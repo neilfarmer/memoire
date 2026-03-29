@@ -4,13 +4,13 @@ output "api_url" {
 }
 
 output "cognito_user_pool_id" {
-  description = "Cognito User Pool ID"
-  value       = aws_cognito_user_pool.main.id
+  description = "Cognito User Pool ID (empty when auth_provider = oidc)"
+  value       = var.auth_provider == "cognito" ? aws_cognito_user_pool.main[0].id : ""
 }
 
 output "cognito_client_id" {
-  description = "Cognito App Client ID (used in auth requests)"
-  value       = aws_cognito_user_pool_client.main.id
+  description = "Cognito App Client ID (empty when auth_provider = oidc)"
+  value       = var.auth_provider == "cognito" ? aws_cognito_user_pool_client.main[0].id : ""
 }
 
 

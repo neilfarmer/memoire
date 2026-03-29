@@ -79,6 +79,6 @@ resource "aws_apigatewayv2_route" "goals" {
   api_id             = aws_apigatewayv2_api.main.id
   route_key          = each.value
   target             = "integrations/${aws_apigatewayv2_integration.goals.id}"
-  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
   authorization_type = "JWT"
 }

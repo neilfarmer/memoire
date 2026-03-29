@@ -24,23 +24,6 @@ terraform {
   # }
 }
 
-provider "aws" {
-  region = var.aws_region
-
-  default_tags {
-    tags = {
-      Project     = var.project_name
-      Environment = var.environment
-      ManagedBy   = "terraform"
-    }
-  }
-}
-
-# Always declared; only used when domain_provider = "cloudflare".
-# When unused, api_token defaults to "unused" and no resources are created.
-provider "cloudflare" {
-  api_token = var.cloudflare_api_token
-}
 
 locals {
   name_prefix = "${var.project_name}-${var.environment}"
@@ -59,6 +42,12 @@ locals {
 
   # api_url used in config.js — custom domain when enabled, raw invoke URL otherwise.
   api_url = local.custom_domain_enabled ? "https://${local.api_domain}" : trimprefix(aws_apigatewayv2_stage.default.invoke_url, "/")
+
+  # ── Auth ──────────────────────────────────────────────────────────────────────
+  # When auth_provider = cognito, derive JWT config from managed Cognito resources.
+  # When auth_provider = oidc, use the caller-supplied auth_oidc_* variables.
+  auth_jwt_issuer_url   = var.auth_provider == "cognito" ? "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.main[0].id}" : var.auth_oidc_issuer_url
+  auth_jwt_client_id = var.auth_provider == "cognito" ? aws_cognito_user_pool_client.main[0].id : var.auth_oidc_client_id
 
 }
 

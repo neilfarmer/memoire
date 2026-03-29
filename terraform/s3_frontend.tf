@@ -178,8 +178,8 @@ resource "aws_s3_object" "config_js" {
   content = <<-JS
     window.MEMOIRE_CONFIG = {
       apiUrl: "${local.api_url}",
-      cognitoClientId: "${aws_cognito_user_pool_client.main.id}",
-      cognitoUserPoolId: "${aws_cognito_user_pool.main.id}",
+      cognitoClientId: "${local.auth_jwt_client_id}",
+      cognitoUserPoolId: "${var.auth_provider == "cognito" ? aws_cognito_user_pool.main[0].id : ""}",
       awsRegion: "${var.aws_region}",
     };
   JS

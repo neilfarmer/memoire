@@ -109,79 +109,99 @@ Cost Explorer is the dominant cost at personal scale. Every home page load trigg
 - Python 3.12 (for running integration tests)
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) configured (`aws configure`)
 - Cost Explorer enabled: AWS Billing console → Cost Explorer → Enable
-- `Project` cost allocation tag activated: Billing → Cost allocation tags → activate `Project`
+- `Project` cost allocation tag activated: AWS Billing console → Cost allocation tags → activate `Project`. **This is required for the home dashboard cost widget.** Tags can take up to 24 hours to appear after first deploy.
 
 ---
 
 ## Getting Started
 
-### 1. Clone the repo
+### 1. Create a deployment repo
 
-```bash
-git clone https://github.com/neilfarmer/memoire
-cd memoire
-```
-
-### 2. Configure Terraform variables
-
-```bash
-cp terraform/terraform.tfvars.example terraform/terraform.tfvars
-```
-
-Edit `terraform/terraform.tfvars` with your values. At minimum, no changes are required for a basic deployment — all variables have defaults. See the [Terraform Variables](#terraform-variables) section below for the full reference.
-
-**To use a custom domain**, set `domain_provider` and `root_domain`:
+Create a new directory for your deployment and add a `main.tf`:
 
 ```hcl
-# terraform/terraform.tfvars
-domain_provider      = "cloudflare"          # or "aws"
-root_domain          = "yourdomain.com"
-cloudflare_api_token = "your-api-token"      # if using Cloudflare
-# route53_zone_id    = "ZXXXXXXXXXXXXXXXXXXXX"  # if using AWS Route 53
+terraform {
+  required_version = ">= 1.6.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
+    cloudflare = {
+      # Only needed if domain_provider = "cloudflare"
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.0"
+    }
+  }
+
+  # Configure your backend here
+  # backend "s3" { ... }
+}
+
+provider "aws" {
+  region = "us-east-1"
+
+  # The Project tag is required — the home dashboard's cost widget queries
+  # Cost Explorer filtered by this tag. Without it, costs will show as $0.
+  default_tags {
+    tags = {
+      Project   = "memoire"   # must match var.project_name
+      ManagedBy = "terraform"
+    }
+  }
+}
+
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token   # omit if not using Cloudflare
+}
+
+module "memoire" {
+  source = "github.com/neilfarmer/memoire//terraform?ref=v0.1.0"
+
+  # Required for initial login
+  default_user_email    = "you@example.com"
+  default_user_password = "ChangeMe123!"
+
+  # Optional — see full variable reference below
+  # domain_provider = "cloudflare"
+  # root_domain     = "yourdomain.com"
+}
+
+output "frontend_url"  { value = module.memoire.frontend_url }
+output "api_url"       { value = module.memoire.api_url }
 ```
 
-### 3. Deploy
+### 2. Deploy
 
 ```bash
-cd terraform
 terraform init
 terraform apply
 ```
 
-Terraform will create all infrastructure and output the URLs and Cognito IDs you need.
-
-### 4. Set up your environment
+### 3. Set up your environment
 
 ```bash
-cd ..
 cp .env.example .env
 ```
 
 Fill in `.env` using the values from `terraform output`:
 
 ```bash
-terraform -chdir=terraform output api_url            # → API_URL
-terraform -chdir=terraform output cognito_client_id  # → COGNITO_CLIENT_ID
-terraform -chdir=terraform output cognito_user_pool_id  # → COGNITO_USER_POOL_ID
+terraform output api_url               # → API_URL
+terraform output cognito_client_id     # → COGNITO_CLIENT_ID
+terraform output cognito_user_pool_id  # → COGNITO_USER_POOL_ID
 ```
 
-Set `TEST_EMAIL` and `TEST_PASSWORD` to credentials you want to use for your Cognito user account.
+Set `TEST_EMAIL` and `TEST_PASSWORD` to match `default_user_email` and `default_user_password`.
 
-### 5. Create your user account
+### 4. Open the app
 
 ```bash
-source .env && python tests/test_api.py --create-user
+terraform output frontend_url
 ```
 
-This registers a Cognito user with the email and password from your `.env`.
-
-### 6. Open the app
-
-```bash
-terraform -chdir=terraform output frontend_url
-```
-
-Navigate to that URL in your browser and log in with the credentials you set in step 5.
+Navigate to that URL and log in with the credentials you configured.
 
 ---
 
@@ -190,12 +210,17 @@ Navigate to that URL in your browser and log in with the credentials you set in 
 | Variable | Type | Default | Description |
 |---|---|---|---|
 | `aws_region` | `string` | `"us-east-1"` | AWS region to deploy all resources |
-| `project_name` | `string` | `"memoire"` | Prefix applied to all resource names |
+| `project_name` | `string` | `"memoire"` | Prefix applied to all resource names. Must match the `Project` tag in your provider's `default_tags`. |
 | `environment` | `string` | `"dev"` | Deployment environment (`dev`, `staging`, `prod`) |
+| **Auth** | | | |
+| `auth_provider` | `string` | `"cognito"` | Authentication provider: `cognito` (deploys AWS Cognito) or `oidc` (bring your own) |
+| `auth_oidc_issuer_url` | `string` | `""` | OIDC issuer URL. Required when `auth_provider = "oidc"` (e.g. `https://your-domain.auth0.com/`) |
+| `auth_oidc_client_id` | `string` | `""` | JWT audience (client ID) from your OIDC provider. Required when `auth_provider = "oidc"` |
+| `default_user_email` | `string` | `""` | Email for the initial Cognito user created on first deploy. Only used when `auth_provider = "cognito"`. Leave empty to skip. |
+| `default_user_password` | `string` | `""` | Password for the initial Cognito user. Must meet Cognito policy: 8+ chars, upper, lower, number. Sensitive. |
 | **Custom Domain** | | | |
 | `domain_provider` | `string` | `"none"` | DNS provider: `cloudflare`, `aws`, or `none` |
 | `root_domain` | `string` | `""` | Root domain (e.g. `example.com`). Frontend at `{project}-{env}.{domain}`, API at `api.{project}-{env}.{domain}` |
-| `cloudflare_api_token` | `string` | — | Cloudflare API token. Required when `domain_provider = "cloudflare"`. Sensitive. |
 | `route53_zone_id` | `string` | `""` | Route 53 hosted zone ID. Required when `domain_provider = "aws"` |
 | **Alerting** | | | |
 | `alert_emails` | `list(string)` | `[]` | Email addresses to receive AWS budget alerts |

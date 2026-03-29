@@ -13,15 +13,15 @@ resource "aws_apigatewayv2_api" "main" {
   }
 }
 
-resource "aws_apigatewayv2_authorizer" "cognito" {
+resource "aws_apigatewayv2_authorizer" "jwt" {
   api_id           = aws_apigatewayv2_api.main.id
   authorizer_type  = "JWT"
   identity_sources = ["$request.header.Authorization"]
-  name             = "cognito-jwt"
+  name             = "jwt"
 
   jwt_configuration {
-    audience = [aws_cognito_user_pool_client.main.id]
-    issuer   = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.main.id}"
+    audience = [local.auth_jwt_client_id]
+    issuer   = local.auth_jwt_issuer_url
   }
 }
 

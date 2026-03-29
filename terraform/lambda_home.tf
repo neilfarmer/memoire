@@ -108,7 +108,7 @@ resource "aws_apigatewayv2_route" "home_costs" {
   api_id             = aws_apigatewayv2_api.main.id
   route_key          = "GET /home/costs"
   target             = "integrations/${aws_apigatewayv2_integration.home.id}"
-  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
   authorization_type = "JWT"
 }
 
@@ -116,6 +116,6 @@ resource "aws_apigatewayv2_route" "admin_stats" {
   api_id             = aws_apigatewayv2_api.main.id
   route_key          = "GET /admin/stats"
   target             = "integrations/${aws_apigatewayv2_integration.home.id}"
-  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
   authorization_type = "JWT"
 }

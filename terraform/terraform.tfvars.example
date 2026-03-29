@@ -2,14 +2,25 @@ project_name = "memoire"
 environment  = "dev"
 aws_region   = "us-east-1"
 
+# ── Auth ──────────────────────────────────────────────────────────────────────
+# Set to "cognito" to deploy AWS Cognito (default), or "oidc" to use your own
+# OIDC provider (Auth0, Google, Keycloak, etc.)
+auth_provider = "cognito"
+
+# Required when auth_provider = "oidc"
+# auth_oidc_issuer_url   = "https://YOUR_DOMAIN.auth0.com/"
+# auth_oidc_client_id = "your-client-id"
+
+# ── Initial user ──────────────────────────────────────────────────────────────
+# Created automatically on first deploy. Leave empty to skip.
+default_user_email    = "you@example.com"
+default_user_password = "ChangeMe123"
+
 # ── Custom domain ─────────────────────────────────────────────────────────────
 # Set domain_provider to "cloudflare", "aws", or leave as "none" to use the
 # raw CloudFront and API Gateway URLs.
 domain_provider = "none"
 root_domain     = ""
-
-# Uncomment if domain_provider = "cloudflare"
-# cloudflare_api_token = "your-cloudflare-api-token"
 
 # Uncomment if domain_provider = "aws"
 # route53_zone_id = "ZXXXXXXXXXXXXXXXXXXXX"

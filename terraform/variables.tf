@@ -4,6 +4,7 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+
 variable "project_name" {
   description = "Project name used as a prefix for all resources"
   type        = string
@@ -34,17 +35,47 @@ variable "root_domain" {
   default     = ""
 }
 
-variable "cloudflare_api_token" {
-  description = "Cloudflare API token. Required when domain_provider = cloudflare."
-  type        = string
-  default     = "unused"
-  sensitive   = true
-}
 
 variable "route53_zone_id" {
   description = "Route 53 hosted zone ID for root_domain. Required when domain_provider = aws."
   type        = string
   default     = ""
+}
+
+variable "auth_provider" {
+  description = "Authentication provider. cognito deploys and manages AWS Cognito. oidc uses an external OIDC provider — supply auth_oidc_issuer_url and auth_oidc_client_id."
+  type        = string
+  default     = "cognito"
+
+  validation {
+    condition     = contains(["cognito", "oidc"], var.auth_provider)
+    error_message = "auth_provider must be cognito or oidc."
+  }
+}
+
+variable "auth_oidc_issuer_url" {
+  description = "OIDC issuer URL. Required when auth_provider = oidc (e.g. https://accounts.google.com)."
+  type        = string
+  default     = ""
+}
+
+variable "auth_oidc_client_id" {
+  description = "JWT audience (client ID) from your OIDC provider. Required when auth_provider = oidc."
+  type        = string
+  default     = ""
+}
+
+variable "default_user_email" {
+  description = "Email address for the initial user account created on first deploy. Leave empty to skip."
+  type        = string
+  default     = ""
+}
+
+variable "default_user_password" {
+  description = "Password for the initial user account. Must meet the Cognito password policy (8+ chars, upper, lower, number)."
+  type        = string
+  default     = ""
+  sensitive   = true
 }
 
 variable "alert_emails" {

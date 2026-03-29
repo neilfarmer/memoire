@@ -1,5 +1,6 @@
 resource "aws_cognito_user_pool" "main" {
-  name = "${local.name_prefix}-users"
+  count = var.auth_provider == "cognito" ? 1 : 0
+  name  = "${local.name_prefix}-users"
 
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
@@ -34,8 +35,9 @@ resource "aws_cognito_user_pool" "main" {
 }
 
 resource "aws_cognito_user_pool_client" "main" {
+  count        = var.auth_provider == "cognito" ? 1 : 0
   name         = "${local.name_prefix}-client"
-  user_pool_id = aws_cognito_user_pool.main.id
+  user_pool_id = aws_cognito_user_pool.main[0].id
 
   # No client secret — suitable for SPAs and CLI tools
   generate_secret = false
@@ -60,6 +62,25 @@ resource "aws_cognito_user_pool_client" "main" {
 }
 
 resource "aws_cognito_user_pool_domain" "main" {
+  count        = var.auth_provider == "cognito" ? 1 : 0
   domain       = "${local.name_prefix}-auth"
-  user_pool_id = aws_cognito_user_pool.main.id
+  user_pool_id = aws_cognito_user_pool.main[0].id
+}
+
+resource "aws_cognito_user" "default" {
+  count        = var.auth_provider == "cognito" && var.default_user_email != "" ? 1 : 0
+  user_pool_id = aws_cognito_user_pool.main[0].id
+  username     = var.default_user_email
+  password     = var.default_user_password
+
+  attributes = {
+    email          = var.default_user_email
+    email_verified = "true"
+  }
+
+  message_action = "SUPPRESS"
+
+  lifecycle {
+    ignore_changes = [password]
+  }
 }
