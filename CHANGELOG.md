@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/neilfarmer/memoire/compare/v0.3.0...v0.4.0) (2026-03-29)
+
+
+### Features
+
+* add name_prefix override and random bucket suffix ([09df66f](https://github.com/neilfarmer/memoire/commit/09df66f60aa7d955b14dc9aec666c63462cc89cc))
+
 ## [0.3.0](https://github.com/neilfarmer/memoire/compare/v0.2.0...v0.3.0) (2026-03-29)
 
 
