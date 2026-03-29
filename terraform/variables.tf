@@ -65,6 +65,12 @@ variable "auth_oidc_client_id" {
   default     = ""
 }
 
+variable "auth_oidc_hosted_ui_url" {
+  description = "Base URL of the OAuth hosted UI (e.g. https://example.auth.us-east-1.amazoncognito.com). Required when auth_provider = oidc."
+  type        = string
+  default     = ""
+}
+
 variable "default_user_email" {
   description = "Email address for the initial user account created on first deploy. Leave empty to skip."
   type        = string

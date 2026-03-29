@@ -2389,15 +2389,6 @@
   <div class="login-card">
     <h1>Memoire</h1>
     <p>Sign in to manage your tasks</p>
-    <div id="login-error" class="error-msg hidden"></div>
-    <div class="field">
-      <label for="email">Email</label>
-      <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
-    </div>
-    <div class="field">
-      <label for="password">Password</label>
-      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
-    </div>
     <button class="btn btn-primary btn-full" id="login-btn">Sign in</button>
   </div>
 </div>
@@ -3049,14 +3040,20 @@
 
 <script>
   const cfg = window.MEMOIRE_CONFIG;
-  const COGNITO_URL = `https://cognito-idp.${cfg.awsRegion}.amazonaws.com/`;
 
-  // ── Auth ────────────────────────────────────────────────────────────────────
+  // ── Auth (OAuth PKCE) ────────────────────────────────────────────────────────
 
   const auth = {
-    getToken() { return localStorage.getItem("memoire_token"); },
-    setToken(t) { localStorage.setItem("memoire_token", t); },
-    clear() { localStorage.removeItem("memoire_token"); },
+    getToken()        { return localStorage.getItem("memoire_token"); },
+    setToken(t)       { localStorage.setItem("memoire_token", t); },
+    getRefreshToken() { return localStorage.getItem("memoire_refresh"); },
+    setRefreshToken(t){ localStorage.setItem("memoire_refresh", t); },
+    clear() {
+      localStorage.removeItem("memoire_token");
+      localStorage.removeItem("memoire_refresh");
+      localStorage.removeItem("memoire_pkce_verifier");
+    },
+
     getPayload() {
       try {
         const token = auth.getToken();
@@ -3069,22 +3066,60 @@
       return p ? (p.email || p["cognito:username"] || null) : null;
     },
 
-    async login(email, password) {
-      const res = await fetch(COGNITO_URL, {
+    _randomString(len = 64) {
+      const arr = new Uint8Array(len);
+      crypto.getRandomValues(arr);
+      return btoa(String.fromCharCode(...arr)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "").slice(0, len);
+    },
+    async _pkceChallenge(verifier) {
+      const data = new TextEncoder().encode(verifier);
+      const hash = await crypto.subtle.digest("SHA-256", data);
+      return btoa(String.fromCharCode(...new Uint8Array(hash))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+    },
+
+    async login() {
+      const verifier = auth._randomString(64);
+      const challenge = await auth._pkceChallenge(verifier);
+      localStorage.setItem("memoire_pkce_verifier", verifier);
+      const params = new URLSearchParams({
+        response_type: "code",
+        client_id:     cfg.cognitoClientId,
+        redirect_uri:  window.location.origin + "/",
+        scope:         "openid email profile",
+        code_challenge:        challenge,
+        code_challenge_method: "S256",
+      });
+      window.location.href = `${cfg.authDomain}/oauth2/authorize?${params}`;
+    },
+
+    async handleCallback(code) {
+      const verifier = localStorage.getItem("memoire_pkce_verifier");
+      localStorage.removeItem("memoire_pkce_verifier");
+      const res = await fetch(`${cfg.authDomain}/oauth2/token`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/x-amz-json-1.1",
-          "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
-        },
-        body: JSON.stringify({
-          AuthFlow: "USER_PASSWORD_AUTH",
-          ClientId: cfg.cognitoClientId,
-          AuthParameters: { USERNAME: email, PASSWORD: password },
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type:    "authorization_code",
+          client_id:     cfg.cognitoClientId,
+          redirect_uri:  window.location.origin + "/",
+          code,
+          code_verifier: verifier,
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Login failed");
-      auth.setToken(data.AuthenticationResult.IdToken);
+      if (!res.ok) throw new Error(data.error || "Token exchange failed");
+      auth.setToken(data.id_token);
+      auth.setRefreshToken(data.refresh_token);
+      window.history.replaceState({}, "", "/");
+    },
+
+    logout() {
+      auth.clear();
+      const params = new URLSearchParams({
+        client_id:   cfg.cognitoClientId,
+        logout_uri:  window.location.origin + "/",
+      });
+      window.location.href = `${cfg.authDomain}/logout?${params}`;
     },
   };
 
@@ -3514,6 +3549,10 @@
 
   const app = {
     async init() {
+      const code = new URLSearchParams(window.location.search).get("code");
+      if (code) {
+        await auth.handleCallback(code);
+      }
       if (auth.getToken()) {
         await app.showApp();
       } else {
@@ -3570,40 +3609,13 @@
     },
 
     logout() {
-      auth.clear();
-      app.showLogin();
+      auth.logout();
     },
   };
 
   // ── Event listeners ───────────────────────────────────────────────────────────
 
-  $("login-btn").addEventListener("click", async () => {
-    const email    = $("email").value.trim();
-    const password = $("password").value;
-    clearError("login-error");
-
-    if (!email || !password) {
-      showError("login-error", "Email and password are required.");
-      return;
-    }
-
-    $("login-btn").disabled = true;
-    $("login-btn").textContent = "Signing in...";
-
-    try {
-      await auth.login(email, password);
-      await app.showApp();
-    } catch (e) {
-      showError("login-error", e.message);
-    } finally {
-      $("login-btn").disabled = false;
-      $("login-btn").textContent = "Sign in";
-    }
-  });
-
-  $("password").addEventListener("keydown", e => {
-    if (e.key === "Enter") $("login-btn").click();
-  });
+  $("login-btn").addEventListener("click", () => auth.login());
 
   $("logout-btn").addEventListener("click", () => app.logout());
 
