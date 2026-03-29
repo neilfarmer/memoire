@@ -1,0 +1,31 @@
+project_name = "memoire"
+environment  = "dev"
+aws_region   = "us-east-1"
+
+# ── Custom domain ─────────────────────────────────────────────────────────────
+# Set domain_provider to "cloudflare", "aws", or leave as "none" to use the
+# raw CloudFront and API Gateway URLs.
+domain_provider = "none"
+root_domain     = ""
+
+# Uncomment if domain_provider = "cloudflare"
+# cloudflare_api_token = "your-cloudflare-api-token"
+
+# Uncomment if domain_provider = "aws"
+# route53_zone_id = "ZXXXXXXXXXXXXXXXXXXXX"
+
+# ── Alerting ──────────────────────────────────────────────────────────────────
+# alert_emails          = ["you@example.com"]
+# budget_thresholds_usd = [10, 20, 30]
+
+# ── Lambda ────────────────────────────────────────────────────────────────────
+# lambda_timeout         = 10
+# lambda_memory_mb       = 128
+# lambda_max_concurrency = 5   # set to -1 for unreserved
+
+# ── Observability ─────────────────────────────────────────────────────────────
+# log_retention_days = 14
+
+# ── S3 lifecycle ──────────────────────────────────────────────────────────────
+# note_attachment_ia_days      = 90
+# note_attachment_glacier_days = 365
