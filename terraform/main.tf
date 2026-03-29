@@ -14,6 +14,10 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 4.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
   }
 
   # Uncomment and configure to use remote state:
@@ -26,7 +30,7 @@ terraform {
 
 
 locals {
-  name_prefix = "${var.project_name}-${var.environment}"
+  name_prefix = var.name_prefix != "" ? var.name_prefix : "${var.project_name}-${var.environment}"
 
   # ── Custom domain ─────────────────────────────────────────────────────────────
   # Set domain_provider = "cloudflare" or "aws" and provide root_domain to enable.

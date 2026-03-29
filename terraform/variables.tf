@@ -11,6 +11,12 @@ variable "project_name" {
   default     = "memoire"
 }
 
+variable "name_prefix" {
+  description = "Override the computed name prefix ({project_name}-{environment}). Useful when you want a clean prod name like 'memoire' instead of 'memoire-prod'."
+  type        = string
+  default     = ""
+}
+
 variable "environment" {
   description = "Deployment environment (dev, staging, prod)"
   type        = string

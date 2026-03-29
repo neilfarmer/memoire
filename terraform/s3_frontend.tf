@@ -1,7 +1,11 @@
 # ── S3 bucket (private — accessed only via CloudFront) ────────────────────────
 
+resource "random_id" "bucket_suffix" {
+  byte_length = 4
+}
+
 resource "aws_s3_bucket" "frontend" {
-  bucket        = "${local.name_prefix}-frontend"
+  bucket        = "${local.name_prefix}-frontend-${random_id.bucket_suffix.hex}"
   force_destroy = true
 }
 
