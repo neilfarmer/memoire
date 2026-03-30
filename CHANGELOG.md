@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/neilfarmer/memoire/compare/v0.5.0...v0.6.0) (2026-03-30)
+
+
+### Features
+
+* add folder dropdown to task modal for moving tasks ([d0872f5](https://github.com/neilfarmer/memoire/commit/d0872f5049b44e763422cbd705bc5fb896af29c2))
+
 ## [0.5.0](https://github.com/neilfarmer/memoire/compare/v0.4.0...v0.5.0) (2026-03-30)
 
 
