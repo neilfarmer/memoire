@@ -8,15 +8,20 @@ import zipfile
 from datetime import date
 
 import boto3
+from boto3.dynamodb.conditions import Key
 import db
 
-TASKS_TABLE     = os.environ["TASKS_TABLE"]
-JOURNAL_TABLE   = os.environ["JOURNAL_TABLE"]
-NOTES_TABLE     = os.environ["NOTES_TABLE"]
-FOLDERS_TABLE   = os.environ["FOLDERS_TABLE"]
-HEALTH_TABLE    = os.environ["HEALTH_TABLE"]
-NUTRITION_TABLE = os.environ["NUTRITION_TABLE"]
-FRONTEND_BUCKET = os.environ["FRONTEND_BUCKET"]
+TASKS_TABLE        = os.environ["TASKS_TABLE"]
+TASK_FOLDERS_TABLE = os.environ["TASK_FOLDERS_TABLE"]
+JOURNAL_TABLE      = os.environ["JOURNAL_TABLE"]
+NOTES_TABLE        = os.environ["NOTES_TABLE"]
+FOLDERS_TABLE      = os.environ["FOLDERS_TABLE"]
+HEALTH_TABLE       = os.environ["HEALTH_TABLE"]
+NUTRITION_TABLE    = os.environ["NUTRITION_TABLE"]
+GOALS_TABLE        = os.environ["GOALS_TABLE"]
+HABITS_TABLE       = os.environ["HABITS_TABLE"]
+HABIT_LOGS_TABLE   = os.environ["HABIT_LOGS_TABLE"]
+FRONTEND_BUCKET    = os.environ["FRONTEND_BUCKET"]
 
 s3 = boto3.client("s3")
 
@@ -55,15 +60,13 @@ def _fetch_s3(key: str) -> bytes | None:
 
 # ── Tasks ─────────────────────────────────────────────────────────────────────
 
-def _tasks_markdown(tasks: list[dict]) -> str:
-    if not tasks:
-        return "# Tasks\n\nNo tasks found.\n"
-
+def _tasks_section(tasks: list[dict]) -> str:
+    """Render a list of tasks grouped by status."""
     grouped: dict[str, list] = {"todo": [], "in_progress": [], "done": []}
     for t in tasks:
         grouped.setdefault(t.get("status", "todo"), []).append(t)
 
-    lines = ["# Tasks\n"]
+    lines: list[str] = []
     for status in ("todo", "in_progress", "done"):
         bucket = grouped.get(status, [])
         if not bucket:
@@ -79,6 +82,35 @@ def _tasks_markdown(tasks: list[dict]) -> str:
             if t.get("description"):
                 lines.append(f"  {t['description']}")
             lines.append("")
+    return "\n".join(lines)
+
+
+def _tasks_markdown(tasks: list[dict], task_folders: list[dict]) -> str:
+    if not tasks:
+        return "# Tasks\n\nNo tasks found.\n"
+
+    if not task_folders:
+        return "# Tasks\n\n" + _tasks_section(tasks)
+
+    folder_by_id = {f["folder_id"]: f["name"] for f in task_folders}
+    # Group tasks by folder_id; tasks with no folder go to the first folder (Inbox)
+    default_id   = task_folders[0]["folder_id"] if task_folders else None
+    by_folder: dict[str, list] = {f["folder_id"]: [] for f in task_folders}
+    for t in tasks:
+        fid = t.get("folder_id") or default_id
+        if fid in by_folder:
+            by_folder[fid].append(t)
+
+    lines = ["# Tasks\n"]
+    for folder in task_folders:
+        fid    = folder["folder_id"]
+        fname  = folder.get("name", "Untitled")
+        bucket = by_folder.get(fid, [])
+        lines.append(f"# {fname}\n")
+        if not bucket:
+            lines.append("No tasks in this folder.\n")
+        else:
+            lines.append(_tasks_section(bucket))
 
     return "\n".join(lines)
 
@@ -251,15 +283,88 @@ def _nutrition_file(log: dict) -> tuple[str, str]:
     return filename, "\n".join(lines) + "\n"
 
 
+# ── Goals ─────────────────────────────────────────────────────────────────────
+
+def _goals_markdown(goals: list[dict]) -> str:
+    if not goals:
+        return "# Goals\n\nNo goals found.\n"
+
+    grouped: dict[str, list] = {"active": [], "completed": [], "abandoned": []}
+    for g in goals:
+        grouped.setdefault(g.get("status", "active"), []).append(g)
+
+    label = {"active": "Active", "completed": "Completed", "abandoned": "Abandoned"}
+    lines = ["# Goals\n"]
+    for status in ("active", "completed", "abandoned"):
+        bucket = grouped.get(status, [])
+        if not bucket:
+            continue
+        lines.append(f"## {label[status]}\n")
+        for g in sorted(bucket, key=lambda x: x.get("created_at", "")):
+            lines.append(f"- **{g.get('title', 'Untitled')}**")
+            if g.get("target_date"):
+                lines.append(f"  Target: {g['target_date']}")
+            if g.get("description"):
+                lines.append(f"  {g['description']}")
+            lines.append("")
+
+    return "\n".join(lines)
+
+
+# ── Habits ────────────────────────────────────────────────────────────────────
+
+def _habits_markdown(habits: list[dict], all_logs: list[dict]) -> str:
+    if not habits:
+        return "# Habits\n\nNo habits found.\n"
+
+    logs_by_habit: dict[str, list[str]] = {}
+    for log in all_logs:
+        hid = log.get("habit_id", "")
+        logs_by_habit.setdefault(hid, []).append(log.get("log_date", ""))
+
+    lines = ["# Habits\n"]
+    for habit in sorted(habits, key=lambda h: h.get("created_at", "")):
+        name     = habit.get("name", "Untitled")
+        notify   = habit.get("notify_time", "")
+        created  = habit.get("created_at", "")
+        hid      = habit.get("habit_id", "")
+        log_dates = sorted(logs_by_habit.get(hid, []))
+
+        lines.append(f"## {name}\n")
+        if notify:
+            lines.append(f"- Reminder: {notify}")
+        if created:
+            lines.append(f"- Tracking since: {created}")
+        if log_dates:
+            lines.append(f"- Completions ({len(log_dates)} total):")
+            for d in log_dates:
+                lines.append(f"  - {d}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
 # ── Main builder ──────────────────────────────────────────────────────────────
 
 def build_export(user_id: str) -> dict:
-    tasks     = db.query_by_user(db.get_table(TASKS_TABLE),     user_id)
-    entries   = db.query_by_user(db.get_table(JOURNAL_TABLE),   user_id)
-    notes     = db.query_by_user(db.get_table(NOTES_TABLE),     user_id)
-    folders   = db.query_by_user(db.get_table(FOLDERS_TABLE),   user_id)
-    health    = db.query_by_user(db.get_table(HEALTH_TABLE),    user_id)
-    nutrition = db.query_by_user(db.get_table(NUTRITION_TABLE), user_id)
+    tasks        = db.query_by_user(db.get_table(TASKS_TABLE),        user_id)
+    task_folders = db.query_by_user(db.get_table(TASK_FOLDERS_TABLE), user_id)
+    entries      = db.query_by_user(db.get_table(JOURNAL_TABLE),      user_id)
+    notes        = db.query_by_user(db.get_table(NOTES_TABLE),        user_id)
+    folders      = db.query_by_user(db.get_table(FOLDERS_TABLE),      user_id)
+    health       = db.query_by_user(db.get_table(HEALTH_TABLE),       user_id)
+    nutrition    = db.query_by_user(db.get_table(NUTRITION_TABLE),    user_id)
+    goals        = db.query_by_user(db.get_table(GOALS_TABLE),        user_id)
+    habits       = db.query_by_user(db.get_table(HABITS_TABLE),       user_id)
+
+    # Fetch all habit logs for each habit (habit_logs PK is habit_id, not user_id)
+    habit_logs: list[dict] = []
+    logs_table = db.get_table(HABIT_LOGS_TABLE)
+    for habit in habits:
+        resp = logs_table.query(
+            KeyConditionExpression=Key("habit_id").eq(habit["habit_id"])
+        )
+        habit_logs.extend(resp.get("Items", []))
 
     folder_paths = _build_folder_paths(folders)
 
@@ -270,7 +375,7 @@ def build_export(user_id: str) -> dict:
         root = f"memoire-export-{today}"
 
         # ── tasks/tasks.md ────────────────────────────────────────────────────
-        zf.writestr(f"{root}/tasks/tasks.md", _tasks_markdown(tasks))
+        zf.writestr(f"{root}/tasks/tasks.md", _tasks_markdown(tasks, task_folders))
 
         # ── journal/YYYY-MM-DD.md ─────────────────────────────────────────────
         for entry in sorted(entries, key=lambda e: e.get("entry_date", "")):
@@ -309,6 +414,12 @@ def build_export(user_id: str) -> dict:
         for log in sorted(nutrition, key=lambda l: l.get("log_date", "")):
             filename, content = _nutrition_file(log)
             zf.writestr(f"{root}/nutrition/{filename}", content)
+
+        # ── goals/goals.md ────────────────────────────────────────────────────
+        zf.writestr(f"{root}/goals/goals.md", _goals_markdown(goals))
+
+        # ── habits/habits.md ──────────────────────────────────────────────────
+        zf.writestr(f"{root}/habits/habits.md", _habits_markdown(habits, habit_logs))
 
     zip_bytes = buf.getvalue()
 
