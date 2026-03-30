@@ -5209,7 +5209,7 @@
           journalBody =
             (entry.mood  ? `<div class="day-view-mood">${escHtml(entry.mood)}</div>` : "") +
             (entry.title ? `<div class="day-view-title">${escHtml(entry.title)}</div>` : "") +
-            (entry.preview ? `<div class="day-view-preview">${escHtml(entry.preview)}</div>` : "");
+            (entry.body ? `<div class="day-view-preview">${escHtml(entry.body)}</div>` : "");
         } else {
           journalBody = `<div class="day-view-empty">No entry for this day.</div>`;
         }
