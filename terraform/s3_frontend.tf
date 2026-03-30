@@ -70,6 +70,24 @@ resource "aws_cloudfront_distribution" "frontend" {
     max_ttl     = 31536000
   }
 
+  # openapi.yaml embeds the live API URL — must not be cached
+  ordered_cache_behavior {
+    path_pattern           = "/openapi.yaml"
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    target_origin_id       = "s3-frontend"
+    viewer_protocol_policy = "redirect-to-https"
+
+    forwarded_values {
+      query_string = false
+      cookies { forward = "none" }
+    }
+
+    min_ttl     = 0
+    default_ttl = 0
+    max_ttl     = 0
+  }
+
   # config.js must not be cached — it holds API/Cognito config values
   ordered_cache_behavior {
     path_pattern           = "/config.js"
@@ -204,4 +222,22 @@ resource "aws_s3_object" "icon_svg" {
   source       = "${path.module}/../frontend/icon.svg"
   content_type = "image/svg+xml"
   etag         = filemd5("${path.module}/../frontend/icon.svg")
+}
+
+resource "aws_s3_object" "docs_html" {
+  bucket       = aws_s3_bucket.frontend.id
+  key          = "docs.html"
+  source       = "${path.module}/../frontend/docs.html"
+  content_type = "text/html"
+  etag         = filemd5("${path.module}/../frontend/docs.html")
+}
+
+# openapi.yaml is generated from the template so the live API URL is embedded.
+# Terraform computes a content hash to force S3 replacement when the spec changes.
+resource "aws_s3_object" "openapi_yaml" {
+  bucket       = aws_s3_bucket.frontend.id
+  key          = "openapi.yaml"
+  content      = templatefile("${path.module}/../frontend/openapi.yaml.tpl", { api_url = local.api_url })
+  content_type = "application/yaml"
+  etag         = md5(templatefile("${path.module}/../frontend/openapi.yaml.tpl", { api_url = local.api_url }))
 }
