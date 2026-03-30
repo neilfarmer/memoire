@@ -131,3 +131,15 @@ data "archive_file" "lambda_goals" {
   source_dir  = "${path.module}/../lambda/goals"
   output_path = "${path.module}/../build/goals.zip"
 }
+
+data "archive_file" "lambda_authorizer" {
+  type        = "zip"
+  source_dir  = "${path.module}/../lambda/authorizer"
+  output_path = "${path.module}/../build/authorizer.zip"
+}
+
+data "archive_file" "lambda_tokens" {
+  type        = "zip"
+  source_dir  = "${path.module}/../lambda/tokens"
+  output_path = "${path.module}/../build/tokens.zip"
+}

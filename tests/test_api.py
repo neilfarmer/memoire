@@ -548,12 +548,86 @@ def test_settings(token: str) -> None:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
+def test_tokens(token: str) -> None:
+    """Test Personal Access Token management and PAT-based API access."""
+
+    section("Tokens — auth enforcement")
+    r = requests.get(f"{API_URL}/tokens", timeout=10)
+    check("No token returns 401", r.status_code == 401)
+
+    section("Tokens — list (empty)")
+    r = api("GET", "/tokens", token)
+    check("List returns 200", r.status_code == 200)
+    check("Returns a list", isinstance(r.json(), list))
+
+    section("Tokens — create validation")
+    r = api("POST", "/tokens", token, {})
+    check("Missing name returns 400", r.status_code == 400)
+
+    r = api("POST", "/tokens", token, {"name": "x" * 101})
+    check("Name too long returns 400", r.status_code == 400)
+
+    section("Tokens — create")
+    r = api("POST", "/tokens", token, {"name": "test-script"})
+    check("Valid create returns 201", r.status_code == 201)
+    data = r.json()
+    check("Has token_id", bool(data.get("token_id")))
+    check("Has name", data.get("name") == "test-script")
+    check("Has token (plaintext)", data.get("token", "").startswith("pat_"))
+    check("Has created_at", bool(data.get("created_at")))
+    check("No token_hash in response", "token_hash" not in data)
+
+    pat        = data["token"]
+    token_id   = data["token_id"]
+
+    section("Tokens — list after create")
+    r = api("GET", "/tokens", token)
+    check("List returns 200", r.status_code == 200)
+    ids = [t["token_id"] for t in r.json()]
+    check("New token appears in list", token_id in ids)
+    check("Listed tokens have no token or token_hash", all(
+        "token" not in t and "token_hash" not in t for t in r.json()
+    ))
+
+    section("Tokens — PAT authenticates API calls")
+    r = api("GET", "/tasks", pat)
+    check("PAT is accepted for tasks endpoint (200)", r.status_code == 200)
+
+    r = api("GET", "/settings", pat)
+    check("PAT is accepted for settings endpoint (200)", r.status_code == 200)
+
+    section("Tokens — PAT cannot manage tokens")
+    r = api("GET", "/tokens", pat)
+    check("PAT cannot list tokens (401)", r.status_code == 401)
+
+    r = api("POST", "/tokens", pat, {"name": "should-fail"})
+    check("PAT cannot create token (401)", r.status_code == 401)
+
+    section("Tokens — revoke")
+    r = api("DELETE", f"/tokens/{token_id}", token)
+    check("Revoke returns 204", r.status_code == 204)
+
+    r = api("DELETE", f"/tokens/{token_id}", token)
+    check("Double revoke returns 404", r.status_code == 404)
+
+    section("Tokens — revoked PAT is rejected")
+    r = api("GET", "/tasks", pat)
+    check("Revoked PAT is rejected (401)", r.status_code == 401)
+
+    section("Tokens — list after revoke")
+    r = api("GET", "/tokens", token)
+    check("List returns 200", r.status_code == 200)
+    ids = [t["token_id"] for t in r.json()]
+    check("Revoked token no longer in list", token_id not in ids)
+
+
 SUITES = {
     "tasks":    test_tasks,
     "habits":   test_habits,
     "journal":  test_journal,
     "notes":    test_notes,
     "settings": test_settings,
+    "tokens":   test_tokens,
 }
 
 

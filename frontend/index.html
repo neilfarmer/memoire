@@ -2869,6 +2869,28 @@
       </div>
       <div id="export-msg" class="hidden" style="font-size:13px; margin-top:6px;"></div>
     </div>
+    <div class="settings-section" id="pat-section">
+      <div class="settings-section-title">Personal Access Tokens</div>
+      <div class="settings-row" style="flex-direction:column; align-items:stretch; gap:10px;">
+        <div>
+          <div class="settings-label">API tokens</div>
+          <div class="settings-desc">Use personal access tokens to authenticate API calls from scripts or third-party tools without a browser session. Tokens are shown only once at creation.</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="text" id="pat-name-input" placeholder="Token name (e.g. my-script)" style="flex:1;" maxlength="100" />
+          <button class="btn btn-secondary" id="pat-create-btn">Generate token</button>
+        </div>
+        <div id="pat-new-token-box" class="hidden" style="background:var(--hover);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;">
+          <div style="font-weight:500;margin-bottom:6px;">Token created — copy it now. It will not be shown again.</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <code id="pat-new-token-value" style="flex:1;word-break:break-all;font-size:12px;"></code>
+            <button class="btn btn-secondary" id="pat-copy-btn" style="white-space:nowrap;">Copy</button>
+          </div>
+        </div>
+        <div id="pat-msg" class="hidden" style="font-size:13px;"></div>
+      </div>
+      <div id="pat-list" style="margin-top:8px;"></div>
+    </div>
     <div class="settings-section">
       <div class="settings-section-title">Editor</div>
       <div class="settings-row">
@@ -4015,6 +4037,76 @@
       btn.disabled = false;
       btn.textContent = "Export";
     }
+  });
+
+  // ── Personal Access Tokens ───────────────────────────────────────────────────
+
+  async function loadPatList() {
+    const container = $("pat-list");
+    try {
+      const tokens = await api.call("GET", "/tokens");
+      if (!tokens || tokens.length === 0) {
+        container.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:4px 0;">No tokens yet.</div>';
+        return;
+      }
+      container.innerHTML = tokens.map(t => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);">
+          <div>
+            <div style="font-size:13px;font-weight:500;">${escHtml(t.name)}</div>
+            <div style="font-size:12px;color:var(--muted);">Created ${t.created_at ? new Date(t.created_at).toLocaleDateString() : '—'}</div>
+          </div>
+          <button class="btn btn-secondary" style="color:var(--danger,#c0392b);" data-token-id="${escHtml(t.token_id)}">Revoke</button>
+        </div>
+      `).join('');
+      container.querySelectorAll('[data-token-id]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm(`Revoke token "${btn.closest('div').querySelector('[style*=font-weight]').textContent}"?`)) return;
+          btn.disabled = true;
+          try {
+            await api.call("DELETE", `/tokens/${btn.dataset.tokenId}`);
+            await loadPatList();
+          } catch (e) {
+            alert("Failed to revoke token: " + e.message);
+            btn.disabled = false;
+          }
+        });
+      });
+    } catch (e) {
+      container.innerHTML = `<div style="font-size:13px;color:var(--danger,#c0392b);">Failed to load tokens: ${escHtml(e.message)}</div>`;
+    }
+  }
+
+  $("pat-create-btn").addEventListener("click", async () => {
+    const nameInput = $("pat-name-input");
+    const msg       = $("pat-msg");
+    const newBox    = $("pat-new-token-box");
+    const name      = nameInput.value.trim();
+    if (!name) { msg.textContent = "Enter a token name."; msg.className = "msg-err"; msg.classList.remove("hidden"); return; }
+    msg.classList.add("hidden");
+    newBox.classList.add("hidden");
+    $("pat-create-btn").disabled = true;
+    try {
+      const token = await api.call("POST", "/tokens", { name });
+      if (!token) return;
+      nameInput.value = "";
+      $("pat-new-token-value").textContent = token.token;
+      newBox.classList.remove("hidden");
+      await loadPatList();
+    } catch (e) {
+      msg.textContent = e.message;
+      msg.className = "msg-err";
+      msg.classList.remove("hidden");
+    } finally {
+      $("pat-create-btn").disabled = false;
+    }
+  });
+
+  $("pat-copy-btn").addEventListener("click", () => {
+    const val = $("pat-new-token-value").textContent;
+    navigator.clipboard.writeText(val).then(() => {
+      $("pat-copy-btn").textContent = "Copied!";
+      setTimeout(() => { $("pat-copy-btn").textContent = "Copy"; }, 2000);
+    });
   });
 
   $("autosave-select").addEventListener("change", async () => {
@@ -6688,6 +6780,7 @@
       ? new Date(p.exp * 1000).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
       : "—";
     $("display-name-input").value = state.settings?.display_name || "";
+    loadPatList();
   }
 
   // ── Global search ────────────────────────────────────────────────────────────
