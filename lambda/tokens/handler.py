@@ -1,4 +1,8 @@
-"""Habits Lambda entry point."""
+"""Tokens Lambda — Personal Access Token management.
+
+Routes are protected by the Cognito JWT authorizer only.
+PATs cannot be used to create or revoke other PATs.
+"""
 
 import json
 import logging
@@ -12,8 +16,9 @@ logger.setLevel(logging.INFO)
 def lambda_handler(event: dict, context) -> dict:
     logger.info("Event: %s", json.dumps(event))
 
-    from auth import get_user_id
-    user_id = get_user_id(event)
+    # These routes only accept the JWT authorizer, so jwt.claims is always present.
+    claims  = event["requestContext"]["authorizer"]["jwt"]["claims"]
+    user_id = claims["sub"]
 
     body = {}
     if event.get("body"):

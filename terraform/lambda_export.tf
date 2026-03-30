@@ -96,6 +96,6 @@ resource "aws_apigatewayv2_route" "export" {
   api_id             = aws_apigatewayv2_api.main.id
   route_key          = "GET /export"
   target             = "integrations/${aws_apigatewayv2_integration.export.id}"
-  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
-  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.lambda.id
+  authorization_type = "CUSTOM"
 }

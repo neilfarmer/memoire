@@ -266,6 +266,48 @@ resource "aws_dynamodb_table" "goals" {
   }
 }
 
+# ── Personal Access Tokens table ─────────────────────────────────────────────
+#
+# PK: user_id    (String) — Cognito sub claim
+# SK: token_id   (String) — UUID generated at creation
+#
+# GSI token-hash-index:
+#   PK: token_hash  — SHA-256 hex digest of the plaintext PAT
+#   The Lambda authorizer queries this index to validate incoming PATs.
+#   The plaintext token is never stored; only its hash is persisted.
+
+resource "aws_dynamodb_table" "tokens" {
+  name         = "${local.name_prefix}-tokens"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "token_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "token_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "token_hash"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "token-hash-index"
+    hash_key        = "token_hash"
+    projection_type = "KEYS_ONLY"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
 # ── Task folders table ────────────────────────────────────────────────────────
 #
 # PK: user_id    (String)

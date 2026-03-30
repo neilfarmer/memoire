@@ -12,8 +12,8 @@ logger.setLevel(logging.INFO)
 def lambda_handler(event: dict, context) -> dict:
     logger.info("Event: %s", json.dumps(event))
 
-    claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
-    user_id = claims["sub"]
+    from auth import get_user_id
+    user_id = get_user_id(event)
 
     body = {}
     if event.get("body"):
