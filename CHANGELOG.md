@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.0](https://github.com/neilfarmer/memoire/compare/v0.4.0...v0.5.0) (2026-03-30)
+
+
+### Features
+
+* add goals, habits, and task folders to export ([5bad612](https://github.com/neilfarmer/memoire/commit/5bad6129189c52cb6a1e3712d4ebd9b5dfb3483b))
+* add timezone setting for date calculations ([755b3c2](https://github.com/neilfarmer/memoire/commit/755b3c249fd66a4d5c688f96fe03ea4dedcbe2cb))
+* show journal, exercise, and nutrition day view on calendar click ([d2cc4da](https://github.com/neilfarmer/memoire/commit/d2cc4da5743340e80062302738718240404118c4))
+* split tasks into user-created folders ([8c048ad](https://github.com/neilfarmer/memoire/commit/8c048adafb5f4faf0e71ce5189e58a3696d554e6))
+
+
+### Bug Fixes
+
+* preload health and nutrition so journal calendar dots appear ([e2aa4f9](https://github.com/neilfarmer/memoire/commit/e2aa4f99180812420b75717273b7839bed40a868))
+* show journal body in day view (was using wrong field name) ([8026c2d](https://github.com/neilfarmer/memoire/commit/8026c2d77430fecedf5df2fd3ee133b3e4b155ca))
+
 ## [0.4.0](https://github.com/neilfarmer/memoire/compare/v0.3.0...v0.4.0) (2026-03-29)
 
 
