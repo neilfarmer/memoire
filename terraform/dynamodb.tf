@@ -265,3 +265,29 @@ resource "aws_dynamodb_table" "goals" {
     enabled = true
   }
 }
+
+# ── Task folders table ────────────────────────────────────────────────────────
+#
+# PK: user_id    (String)
+# SK: folder_id  (String) — UUID
+
+resource "aws_dynamodb_table" "task_folders" {
+  name         = "${local.name_prefix}-task-folders"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key     = "folder_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "folder_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}

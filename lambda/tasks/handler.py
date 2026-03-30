@@ -12,8 +12,7 @@ logger.setLevel(logging.INFO)
 def lambda_handler(event: dict, context) -> dict:
     logger.info("Event: %s", json.dumps(event))
 
-    # JWT authorizer injects verified claims — no token validation needed here
-    claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
+    claims  = event["requestContext"]["authorizer"]["jwt"]["claims"]
     user_id = claims["sub"]
 
     body = {}
@@ -24,7 +23,8 @@ def lambda_handler(event: dict, context) -> dict:
             from response import error
             return error("Invalid JSON body")
 
-    path_params = event.get("pathParameters") or {}
-    route_key = event["routeKey"]  # e.g. "GET /tasks" or "DELETE /tasks/{id}"
+    path_params  = event.get("pathParameters") or {}
+    query_params = event.get("queryStringParameters") or {}
+    route_key    = event["routeKey"]
 
-    return route(route_key, user_id, body, path_params)
+    return route(route_key, user_id, body, path_params, query_params)

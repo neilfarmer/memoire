@@ -74,6 +74,7 @@ def create_task(user_id: str, body: dict) -> dict:
         "priority": body.get("priority", "medium"),
         "due_date": body.get("due_date"),
         "notifications": body.get("notifications"),
+        "folder_id": body.get("folder_id"),
         "created_at": now,
         "updated_at": now,
     }
@@ -97,7 +98,7 @@ def get_task(user_id: str, task_id: str) -> dict:
 # ── Update ────────────────────────────────────────────────────────────────────
 
 def update_task(user_id: str, task_id: str, body: dict) -> dict:
-    updatable = {"title", "description", "status", "priority", "due_date", "notifications"}
+    updatable = {"title", "description", "status", "priority", "due_date", "notifications", "folder_id"}
     fields = {k: v for k, v in body.items() if k in updatable}
 
     if not fields:

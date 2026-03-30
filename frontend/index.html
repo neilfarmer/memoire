@@ -2494,6 +2494,11 @@
           <div class="sb-section-hdr" onclick="sidebar.navigate('tasks')">
             <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
             <span class="sb-hdr-label">Tasks</span>
+            <button class="sb-hdr-btn" id="new-task-folder-btn" onclick="event.stopPropagation()" title="New folder">+ Folder</button>
+            <span class="sb-arrow"><svg viewBox="0 0 10 10" fill="currentColor"><polygon points="2,1 8,5 2,9"/></svg></span>
+          </div>
+          <div class="sb-section-body hidden" id="sb-tasks-body">
+            <div id="task-folders-tree"></div>
           </div>
         </div>
         <div class="sb-section" id="sb-notes">
@@ -3212,10 +3217,14 @@
       return data;
     },
 
-    listTasks()             { return api.call("GET",    "/tasks"); },
-    createTask(body)        { return api.call("POST",   "/tasks", body); },
-    updateTask(id, body)    { return api.call("PUT",    `/tasks/${id}`, body); },
-    deleteTask(id)          { return api.call("DELETE", `/tasks/${id}`); },
+    listTasks()                    { return api.call("GET",    "/tasks"); },
+    createTask(body)               { return api.call("POST",   "/tasks", body); },
+    updateTask(id, body)           { return api.call("PUT",    `/tasks/${id}`, body); },
+    deleteTask(id)                 { return api.call("DELETE", `/tasks/${id}`); },
+    listTaskFolders()              { return api.call("GET",    "/tasks/folders"); },
+    createTaskFolder(body)         { return api.call("POST",   "/tasks/folders", body); },
+    updateTaskFolder(id, body)     { return api.call("PUT",    `/tasks/folders/${id}`, body); },
+    deleteTaskFolder(id)           { return api.call("DELETE", `/tasks/folders/${id}`); },
 
     getSettings()              { return api.call("GET",  "/settings"); },
     updateSettings(body)       { return api.call("PUT",  "/settings", body); },
@@ -3234,6 +3243,7 @@
 
   const state = {
     tasks: [],
+    currentFolderID: null,
     filter: "all",
     editingId: null,
     settings: {},
@@ -3301,9 +3311,13 @@
     $("task-calendar").classList.add("hidden");
 
     const list = $("task-list");
+    const isDefault   = taskFolders.data.length > 0 && taskFolders.data[0].folder_id === state.currentFolderID;
+    const folderTasks = state.currentFolderID
+      ? state.tasks.filter(t => t.folder_id === state.currentFolderID || (!t.folder_id && isDefault))
+      : state.tasks;
     const visible = (state.filter === "all"
-      ? [...state.tasks]
-      : state.tasks.filter(t => t.status === state.filter)
+      ? [...folderTasks]
+      : folderTasks.filter(t => t.status === state.filter)
     ).sort((a, b) => taskUrgency(a) - taskUrgency(b));
 
     if (visible.length === 0) {
@@ -3358,9 +3372,13 @@
                         "July","August","September","October","November","December"];
 
     // Group filtered tasks by due date
+    const isDefault    = taskFolders.data.length > 0 && taskFolders.data[0].folder_id === state.currentFolderID;
+    const folderTasks  = state.currentFolderID
+      ? state.tasks.filter(t => t.folder_id === state.currentFolderID || (!t.folder_id && isDefault))
+      : state.tasks;
     const filtered = state.filter === "all"
-      ? state.tasks
-      : state.tasks.filter(t => t.status === state.filter);
+      ? folderTasks
+      : folderTasks.filter(t => t.status === state.filter);
     const byDate = {};
     filtered.forEach(t => {
       if (!t.due_date) return;
@@ -3595,6 +3613,129 @@
     },
   };
 
+  // ── Task folders ─────────────────────────────────────────────────────────────
+
+  const taskFolders = {
+    data: [],
+
+    async load() {
+      try {
+        taskFolders.data = await api.listTaskFolders() || [];
+      } catch (e) {
+        console.error("Failed to load task folders:", e);
+        return;
+      }
+      if (!state.currentFolderID && taskFolders.data.length > 0) {
+        state.currentFolderID = taskFolders.data[0].folder_id;
+      }
+      taskFolders.renderTree();
+      renderTasks();
+    },
+
+    renderTree() {
+      const container = $("task-folders-tree");
+      if (!container) return;
+      if (!taskFolders.data.length) {
+        container.innerHTML = `<div style="padding:8px 12px;font-size:13px;color:var(--muted);">No folders yet.</div>`;
+        return;
+      }
+      container.innerHTML = taskFolders.data.map(f => `
+        <div class="tree-folder-row ${f.folder_id === state.currentFolderID ? "active" : ""}"
+             data-folder-id="${f.folder_id}"
+             onclick="taskFolders.select('${f.folder_id}')">
+          <span class="tree-folder-name">${escHtml(f.name)}</span>
+          <div class="tree-actions">
+            <button class="tree-action-btn" title="Rename"
+              onclick="event.stopPropagation(); taskFolders.rename('${f.folder_id}')">&#9998;</button>
+            <button class="tree-action-btn danger" title="Delete"
+              onclick="event.stopPropagation(); taskFolders.deleteFolder('${f.folder_id}')">&#x2715;</button>
+          </div>
+        </div>`).join("");
+    },
+
+    select(folderId) {
+      state.currentFolderID = folderId;
+      taskFolders.renderTree();
+      if (pages.current !== "tasks") pages.show("tasks");
+      else renderTasks();
+    },
+
+    async promptNew() {
+      const name = prompt("Folder name:");
+      if (!name || !name.trim()) return;
+      try {
+        const folder = await api.createTaskFolder({ name: name.trim() });
+        taskFolders.data.push(folder);
+        state.currentFolderID = folder.folder_id;
+        taskFolders.renderTree();
+        if (pages.current !== "tasks") pages.show("tasks");
+        else renderTasks();
+      } catch (e) {
+        console.error("Failed to create task folder:", e);
+      }
+    },
+
+    rename(folderId) {
+      const folder = taskFolders.data.find(f => f.folder_id === folderId);
+      if (!folder) return;
+      const row    = document.querySelector(`#task-folders-tree [data-folder-id="${folderId}"]`);
+      const nameEl = row?.querySelector(".tree-folder-name");
+      if (!nameEl) return;
+      const input  = document.createElement("input");
+      input.value  = folder.name;
+      input.className = "tree-rename-input";
+      nameEl.replaceWith(input);
+      input.focus();
+      input.select();
+
+      const save = async () => {
+        const name    = input.value.trim();
+        const changed = name && name !== folder.name;
+        input.replaceWith(nameEl);
+        if (!changed) return;
+        try {
+          const updated = await api.updateTaskFolder(folderId, { name });
+          const idx = taskFolders.data.findIndex(f => f.folder_id === folderId);
+          if (idx >= 0) taskFolders.data[idx] = { ...taskFolders.data[idx], name: updated.name || name };
+          taskFolders.renderTree();
+        } catch (e) {
+          console.error("Rename failed:", e);
+          taskFolders.renderTree();
+        }
+      };
+
+      input.addEventListener("blur", save);
+      input.addEventListener("keydown", e => {
+        if (e.key === "Enter")  { e.preventDefault(); input.blur(); }
+        if (e.key === "Escape") { input.replaceWith(nameEl); }
+      });
+    },
+
+    async deleteFolder(folderId) {
+      const folder = taskFolders.data.find(f => f.folder_id === folderId);
+      if (!folder) return;
+      const isDefault   = taskFolders.data.length > 0 && taskFolders.data[0].folder_id === folderId;
+      const taskCount   = state.tasks.filter(t =>
+        t.folder_id === folderId || (!t.folder_id && isDefault)
+      ).length;
+      const msg = taskCount > 0
+        ? `Delete "${folder.name}"? This will also delete ${taskCount} task${taskCount !== 1 ? "s" : ""}.`
+        : `Delete "${folder.name}"?`;
+      if (!await confirmDialog(msg)) return;
+      try {
+        await api.deleteTaskFolder(folderId);
+        taskFolders.data = taskFolders.data.filter(f => f.folder_id !== folderId);
+        if (state.currentFolderID === folderId) {
+          state.currentFolderID = taskFolders.data.length > 0 ? taskFolders.data[0].folder_id : null;
+        }
+        await app.loadTasks();
+        taskFolders.renderTree();
+      } catch (e) {
+        console.error("Failed to delete folder:", e);
+      }
+    },
+  };
+
   // ── Auto-save ────────────────────────────────────────────────────────────────
 
   const autoSave = {
@@ -3640,6 +3781,7 @@
       $("app-view").classList.remove("hidden");
       await app.loadSettings();
       app.loadTasks();   // preload so [[task: references work from any page
+      taskFolders.load(); // preload sidebar folder list
       notesApp.load();   // preload so global search finds notes immediately
       journal.load();    // preload so global search finds journal entries immediately
       habits.load();     // preload so home dashboard shows habit status
@@ -3691,6 +3833,7 @@
   $("logout-btn").addEventListener("click", () => app.logout());
 
   $("new-task-btn").addEventListener("click", () => modal.open());
+  $("new-task-folder-btn").addEventListener("click", () => taskFolders.promptNew());
 
   $("modal-close").addEventListener("click", () => modal.close());
   $("cancel-btn").addEventListener("click", () => modal.close());
@@ -3736,6 +3879,7 @@
       due_date:      $("task-due").value || undefined,
       notifications,
     };
+    if (!state.editingId && state.currentFolderID) body.folder_id = state.currentFolderID;
 
     $("save-btn").disabled = true;
     $("save-btn").textContent = "Saving...";
@@ -6801,7 +6945,16 @@
       if (name === "home")     { renderHome(); }
       if (name === "admin")    { if (!admin.loaded) admin.load(); }
       if (name === "settings") renderSettings();
-      if (name === "tasks"   && state.tasks.length === 0) app.loadTasks();
+      if (name === "tasks") {
+        if (taskFolders.data.length === 0) taskFolders.load();
+        else {
+          if (!state.currentFolderID && taskFolders.data.length > 0)
+            state.currentFolderID = taskFolders.data[0].folder_id;
+          taskFolders.renderTree();
+        }
+        if (state.tasks.length === 0) app.loadTasks();
+        else renderTasks();
+      }
       if (name === "habits"  && habits.data.length === 0) habits.load();
       if (name === "goals"   && goals.data.length === 0) goals.load();
       if (name === "notes"   && notesApp.folders.length === 0) notesApp.load();

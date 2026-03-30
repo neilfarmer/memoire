@@ -14,7 +14,8 @@ resource "aws_lambda_function" "tasks" {
 
   environment {
     variables = {
-      TABLE_NAME = aws_dynamodb_table.tasks.name
+      TABLE_NAME    = aws_dynamodb_table.tasks.name
+      FOLDERS_TABLE = aws_dynamodb_table.task_folders.name
     }
   }
 }
@@ -40,7 +41,10 @@ resource "aws_iam_role_policy" "tasks_dynamodb" {
         "dynamodb:DeleteItem",
         "dynamodb:Query",
       ]
-      Resource = aws_dynamodb_table.tasks.arn
+      Resource = [
+        aws_dynamodb_table.tasks.arn,
+        aws_dynamodb_table.task_folders.arn,
+      ]
     }]
   })
 }
@@ -70,6 +74,10 @@ locals {
     "GET /tasks/{id}",
     "PUT /tasks/{id}",
     "DELETE /tasks/{id}",
+    "GET /tasks/folders",
+    "POST /tasks/folders",
+    "PUT /tasks/folders/{id}",
+    "DELETE /tasks/folders/{id}",
   ]
 }
 
