@@ -1734,6 +1734,66 @@
       flex-direction: column;
     }
 
+    .day-view {
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .day-view-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .day-view-date {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .day-section {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .day-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg);
+      font-size: 13px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    .day-section-body {
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .day-view-empty { font-size: 13px; color: var(--muted); }
+    .day-view-mood  { font-size: 13px; color: var(--muted); }
+    .day-view-title { font-size: 14px; font-weight: 600; }
+    .day-view-preview {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .day-view-exercise { font-size: 13px; }
+    .day-view-ex-name  { font-weight: 500; }
+    .day-view-ex-detail { color: var(--muted); margin-left: 6px; }
+    .day-view-meal { display: flex; justify-content: space-between; font-size: 13px; }
+    .day-view-meal-cal { color: var(--muted); font-size: 12px; }
+    .day-view-totals { font-size: 12px; color: var(--muted); margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--border); }
+    .day-view-notes  { font-size: 12px; color: var(--muted); margin-top: 4px; font-style: italic; }
+    .day-section-loading { padding: 40px; display: flex; justify-content: center; }
+
     .journal-cal-legend {
       display: flex;
       gap: 12px;
@@ -2634,7 +2694,7 @@
         <div class="journal-cal-legend-item"><span class="cal-dot cal-dot-nutrition"></span> Nutrition</div>
       </div>
     </div>
-    <div class="journal-right">
+    <div class="journal-right" id="journal-right">
       <div class="health-empty-state">
         <p>Select a day to view or write an entry.</p>
       </div>
@@ -4815,6 +4875,7 @@
     saveTimer: null,
     isDirty: false,
     currentDate: null,
+    selectedDate: null,
     isPreviewing: false,
 
     async load() {
@@ -4875,13 +4936,14 @@
       for (let d = 1; d <= daysInMon; d++) {
         const dateStr      = `${year}-${String(month + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
         const isToday      = dateStr === today;
+        const isSelected   = dateStr === journal.selectedDate;
         const hasEntry     = dates.has(dateStr);
         const hasExercise  = healthDates.has(dateStr);
         const hasNutrition = nutritionDates.has(dateStr);
         const hasDots      = hasEntry || hasExercise || hasNutrition;
         cells += `
-          <div class="cal-day ${isToday ? "cal-today" : ""} ${hasEntry ? "cal-has-entry" : ""}"
-               onclick="journal.openEntry('${dateStr}')">
+          <div class="cal-day ${isToday ? "cal-today" : ""} ${hasEntry ? "cal-has-entry" : ""} ${isSelected ? "cal-selected" : ""}"
+               onclick="journal.openDay('${dateStr}')">
             <span>${d}</span>
             ${hasDots ? `<div class="cal-day-dots">
               ${hasEntry     ? `<span class="cal-dot"></span>` : ""}
@@ -4967,6 +5029,116 @@
       }
     },
 
+    openDay(dateStr) {
+      journal.selectedDate = dateStr;
+      journal.renderCalendar();
+
+      const dateLabel = new Date(dateStr + "T12:00:00").toLocaleDateString(undefined, {
+        weekday: "long", year: "numeric", month: "long", day: "numeric"
+      });
+
+      $("journal-right").innerHTML = `
+        <div class="day-view">
+          <div class="day-view-header">
+            <span class="day-view-date">${dateLabel}</span>
+          </div>
+          <div id="day-view-sections">
+            <div class="day-section-loading"><div class="spinner"></div></div>
+          </div>
+        </div>`;
+
+      Promise.allSettled([
+        api.call("GET", `/journal/${dateStr}`).catch(() => null),
+        api.call("GET", `/health/${dateStr}`).catch(() => null),
+        api.call("GET", `/nutrition/${dateStr}`).catch(() => null),
+      ]).then(([jRes, hRes, nRes]) => {
+        const sections = $("day-view-sections");
+        if (!sections) return;
+
+        const entry    = jRes.status === "fulfilled" ? jRes.value : null;
+        const workout  = hRes.status === "fulfilled" ? hRes.value : null;
+        const nutLog   = nRes.status === "fulfilled" ? nRes.value : null;
+
+        // Journal
+        let journalBody;
+        if (entry) {
+          journalBody =
+            (entry.mood  ? `<div class="day-view-mood">${escHtml(entry.mood)}</div>` : "") +
+            (entry.title ? `<div class="day-view-title">${escHtml(entry.title)}</div>` : "") +
+            (entry.preview ? `<div class="day-view-preview">${escHtml(entry.preview)}</div>` : "");
+        } else {
+          journalBody = `<div class="day-view-empty">No entry for this day.</div>`;
+        }
+
+        // Exercise
+        let exerciseBody;
+        if (workout) {
+          const exItems = (workout.exercises || []).map(ex => {
+            const sets = (ex.sets || []).filter(s => s.reps || s.weight)
+              .map(s => `${s.reps ?? "—"} reps${s.weight ? ` × ${s.weight} lbs` : ""}`)
+              .join(", ");
+            const dur = ex.duration_min ? `${ex.duration_min} min` : "";
+            const detail = [sets, dur].filter(Boolean).join(" · ");
+            return `<div class="day-view-exercise">
+              <span class="day-view-ex-name">${escHtml(ex.name || "Unnamed")}</span>
+              ${detail ? `<span class="day-view-ex-detail">${detail}</span>` : ""}
+            </div>`;
+          }).join("");
+          exerciseBody = exItems || `<div class="day-view-empty">No exercises recorded.</div>`;
+          if (workout.notes) exerciseBody += `<div class="day-view-notes">${escHtml(workout.notes)}</div>`;
+        } else {
+          exerciseBody = `<div class="day-view-empty">No workout logged.</div>`;
+        }
+
+        // Nutrition
+        let nutritionBody;
+        if (nutLog) {
+          const meals = nutLog.meals || [];
+          const mealItems = meals.map(m => `
+            <div class="day-view-meal">
+              <span>${escHtml(m.name || "Unnamed meal")}</span>
+              ${m.calories ? `<span class="day-view-meal-cal">${m.calories} cal</span>` : ""}
+            </div>`).join("");
+          const cal  = meals.reduce((s, m) => s + (m.calories  || 0), 0);
+          const prot = meals.reduce((s, m) => s + (m.protein_g || 0), 0);
+          const totals = [cal ? `${cal} cal` : "", prot ? `${prot}g protein` : ""].filter(Boolean).join(" · ");
+          nutritionBody = mealItems || `<div class="day-view-empty">No meals recorded.</div>`;
+          if (totals) nutritionBody += `<div class="day-view-totals">${totals}</div>`;
+        } else {
+          nutritionBody = `<div class="day-view-empty">No meals logged.</div>`;
+        }
+
+        sections.innerHTML = `
+          <div class="day-section">
+            <div class="day-section-header">
+              <span>Journal</span>
+              <button class="btn btn-secondary btn-sm" onclick="journal.openEntry('${dateStr}')">
+                ${entry ? "Edit" : "Write"}
+              </button>
+            </div>
+            <div class="day-section-body">${journalBody}</div>
+          </div>
+          <div class="day-section">
+            <div class="day-section-header">
+              <span>Exercise</span>
+              <button class="btn btn-secondary btn-sm" onclick="pages.show('health'); health.openLog('${dateStr}')">
+                ${workout ? "Edit" : "Log"}
+              </button>
+            </div>
+            <div class="day-section-body">${exerciseBody}</div>
+          </div>
+          <div class="day-section">
+            <div class="day-section-header">
+              <span>Nutrition</span>
+              <button class="btn btn-secondary btn-sm" onclick="pages.show('nutrition'); nutrition.openLog('${dateStr}')">
+                ${nutLog ? "Edit" : "Log"}
+              </button>
+            </div>
+            <div class="day-section-body">${nutritionBody}</div>
+          </div>`;
+      });
+    },
+
     closeEntry() {
       clearTimeout(journal.saveTimer);
       $("entry-overlay").classList.add("hidden");
@@ -5018,6 +5190,7 @@
         renderJournalStreaks();
         journal.isDirty = false;
         $("entry-status").textContent = "Saved";
+        if (journal.selectedDate === journal.currentDate) journal.openDay(journal.selectedDate);
         $("entry-delete-btn").classList.remove("hidden");
       } catch (e) {
         $("entry-status").textContent = e.message;
@@ -5032,10 +5205,12 @@
       if (!await confirmDialog("Delete this entry?")) return;
       try {
         await api.call("DELETE", `/journal/${journal.currentDate}`);
-        journal.entries = journal.entries.filter(e => e.entry_date !== journal.currentDate);
+        const deleted = journal.currentDate;
+        journal.entries = journal.entries.filter(e => e.entry_date !== deleted);
         journal.renderCalendar();
         journal.renderEntryList();
         journal.closeEntry();
+        if (journal.selectedDate === deleted) journal.openDay(deleted);
       } catch (e) {
         $("entry-status").textContent = e.message;
       }
