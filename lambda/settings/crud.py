@@ -12,6 +12,7 @@ DEFAULTS = {
     "dark_mode":        False,
     "ntfy_url":         "",
     "autosave_seconds": 300,
+    "timezone":         "",
 }
 
 ALLOWED_KEYS = set(DEFAULTS.keys())

@@ -2770,6 +2770,13 @@
           <span class="toggle-track"></span>
         </label>
       </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Timezone</div>
+          <div class="settings-desc">Used for date calculations throughout the app</div>
+        </div>
+        <select id="timezone-select" style="min-width:220px;"></select>
+      </div>
     </div>
     <div class="settings-section">
       <div class="settings-section-title">Notifications</div>
@@ -3184,7 +3191,10 @@
   }
 
   function todayStr() {
-    return new Date().toISOString().slice(0, 10);
+    const tz = state.settings?.timezone;
+    if (tz) return new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
 
   function isOverdue(dueDate) {
@@ -3589,6 +3599,7 @@
           const secs = settings.autosave_seconds ?? 300;
           $("autosave-select").value = String(secs);
           autoSave.start(secs);
+          $("timezone-select").value = settings.timezone || "";
         }
       } catch (e) {
         console.error("Failed to load settings:", e);
@@ -3762,7 +3773,7 @@
     msg.classList.add("hidden");
     try {
       const blob = await api.downloadExport();
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayStr();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -3790,6 +3801,25 @@
       await api.updateSettings({ autosave_seconds: secs });
     } catch (e) {
       console.error("Failed to save autosave setting:", e);
+    }
+  });
+
+  // ── Timezone select ──────────────────────────────────────────────────────────
+  (function initTimezoneSelect() {
+    const sel      = $("timezone-select");
+    const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const zones    = Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : [];
+    sel.innerHTML  = `<option value="">Auto-detect (${detected})</option>` +
+      zones.map(tz => `<option value="${tz}">${tz.replace(/_/g, ' ')}</option>`).join('');
+  })();
+
+  $("timezone-select").addEventListener("change", async () => {
+    const tz = $("timezone-select").value;
+    state.settings = { ...state.settings, timezone: tz };
+    try {
+      await api.updateSettings({ timezone: tz });
+    } catch (e) {
+      console.error("Failed to save timezone setting:", e);
     }
   });
 
@@ -4828,7 +4858,7 @@
 
     renderCalendar() {
       const { year, month } = journal.calMonth;
-      const today          = new Date().toISOString().slice(0, 10);
+      const today          = todayStr();
       const dates          = journal.entryDates();
       const healthDates    = new Set((health.logs    || []).map(l => l.log_date));
       const nutritionDates = new Set((nutrition.logs || []).map(l => l.log_date));
@@ -5040,7 +5070,7 @@
 
   // Journal event listeners
   $("journal-today-btn").addEventListener("click", () => {
-    journal.openEntry(new Date().toISOString().slice(0, 10));
+    journal.openEntry(todayStr());
   });
 
   $("entry-close-btn").addEventListener("click",   () => journal.closeEntry());
@@ -5089,7 +5119,7 @@
     renderCalendar() {
       if (!$("health-calendar")) return;
       const { year, month } = health.calMonth;
-      const today    = new Date().toISOString().slice(0, 10);
+      const today    = todayStr();
       const dates    = health.logDates();
       const names    = ["January","February","March","April","May","June",
                         "July","August","September","October","November","December"];
@@ -5314,7 +5344,7 @@
   };
 
   $("health-today-btn").addEventListener("click", () => {
-    health.openLog(new Date().toISOString().slice(0, 10));
+    health.openLog(todayStr());
   });
   $("health-save-btn").addEventListener("click",   () => health.save());
   $("health-delete-btn").addEventListener("click", () => health.deleteLog());
@@ -5351,7 +5381,7 @@
     renderCalendar() {
       if (!$("nutrition-calendar")) return;
       const { year, month } = nutrition.calMonth;
-      const today    = new Date().toISOString().slice(0, 10);
+      const today    = todayStr();
       const dates    = nutrition.logDates();
       const names    = ["January","February","March","April","May","June",
                         "July","August","September","October","November","December"];
@@ -5575,7 +5605,7 @@
   };
 
   $("nutrition-today-btn").addEventListener("click", () => {
-    nutrition.openLog(new Date().toISOString().slice(0, 10));
+    nutrition.openLog(todayStr());
   });
   $("nutrition-save-btn").addEventListener("click",   () => nutrition.save());
   $("nutrition-delete-btn").addEventListener("click", () => nutrition.deleteLog());
@@ -5634,7 +5664,7 @@
                 </div>
               </div>
               <button class="btn-done ${h.done_today ? 'is-done' : ''}"
-                onclick="habits.toggle('${h.habit_id}', '${new Date().toISOString().slice(0,10)}', this)">
+                onclick="habits.toggle('${h.habit_id}', '${todayStr()}', this)">
                 ${h.done_today ? "Done" : "Mark done"}
               </button>
               <button class="btn btn-secondary btn-sm"
@@ -6241,12 +6271,12 @@
   }
 
   function renderHomeDashboard() {
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const today = todayStr();
     const grid = $("home-grid");
 
     // ── Tasks widget ──────────────────────────────────────────────────────────
     const activeTasks = state.tasks.filter(t => t.status !== "done");
-    const dueTodayTasks = activeTasks.filter(t => t.due_date === todayStr);
+    const dueTodayTasks = activeTasks.filter(t => t.due_date === today);
     const inProgress    = activeTasks.filter(t => t.status === "in_progress");
     const taskItems = [...new Map([...dueTodayTasks, ...inProgress].map(t => [t.task_id, t])).values()].slice(0, 5);
     const tasksHtml = taskItems.length
@@ -6255,12 +6285,12 @@
 
     // ── Habits widget ─────────────────────────────────────────────────────────
     const totalHabits = habits.data.length;
-    const doneToday   = habits.data.filter(h => h.last_completed === todayStr).length;
+    const doneToday   = habits.data.filter(h => h.last_completed === today).length;
     const habitsHtml  = totalHabits
       ? `<div class="home-widget-stat">${doneToday}<span style="font-size:16px;font-weight:400;color:var(--muted)"> / ${totalHabits}</span></div>
          <div class="home-widget-sublabel">completed today</div>
          ${habits.data.slice(0, 5).map(h => {
-           const done = h.last_completed === todayStr;
+           const done = h.last_completed === today;
            return `<div class="home-widget-item ${done ? 'muted' : ''}" onclick="pages.show('habits')">${done ? '&#10003; ' : ''}${escHtml(h.name)}</div>`;
          }).join("")}`
       : `<div class="home-widget-empty">No habits set up</div>`;
@@ -6270,16 +6300,16 @@
     if (journal.entries.length) {
       const dates = new Set(journal.entries.map(e => e.entry_date));
       let d = new Date(); d.setHours(0,0,0,0);
-      while (dates.has(d.toISOString().slice(0,10))) {
+      while (dates.has(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`)) {
         streak++;
         d.setDate(d.getDate() - 1);
       }
     }
-    const todayEntry = journal.entries.find(e => e.entry_date === todayStr);
+    const todayEntry = journal.entries.find(e => e.entry_date === today);
     const journalHtml = `
       <div class="home-widget-stat">${streak}</div>
       <div class="home-widget-sublabel">day streak</div>
-      <div class="home-widget-item" onclick="journal.openEntry('${todayStr}')" style="color:var(--primary);font-weight:500;">
+      <div class="home-widget-item" onclick="journal.openEntry('${today}')" style="color:var(--primary);font-weight:500;">
         ${todayEntry ? "Edit today's entry" : "Write today's entry"}
       </div>`;
 
@@ -6287,7 +6317,7 @@
     const activeGoals = goals.data.filter(g => g.status === "active");
     const goalsHtml = activeGoals.length
       ? activeGoals.slice(0, 5).map(g => {
-          const overdue = g.target_date && g.target_date < todayStr && g.status === "active";
+          const overdue = g.target_date && g.target_date < today && g.status === "active";
           return `<div class="home-widget-item${overdue ? " overdue" : ""}" onclick="goalModal.open('${g.goal_id}')">${escHtml(g.title)}</div>`;
         }).join("")
       : `<div class="home-widget-empty">${goals.data.length ? "No active goals" : "No goals set"}</div>`;
@@ -6502,7 +6532,9 @@
     if (!dates.size) { $("journal-streaks").classList.add("hidden"); return; }
 
     const today = new Date();
-    const toStr = d => d.toISOString().slice(0, 10);
+    const tz    = state.settings?.timezone;
+    const toStr = d => tz ? new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(d)
+                          : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const prev  = d => { const x = new Date(d); x.setDate(x.getDate() - 1); return x; };
 
     // Current streak — walk back from today (or yesterday if today not written)
