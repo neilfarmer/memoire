@@ -3057,9 +3057,15 @@
           </select>
         </div>
       </div>
-      <div class="field">
-        <label for="task-due">Due date</label>
-        <input type="date" id="task-due" />
+      <div class="field-row">
+        <div class="field">
+          <label for="task-due">Due date</label>
+          <input type="date" id="task-due" />
+        </div>
+        <div class="field">
+          <label for="task-folder">Folder</label>
+          <select id="task-folder"></select>
+        </div>
       </div>
 
       <!-- Notifications (only shown when ntfy is configured) -->
@@ -3603,6 +3609,16 @@
         $("notif-section").classList.add("hidden");
       }
 
+      // Populate folder dropdown
+      const folderSel = $("task-folder");
+      folderSel.innerHTML = taskFolders.data.map(f =>
+        `<option value="${f.folder_id}">${escHtml(f.name)}</option>`
+      ).join("");
+      const taskFolderId = taskId
+        ? (state.tasks.find(t => t.task_id === taskId) || {}).folder_id
+        : state.currentFolderID;
+      folderSel.value = taskFolderId || (taskFolders.data[0]?.folder_id ?? "");
+
       $("modal-overlay").classList.remove("hidden");
       $("task-title").focus();
     },
@@ -3881,7 +3897,8 @@
       due_date:      $("task-due").value || undefined,
       notifications,
     };
-    if (!state.editingId && state.currentFolderID) body.folder_id = state.currentFolderID;
+    const selectedFolder = $("task-folder").value;
+    if (selectedFolder) body.folder_id = selectedFolder;
 
     $("save-btn").disabled = true;
     $("save-btn").textContent = "Saving...";
