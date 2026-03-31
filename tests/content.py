@@ -50,6 +50,10 @@ def ok(r: requests.Response, expected: int, label: str) -> dict:
 # ── Deploy ────────────────────────────────────────────────────────────────────
 
 def deploy(token: str, api_url: str) -> None:
+    if os.path.exists(IDS_FILE):
+        print(f"\n{BOLD}Existing content found — cleaning up first…{RESET}")
+        destroy(token, api_url)
+
     ids = {
         "task_folders": [], "tasks": [],
         "habits": [],
@@ -156,7 +160,7 @@ def deploy(token: str, api_url: str) -> None:
         {"date": "2099-03-20", "mood": "good",   "title": "Side project momentum",
          "body": "Put two hours into the finance tracker after work. The CSV parser is coming together. Monzo and Revolut formats done, Barclays is next.",
          "tags": ["side-project", "coding"]},
-        {"date": "2099-03-22", "mood": "tired",  "title": "Low energy",
+        {"date": "2099-03-22", "mood": "bad",    "title": "Low energy",
          "body": "Didn't sleep well. Got through the essentials but nothing creative. Skipped the run but did stretch. Sometimes you just have to do less.",
          "tags": ["health", "rest", "self-compassion"]},
         {"date": "2099-03-25", "mood": "great",  "title": "Strong week finish",
