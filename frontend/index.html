@@ -1543,7 +1543,7 @@
       display: flex;
       align-items: center;
       gap: 4px;
-      padding: 5px 6px;
+      padding: 7px 6px;
       border-radius: var(--radius);
       cursor: pointer;
       user-select: none;
@@ -3681,6 +3681,7 @@
         <div class="tree-folder-row ${f.folder_id === state.currentFolderID ? "active" : ""}"
              data-folder-id="${f.folder_id}"
              onclick="taskFolders.select('${f.folder_id}')">
+          <span class="tree-arrow"><svg viewBox="0 0 10 10" fill="currentColor" style="opacity:0.35"><circle cx="5" cy="5" r="2.5"/></svg></span>
           <span class="tree-folder-name">${escHtml(f.name)}</span>
           <div class="tree-actions">
             <button class="tree-action-btn" title="Rename"
