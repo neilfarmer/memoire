@@ -182,8 +182,8 @@ def _extract_token(event: dict) -> str:
     # Authorization header — used by PAT clients and PAT API users
     auth_header = headers.get("authorization") or headers.get("Authorization") or ""
     auth_header = auth_header.strip()
-    if auth_header.lower().startswith("bearer "):
-        auth_header = auth_header[7:].strip()
+    if auth_header.lower().startswith("bearer"):
+        auth_header = auth_header[6:].strip()  # strip "bearer" + any surrounding whitespace
     if auth_header:
         return auth_header
 
