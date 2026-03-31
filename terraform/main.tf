@@ -47,6 +47,10 @@ locals {
   # api_url used in config.js — custom domain when enabled, raw invoke URL otherwise.
   api_url = local.custom_domain_enabled ? "https://${local.api_domain}" : trimprefix(aws_apigatewayv2_stage.default.invoke_url, "/")
 
+  # frontend_origin used for CORS allow_origins and cookie validation.
+  # Must be the exact origin (scheme + host, no trailing slash) of the frontend.
+  frontend_origin = local.custom_domain_enabled ? "https://${local.frontend_domain}" : "https://${aws_cloudfront_distribution.frontend.domain_name}"
+
   # ── Auth ──────────────────────────────────────────────────────────────────────
   # When auth_provider = cognito, derive JWT config from managed Cognito resources.
   # When auth_provider = oidc, use the caller-supplied auth_oidc_* variables.

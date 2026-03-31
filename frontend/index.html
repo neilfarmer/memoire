@@ -3141,31 +3141,29 @@
 <script>
   const cfg = window.MEMOIRE_CONFIG;
 
-  // ── Auth (OAuth PKCE) ────────────────────────────────────────────────────────
+  // ── Auth (OAuth PKCE + HttpOnly cookie session) ──────────────────────────────
+  //
+  // Tokens are stored in HttpOnly cookies set by the /auth/callback Lambda proxy —
+  // JavaScript never has access to the JWT. Only non-sensitive user info (email,
+  // sub, exp) is kept in localStorage so the UI can display it without an extra
+  // round-trip on every page load.
 
   const auth = {
-    getToken()        { return localStorage.getItem("memoire_token"); },
-    setToken(t)       { localStorage.setItem("memoire_token", t); },
-    getRefreshToken() { return localStorage.getItem("memoire_refresh"); },
-    setRefreshToken(t){ localStorage.setItem("memoire_refresh", t); },
-    clear() {
-      localStorage.removeItem("memoire_token");
-      localStorage.removeItem("memoire_refresh");
-      localStorage.removeItem("memoire_pkce_verifier");
+    // ── User info (non-sensitive, safe in localStorage) ──────────────────────
+    getUserInfo() {
+      try { return JSON.parse(localStorage.getItem("memoire_user") || "null"); }
+      catch { return null; }
     },
+    _saveUserInfo(info) { localStorage.setItem("memoire_user", JSON.stringify(info)); },
+    _clearUserInfo()    { localStorage.removeItem("memoire_user"); },
 
-    getPayload() {
-      try {
-        const token = auth.getToken();
-        if (!token) return null;
-        return JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-      } catch { return null; }
-    },
-    getEmail() {
-      const p = auth.getPayload();
-      return p ? (p.email || p["cognito:username"] || null) : null;
-    },
+    isLoggedIn()  { return !!this.getUserInfo(); },
+    getEmail()    { return this.getUserInfo()?.email || null; },
+    // Returns the stored user info object (email, sub, exp) in place of the old
+    // full JWT payload — callers should only use email, sub, and exp fields.
+    getPayload()  { return this.getUserInfo(); },
 
+    // ── PKCE helpers ─────────────────────────────────────────────────────────
     _randomString(len = 64) {
       const arr = new Uint8Array(len);
       crypto.getRandomValues(arr);
@@ -3177,15 +3175,16 @@
       return btoa(String.fromCharCode(...new Uint8Array(hash))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
     },
 
+    // ── Login / callback / logout ─────────────────────────────────────────────
     async login() {
-      const verifier = auth._randomString(64);
+      const verifier  = auth._randomString(64);
       const challenge = await auth._pkceChallenge(verifier);
-      localStorage.setItem("memoire_pkce_verifier", verifier);
+      sessionStorage.setItem("memoire_pkce_verifier", verifier);
       const params = new URLSearchParams({
-        response_type: "code",
-        client_id:     cfg.cognitoClientId,
-        redirect_uri:  window.location.origin + "/",
-        scope:         "openid email profile",
+        response_type:         "code",
+        client_id:             cfg.cognitoClientId,
+        redirect_uri:          window.location.origin + "/",
+        scope:                 "openid email profile",
         code_challenge:        challenge,
         code_challenge_method: "S256",
       });
@@ -3193,31 +3192,35 @@
     },
 
     async handleCallback(code) {
-      const verifier = localStorage.getItem("memoire_pkce_verifier");
-      localStorage.removeItem("memoire_pkce_verifier");
-      const res = await fetch(`${cfg.authDomain}/oauth2/token`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          grant_type:    "authorization_code",
-          client_id:     cfg.cognitoClientId,
-          redirect_uri:  window.location.origin + "/",
+      const verifier = sessionStorage.getItem("memoire_pkce_verifier");
+      sessionStorage.removeItem("memoire_pkce_verifier");
+      const apiBase = cfg.apiUrl.replace(/\/$/, "");
+      const res = await fetch(`${apiBase}/auth/callback`, {
+        method:      "POST",
+        credentials: "include",
+        headers:     { "Content-Type": "application/json" },
+        body:        JSON.stringify({
           code,
+          redirect_uri:  window.location.origin + "/",
           code_verifier: verifier,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Token exchange failed");
-      auth.setToken(data.id_token);
-      auth.setRefreshToken(data.refresh_token);
+      // Store non-sensitive user info for display; the JWT lives in an HttpOnly cookie.
+      auth._saveUserInfo({ email: data.email, sub: data.sub, exp: data.exp });
       window.history.replaceState({}, "", "/");
     },
 
-    logout() {
-      auth.clear();
+    async logout() {
+      try {
+        const apiBase = cfg.apiUrl.replace(/\/$/, "");
+        await fetch(`${apiBase}/auth/logout`, { method: "POST", credentials: "include" });
+      } catch { /* best-effort */ }
+      auth._clearUserInfo();
       const params = new URLSearchParams({
-        client_id:   cfg.cognitoClientId,
-        logout_uri:  window.location.origin + "/",
+        client_id:  cfg.cognitoClientId,
+        logout_uri: window.location.origin + "/",
       });
       window.location.href = `${cfg.authDomain}/logout?${params}`;
     },
@@ -3230,10 +3233,8 @@
       const apiBase = cfg.apiUrl.replace(/\/$/, "");
       const res = await fetch(`${apiBase}${path}`, {
         method,
-        headers: {
-          Authorization: auth.getToken(),
-          "Content-Type": "application/json",
-        },
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: body != null ? JSON.stringify(body) : undefined,
       });
 
@@ -3260,7 +3261,7 @@
 
     async downloadExport() {
       const resp = await fetch(`${cfg.apiUrl.replace(/\/$/, "")}/export`, {
-        headers: { Authorization: auth.getToken() },
+        credentials: "include",
       });
       if (!resp.ok) throw new Error(`Export failed: ${resp.status}`);
       return resp.blob();
@@ -3803,7 +3804,7 @@
       if (code) {
         await auth.handleCallback(code);
       }
-      if (auth.getToken()) {
+      if (auth.isLoggedIn()) {
         await app.showApp();
       } else {
         app.showLogin();
@@ -4603,7 +4604,7 @@
       if (!src.startsWith("note-images/")) return;
       try {
         const res = await fetch(`${apiBase}/notes/images?key=${encodeURIComponent(src)}`, {
-          headers: { Authorization: auth.getToken() },
+          credentials: "include",
         });
         if (res.ok) img.src = URL.createObjectURL(await res.blob());
       } catch (e) { console.error("Failed to load note image", e); }
@@ -4672,7 +4673,7 @@
       if (!noteId) return;
       const apiBase = cfg.apiUrl.replace(/\/$/, "");
       const res = await fetch(`${apiBase}/notes/${noteId}/attachments/${attId}`, {
-        headers: { Authorization: auth.getToken() },
+        credentials: "include",
       });
       if (!res.ok) { console.error("Download failed", res.status); return; }
       const blob = await res.blob();
