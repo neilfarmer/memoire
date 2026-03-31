@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: deploy deploy-auto invalidate destroy test
+.PHONY: deploy deploy-auto invalidate destroy test test-unit
 
 deploy:
 	@bash -c 'source scripts/load-env.sh && cd terraform && terraform apply'
@@ -14,6 +14,9 @@ invalidate:
 
 destroy:
 	@bash -c 'source scripts/load-env.sh && cd terraform && terraform destroy'
+
+test-unit:
+	python -m pytest tests/test_auth_handler.py tests/test_authorizer.py -v
 
 test:
 	TEST_PAT=$(TEST_PAT) python tests/test_api.py

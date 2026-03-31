@@ -114,17 +114,18 @@ def _verify_jwt(token: str) -> str | None:
     # Validate expiry, issuer, and audience
     now = time.time()
     if payload.get("exp", 0) < now:
-        logger.debug("JWT expired")
+        logger.warning("JWT rejected: expired (sub=%s)", payload.get("sub"))
         return None
     if payload.get("iss") != JWT_ISSUER:
-        logger.debug("JWT issuer mismatch")
+        logger.warning("JWT rejected: issuer mismatch (got %s)", payload.get("iss"))
         return None
     aud = payload.get("aud") or payload.get("client_id")
     if isinstance(aud, list):
         if JWT_AUDIENCE not in aud:
+            logger.warning("JWT rejected: audience mismatch")
             return None
     elif aud != JWT_AUDIENCE:
-        logger.debug("JWT audience mismatch")
+        logger.warning("JWT rejected: audience mismatch (got %s)", aud)
         return None
 
     # Locate the matching public key by kid
@@ -173,15 +174,34 @@ def _verify_pat(token: str) -> str | None:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def lambda_handler(event: dict, context) -> dict:
-    identity_source = event.get("identitySource", "")
-    token: str = (identity_source[0] if isinstance(identity_source, list) else identity_source).strip()
+def _extract_token(event: dict) -> str:
+    """Return the raw token string from either the Authorization header (PATs)
+    or the memoire_token cookie (browser JWT), preferring Authorization."""
+    headers = event.get("headers") or {}
 
-    # Strip "Bearer " prefix if present
-    if token.lower().startswith("bearer "):
-        token = token[7:].strip()
+    # Authorization header — used by PAT clients and PAT API users
+    auth_header = headers.get("authorization") or headers.get("Authorization") or ""
+    auth_header = auth_header.strip()
+    if auth_header.lower().startswith("bearer"):
+        auth_header = auth_header[6:].strip()  # strip "bearer" + any surrounding whitespace
+    if auth_header:
+        return auth_header
+
+    # Cookie — used by browser sessions (HttpOnly cookie set by /auth/callback)
+    cookie_header = headers.get("cookie") or headers.get("Cookie") or ""
+    for part in cookie_header.split(";"):
+        k, _, v = part.strip().partition("=")
+        if k.strip() == "memoire_token":
+            return v.strip()
+
+    return ""
+
+
+def lambda_handler(event: dict, context) -> dict:
+    token = _extract_token(event)
 
     if not token:
+        logger.warning("Auth rejected: no token in Authorization header or cookie")
         return {"isAuthorized": False}
 
     try:
@@ -194,6 +214,7 @@ def lambda_handler(event: dict, context) -> dict:
         return {"isAuthorized": False}
 
     if not user_id:
+        logger.warning("Auth rejected: token validation failed")
         return {"isAuthorized": False}
 
     return {
