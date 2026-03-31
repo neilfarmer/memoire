@@ -20,4 +20,6 @@ jobs:
         run: pip install requests
 
       - name: Run integration tests
-        run: make test TEST_PAT=${{ secrets.TEST_PAT }}
+        env:
+          TEST_PAT: ${{ secrets.TEST_PAT }}
+        run: make test TEST_PAT=$TEST_PAT
