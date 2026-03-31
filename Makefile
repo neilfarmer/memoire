@@ -16,4 +16,10 @@ destroy:
 	@bash -c 'source scripts/load-env.sh && cd terraform && terraform destroy'
 
 test:
-	source .env && python tests/test_api.py
+	TEST_PAT=$(TEST_PAT) python tests/test_api.py
+
+test-deploy-content:
+	TEST_PAT=$(TEST_PAT) python tests/content.py deploy
+
+test-destroy-content:
+	TEST_PAT=$(TEST_PAT) python tests/content.py destroy

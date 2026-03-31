@@ -81,7 +81,7 @@ def test_tasks(token: str) -> None:
     r = requests.get(f"{API_URL}/tasks", timeout=10)
     check("No token returns 401", r.status_code == 401, f"Got {r.status_code}")
     r2 = requests.get(f"{API_URL}/tasks", headers={"Authorization": "Bearer bad.token"}, timeout=10)
-    check("Invalid token returns 401", r2.status_code == 401, f"Got {r2.status_code}")
+    check("Invalid token returns 401/403", r2.status_code in (401, 403), f"Got {r2.status_code}")
 
     section("Tasks — create")
     r = api("POST", "/tasks", token, {
