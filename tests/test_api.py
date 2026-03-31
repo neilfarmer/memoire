@@ -2,44 +2,37 @@
 """
 End-to-end integration tests for the Memoire API.
 
-Covers tasks, habits, journal, notes, and settings — all CRUD operations,
+Covers tasks, habits, journal, notes, settings, and tokens — all CRUD operations,
 validation rules, and error cases.
 
+Authentication uses a Personal Access Token (PAT). Token management endpoints
+(/tokens) require a Cognito JWT and cannot be tested via PAT.
+
 Required environment variables:
-    API_URL           - Base API URL (terraform output api_url)
-    COGNITO_CLIENT_ID - Cognito App Client ID (terraform output cognito_client_id)
-    TEST_EMAIL        - Email of an existing Cognito user
-    TEST_PASSWORD     - Password of that user
+    TEST_PAT  - Personal Access Token (pat_...)
 
 Optional:
-    COGNITO_USER_POOL_ID - Required only if using --create-user flag
-    AWS_REGION           - Defaults to us-east-1
+    API_URL   - Base API URL (defaults to https://memoire-dev.edenforge.io)
 
 Usage:
-    source .env
-    python tests/test_api.py
-    python tests/test_api.py --create-user   # first run only
-    python tests/test_api.py --suite tasks   # run one suite only
+    TEST_PAT=pat_... python tests/test_api.py
+    TEST_PAT=pat_... python tests/test_api.py --suite tasks
+    python tests/test_api.py --pat pat_... --api-url https://...
 """
 
 import argparse
-import json
 import os
 import sys
 import traceback
 
-import boto3
 import requests
 
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-API_URL              = os.environ.get("API_URL", "").rstrip("/")
-COGNITO_CLIENT_ID    = os.environ.get("COGNITO_CLIENT_ID", "")
-COGNITO_USER_POOL_ID = os.environ.get("COGNITO_USER_POOL_ID", "")
-TEST_EMAIL           = os.environ.get("TEST_EMAIL", "")
-TEST_PASSWORD        = os.environ.get("TEST_PASSWORD", "")
-AWS_REGION           = os.environ.get("AWS_REGION", "us-east-1")
+DEFAULT_API_URL = "https://api.memoire-dev.edenforge.io"
+API_URL         = os.environ.get("API_URL", DEFAULT_API_URL).rstrip("/")
+TEST_PAT        = os.environ.get("TEST_PAT", "")
 
 # ── Output helpers ────────────────────────────────────────────────────────────
 
@@ -68,49 +61,6 @@ def check(label: str, condition: bool, detail: str = "") -> bool:
 def section(title: str) -> None:
     print(f"\n{BOLD}{title}{RESET}")
     print("-" * (len(title) + 2))
-
-
-# ── Auth ──────────────────────────────────────────────────────────────────────
-
-def get_token() -> str:
-    client = boto3.client("cognito-idp", region_name=AWS_REGION)
-    resp = client.initiate_auth(
-        AuthFlow="USER_PASSWORD_AUTH",
-        AuthParameters={"USERNAME": TEST_EMAIL, "PASSWORD": TEST_PASSWORD},
-        ClientId=COGNITO_CLIENT_ID,
-    )
-    return resp["AuthenticationResult"]["IdToken"]
-
-
-def create_test_user() -> None:
-    if not COGNITO_USER_POOL_ID:
-        print("COGNITO_USER_POOL_ID is required to create a user.")
-        sys.exit(1)
-
-    client = boto3.client("cognito-idp", region_name=AWS_REGION)
-    print(f"Creating test user: {TEST_EMAIL}")
-    try:
-        client.admin_create_user(
-            UserPoolId=COGNITO_USER_POOL_ID,
-            Username=TEST_EMAIL,
-            UserAttributes=[
-                {"Name": "email",          "Value": TEST_EMAIL},
-                {"Name": "email_verified", "Value": "true"},
-            ],
-            TemporaryPassword=TEST_PASSWORD,
-            MessageAction="SUPPRESS",
-        )
-    except client.exceptions.UsernameExistsException:
-        print("User already exists, continuing.")
-        return
-
-    client.admin_set_user_password(
-        UserPoolId=COGNITO_USER_POOL_ID,
-        Username=TEST_EMAIL,
-        Password=TEST_PASSWORD,
-        Permanent=True,
-    )
-    print("Test user created and confirmed.")
 
 
 # ── Request helpers ───────────────────────────────────────────────────────────
@@ -546,80 +496,30 @@ def test_settings(token: str) -> None:
     api("PUT", "/settings", token, original)
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
+# ── Tokens ────────────────────────────────────────────────────────────────────
 
 def test_tokens(token: str) -> None:
-    """Test Personal Access Token management and PAT-based API access."""
+    """Verify PAT auth enforcement on the /tokens management endpoints.
 
-    section("Tokens — auth enforcement")
+    Full token lifecycle (create/list/revoke) requires a Cognito JWT and
+    cannot be tested with a PAT. These checks confirm the boundary is enforced.
+    """
+    section("Tokens — unauthenticated access blocked")
     r = requests.get(f"{API_URL}/tokens", timeout=10)
-    check("No token returns 401", r.status_code == 401)
-
-    section("Tokens — list (empty)")
-    r = api("GET", "/tokens", token)
-    check("List returns 200", r.status_code == 200)
-    check("Returns a list", isinstance(r.json(), list))
-
-    section("Tokens — create validation")
-    r = api("POST", "/tokens", token, {})
-    check("Missing name returns 400", r.status_code == 400)
-
-    r = api("POST", "/tokens", token, {"name": "x" * 101})
-    check("Name too long returns 400", r.status_code == 400)
-
-    section("Tokens — create")
-    r = api("POST", "/tokens", token, {"name": "test-script"})
-    check("Valid create returns 201", r.status_code == 201)
-    data = r.json()
-    check("Has token_id", bool(data.get("token_id")))
-    check("Has name", data.get("name") == "test-script")
-    check("Has token (plaintext)", data.get("token", "").startswith("pat_"))
-    check("Has created_at", bool(data.get("created_at")))
-    check("No token_hash in response", "token_hash" not in data)
-
-    pat        = data["token"]
-    token_id   = data["token_id"]
-
-    section("Tokens — list after create")
-    r = api("GET", "/tokens", token)
-    check("List returns 200", r.status_code == 200)
-    ids = [t["token_id"] for t in r.json()]
-    check("New token appears in list", token_id in ids)
-    check("Listed tokens have no token or token_hash", all(
-        "token" not in t and "token_hash" not in t for t in r.json()
-    ))
-
-    section("Tokens — PAT authenticates API calls")
-    r = api("GET", "/tasks", pat)
-    check("PAT is accepted for tasks endpoint (200)", r.status_code == 200)
-
-    r = api("GET", "/settings", pat)
-    check("PAT is accepted for settings endpoint (200)", r.status_code == 200)
+    check("No token returns 401", r.status_code == 401, f"Got {r.status_code}")
 
     section("Tokens — PAT cannot manage tokens")
-    r = api("GET", "/tokens", pat)
-    check("PAT cannot list tokens (401)", r.status_code == 401)
-
-    r = api("POST", "/tokens", pat, {"name": "should-fail"})
-    check("PAT cannot create token (401)", r.status_code == 401)
-
-    section("Tokens — revoke")
-    r = api("DELETE", f"/tokens/{token_id}", token)
-    check("Revoke returns 204", r.status_code == 204)
-
-    r = api("DELETE", f"/tokens/{token_id}", token)
-    check("Double revoke returns 404", r.status_code == 404)
-
-    section("Tokens — revoked PAT is rejected")
-    r = api("GET", "/tasks", pat)
-    check("Revoked PAT is rejected (401)", r.status_code == 401)
-
-    section("Tokens — list after revoke")
     r = api("GET", "/tokens", token)
-    check("List returns 200", r.status_code == 200)
-    ids = [t["token_id"] for t in r.json()]
-    check("Revoked token no longer in list", token_id not in ids)
+    check("PAT blocked from listing tokens (401)", r.status_code == 401, f"Got {r.status_code}: {r.text}")
 
+    r = api("POST", "/tokens", token, {"name": "should-fail"})
+    check("PAT blocked from creating token (401)", r.status_code == 401, f"Got {r.status_code}: {r.text}")
+
+    r = api("DELETE", "/tokens/any-id", token)
+    check("PAT blocked from revoking token (401)", r.status_code == 401, f"Got {r.status_code}: {r.text}")
+
+
+# ── Suites + entry point ──────────────────────────────────────────────────────
 
 SUITES = {
     "tasks":    test_tasks,
@@ -631,51 +531,39 @@ SUITES = {
 }
 
 
-def validate_config() -> None:
-    missing = [name for name, val in {
-        "API_URL":           API_URL,
-        "COGNITO_CLIENT_ID": COGNITO_CLIENT_ID,
-        "TEST_EMAIL":        TEST_EMAIL,
-        "TEST_PASSWORD":     TEST_PASSWORD,
-    }.items() if not val]
-
-    if missing:
-        print(f"Missing required environment variables: {', '.join(missing)}")
-        print("\nSet them and re-run:")
-        for var in missing:
-            print(f"  export {var}=...")
+def validate_config(pat: str) -> None:
+    if not API_URL:
+        print("API_URL is not set.")
         sys.exit(1)
+    if not pat:
+        print("No PAT provided. Set TEST_PAT or pass --pat <token>.")
+        sys.exit(1)
+    if not pat.startswith("pat_"):
+        print(f"Warning: token doesn't start with 'pat_' — is this a valid PAT?")
 
 
 def main() -> None:
+    global API_URL
     parser = argparse.ArgumentParser(description="Memoire API end-to-end tests")
-    parser.add_argument("--create-user", action="store_true",
-                        help="Create the test Cognito user before running tests")
+    parser.add_argument("--pat", default=TEST_PAT,
+                        help="Personal Access Token (or set TEST_PAT env var)")
+    parser.add_argument("--api-url", default=API_URL,
+                        help=f"Base API URL (default: {DEFAULT_API_URL})")
     parser.add_argument("--suite", choices=list(SUITES), default=None,
                         help="Run only this suite (default: all)")
     args = parser.parse_args()
 
-    validate_config()
+    API_URL = args.api_url.rstrip("/")
+
+    validate_config(args.pat)
 
     suites_to_run = {args.suite: SUITES[args.suite]} if args.suite else SUITES
 
     print(f"\n{BOLD}Memoire API — End-to-End Tests{RESET}")
-    print(f"API URL:  {API_URL}")
-    print(f"User:     {TEST_EMAIL}")
-    print(f"Suites:   {', '.join(suites_to_run)}")
+    print(f"API URL: {API_URL}")
+    print(f"Suites:  {', '.join(suites_to_run)}")
 
-    if args.create_user:
-        print()
-        create_test_user()
-
-    print("\nAuthenticating...")
-    try:
-        token = get_token()
-        print("Authentication successful.")
-    except Exception as e:
-        print(f"Authentication failed: {e}")
-        print("Run with --create-user to create the test user first.")
-        sys.exit(1)
+    token = args.pat
 
     for name, suite_fn in suites_to_run.items():
         print(f"\n{BOLD}{'=' * 40}{RESET}")

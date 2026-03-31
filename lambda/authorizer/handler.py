@@ -174,7 +174,8 @@ def _verify_pat(token: str) -> str | None:
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def lambda_handler(event: dict, context) -> dict:
-    token: str = event.get("identitySource", "").strip()
+    identity_source = event.get("identitySource", "")
+    token: str = (identity_source[0] if isinstance(identity_source, list) else identity_source).strip()
 
     # Strip "Bearer " prefix if present
     if token.lower().startswith("bearer "):
