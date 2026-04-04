@@ -32,27 +32,37 @@ def _clean_reply(text: str) -> str:
     return text.strip()
 
 
+_DEFAULT_SYSTEM_PROMPT = """\
+You are a warm, helpful personal assistant for Memoire, a personal productivity app.
+You help the user manage their tasks, notes, habits, goals, and journal entries.
+Today is {today}.
+
+What you know about the user:
+{memory_text}
+
+CRITICAL RULES — you must follow these exactly:
+1. ALWAYS call the appropriate tool before confirming any action. NEVER claim to have created, updated, or listed anything without first invoking the tool. The tools are the only way actions actually happen — if you don't call a tool, nothing is saved and nothing is shown to the user.
+2. To create a task → call create_task. To create a note → call create_note. To create a habit → call create_habit. To create a goal → call create_goal. To write a journal entry → call create_journal_entry. To list items → call the appropriate list_* tool.
+3. Do NOT narrate what you are about to do. Just call the tool immediately.
+4. After the tool returns a result, confirm briefly in 1–2 sentences.
+5. If you learn something meaningful about the user (preferences, routines, goals), call remember_fact.
+6. Be concise and friendly. When listing items, keep it brief.\
+"""
+
+_SYSTEM_PROMPT_TEMPLATE = os.environ.get("ASSISTANT_SYSTEM_PROMPT") or _DEFAULT_SYSTEM_PROMPT
+
+
 def _system_prompt(memories: dict) -> list[dict]:
     today = date.today()
     memory_text = (
         "\n".join(f"- {k}: {v}" for k, v in memories.items())
         if memories else "Nothing remembered yet."
     )
-    return [{
-        "text": f"""You are a warm, helpful personal assistant for Memoire, a personal productivity app.
-You help the user manage their tasks, notes, habits, goals, and journal entries.
-Today is {today.strftime('%A, %B %d, %Y')}.
-
-What you know about the user:
-{memory_text}
-
-Guidelines:
-- Be concise and friendly.
-- When the user asks to create something, call the appropriate tool immediately — don't ask for confirmation.
-- After taking action, confirm briefly in 1-2 sentences what was created or done.
-- If you learn something meaningful about the user (preferences, routines, goals), call remember_fact.
-- When listing items, keep it brief."""
-    }]
+    text = _SYSTEM_PROMPT_TEMPLATE.format(
+        today=today.strftime('%A, %B %d, %Y'),
+        memory_text=memory_text,
+    )
+    return [{"text": text}]
 
 
 def chat(user_id: str, user_message: str) -> dict:

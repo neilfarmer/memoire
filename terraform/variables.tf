@@ -156,3 +156,9 @@ variable "assistant_model_id" {
   default     = "amazon.nova-lite-v1:0"
 }
 
+variable "assistant_system_prompt" {
+  description = "System prompt for the AI assistant. Overrides the default prompt baked into the Lambda code."
+  type        = string
+  default     = ""
+}
+
