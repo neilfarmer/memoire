@@ -147,3 +147,9 @@ data "archive_file" "lambda_tokens" {
   source_dir  = "${path.module}/../lambda/tokens"
   output_path = "${path.module}/../build/tokens.zip"
 }
+
+data "archive_file" "lambda_assistant" {
+  type        = "zip"
+  source_dir  = "${path.module}/../lambda/assistant"
+  output_path = "${path.module}/../build/assistant.zip"
+}

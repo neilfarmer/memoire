@@ -2521,6 +2521,130 @@
     .modal {
       border: 1px solid var(--border);
     }
+
+    /* ── AI Pal chat widget ── */
+    #pal-btn {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 900;
+      font-size: 22px;
+      transition: background 0.15s, transform 0.15s;
+    }
+    #pal-btn:hover { background: var(--primary-h); transform: scale(1.05); }
+    #pal-window {
+      position: fixed;
+      bottom: 84px;
+      left: 24px;
+      width: 340px;
+      height: 480px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+      display: flex;
+      flex-direction: column;
+      z-index: 900;
+      overflow: hidden;
+    }
+    #pal-window.hidden { display: none; }
+    #pal-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    #pal-header span { flex: 1; }
+    #pal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1;
+      padding: 2px 4px;
+    }
+    #pal-close:hover { color: var(--text); }
+    #pal-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .pal-msg {
+      max-width: 85%;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .pal-msg-user {
+      background: var(--primary);
+      color: #fff;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+    .pal-msg-assistant {
+      background: var(--bg);
+      color: var(--text);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+    .pal-msg-typing {
+      background: var(--bg);
+      color: var(--muted);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+      font-style: italic;
+    }
+    #pal-form {
+      padding: 10px 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+    }
+    #pal-input {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+      background: var(--bg);
+      color: var(--text);
+      resize: none;
+      font-family: inherit;
+      line-height: 1.4;
+    }
+    #pal-input:focus { outline: none; border-color: var(--primary); }
+    #pal-send {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 12px;
+      cursor: pointer;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    #pal-send:hover { background: var(--primary-h); }
+    #pal-send:disabled { opacity: 0.5; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -3921,11 +4045,13 @@
     showLogin() {
       $("login-view").classList.remove("hidden");
       $("app-view").classList.add("hidden");
+      document.dispatchEvent(new Event("pal:hide"));
     },
 
     async showApp() {
       $("login-view").classList.add("hidden");
       $("app-view").classList.remove("hidden");
+      document.dispatchEvent(new Event("pal:show"));
       await app.loadSettings();
       app.loadTasks();   // preload so [[task: references work from any page
       taskFolders.load(); // preload sidebar folder list
@@ -7266,6 +7392,102 @@
   theme.set(theme.get());
   pomodoro.init();
   app.init();
+</script>
+
+<!-- ── AI Pal widget ── -->
+<button id="pal-btn" title="Chat with your AI pal" aria-label="AI assistant" class="hidden">🤖</button>
+<div id="pal-window" class="hidden">
+  <div id="pal-header">
+    <span>✨ AI Pal</span>
+    <button id="pal-close" aria-label="Close">✕</button>
+  </div>
+  <div id="pal-messages"></div>
+  <form id="pal-form">
+    <textarea id="pal-input" rows="1" placeholder="Ask me anything…" autocomplete="off"></textarea>
+    <button id="pal-send" type="submit">↑</button>
+  </form>
+</div>
+
+<script>
+  (function () {
+    const palBtn     = document.getElementById("pal-btn");
+    const palWindow  = document.getElementById("pal-window");
+    const palClose   = document.getElementById("pal-close");
+    const palForm    = document.getElementById("pal-form");
+    const palInput   = document.getElementById("pal-input");
+    const palSend    = document.getElementById("pal-send");
+    const palMsgs    = document.getElementById("pal-messages");
+
+    let palOpen = false;
+
+    function palToggle() {
+      palOpen = !palOpen;
+      palWindow.classList.toggle("hidden", !palOpen);
+      if (palOpen) {
+        palInput.focus();
+        if (palMsgs.children.length === 0) palAddMsg("assistant", "Hi! I'm your AI pal. I can create tasks, notes, habits, goals, and journal entries for you. What would you like to do?");
+      }
+    }
+
+    function palAddMsg(role, text) {
+      const div = document.createElement("div");
+      div.className = "pal-msg pal-msg-" + role;
+      div.textContent = text;
+      palMsgs.appendChild(div);
+      palMsgs.scrollTop = palMsgs.scrollHeight;
+      return div;
+    }
+
+    async function palSendMsg() {
+      const msg = palInput.value.trim();
+      if (!msg) return;
+
+      palAddMsg("user", msg);
+      palInput.value = "";
+      palInput.style.height = "";
+      palSend.disabled = true;
+
+      const typing = palAddMsg("typing", "Thinking…");
+
+      try {
+        const res  = await api.call("POST", "/assistant/chat", { message: msg });
+        typing.remove();
+        if (res && res.reply) {
+          palAddMsg("assistant", res.reply);
+        } else {
+          palAddMsg("assistant", "Sorry, something went wrong. Try again.");
+        }
+      } catch (e) {
+        typing.remove();
+        palAddMsg("assistant", "Network error. Please try again.");
+      } finally {
+        palSend.disabled = false;
+        palInput.focus();
+      }
+    }
+
+    palBtn.addEventListener("click", palToggle);
+    palClose.addEventListener("click", palToggle);
+
+    palForm.addEventListener("submit", e => { e.preventDefault(); palSendMsg(); });
+
+    palInput.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        palSendMsg();
+      }
+    });
+
+    // Auto-resize textarea
+    palInput.addEventListener("input", () => {
+      palInput.style.height = "";
+      palInput.style.height = Math.min(palInput.scrollHeight, 100) + "px";
+    });
+
+    // Hide pal when not logged in
+    document.addEventListener("pal:hide", () => palBtn.classList.add("hidden"));
+    document.addEventListener("pal:show", () => palBtn.classList.remove("hidden"));
+  })();
 </script>
 </body>
 </html>
