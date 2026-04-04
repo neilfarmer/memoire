@@ -85,25 +85,53 @@ Memory:
 _SYSTEM_PROMPT_TEMPLATE = os.environ.get("ASSISTANT_SYSTEM_PROMPT") or _DEFAULT_SYSTEM_PROMPT
 
 
-def _system_prompt(memories: dict) -> list[dict]:
+def _system_prompt(memories: dict, master_context: str) -> list[dict]:
     today = date.today()
     memory_text = (
         "\n".join(f"- {k}: {v}" for k, v in memories.items())
         if memories else "Nothing remembered yet."
     )
+    context_section = f"\n\nWhat I know about you (big picture):\n{master_context}" if master_context else ""
     text = _SYSTEM_PROMPT_TEMPLATE.format(
         today=today.strftime('%A, %B %d, %Y'),
         memory_text=memory_text,
-    )
+    ) + context_section
     return [{"text": text}]
+
+
+def _update_master_context(user_id: str, existing_context: str, facts: dict, user_message: str, reply: str) -> None:
+    """Summarize what we know about the user and persist it."""
+    facts_text = "\n".join(f"- {k}: {v}" for k, v in facts.items()) if facts else "None"
+    existing   = f"\n\nExisting summary:\n{existing_context}" if existing_context else ""
+
+    prompt = (
+        f"You are updating a personal profile for an AI assistant. "
+        f"Based on the information below, write a concise 3-5 sentence paragraph summarizing who this person is: "
+        f"their role, interests, goals, habits, preferences, and routines. "
+        f"Focus on durable, personal facts. Do not include task IDs, note IDs, or one-off requests."
+        f"\n\nKnown facts:\n{facts_text}"
+        f"{existing}"
+        f"\n\nLatest exchange:\nUser: {user_message[:400]}\nAssistant: {reply[:400]}"
+        f"\n\nWrite the updated summary paragraph (plain text, no headings):"
+    )
+    try:
+        resp = _bedrock.converse(
+            modelId=MODEL_ID,
+            messages=[{"role": "user", "content": [{"text": prompt}]}],
+            inferenceConfig={"maxTokens": 300},
+        )
+        context = _clean_reply(resp["output"]["message"]["content"][0]["text"].strip())
+        mem.save_master_context(user_id, context)
+    except Exception:
+        logger.warning("Failed to update master context", exc_info=True)
 
 
 def chat(user_id: str, user_message: str) -> dict:
     try:
-        history   = mem.load_history(user_id)
-        memories  = mem.load_memory(user_id)
-        system    = _system_prompt(memories)
-        messages  = history + [{"role": "user", "content": [{"text": user_message}]}]
+        history         = mem.load_history(user_id)
+        facts, master   = mem.load_memory(user_id)
+        system          = _system_prompt(facts, master)
+        messages        = history + [{"role": "user", "content": [{"text": user_message}]}]
 
         reply      = ""
         link_tags  = []  # [pal-link:...] tags collected from tool results
@@ -151,6 +179,7 @@ def chat(user_id: str, user_message: str) -> dict:
             reply = reply.rstrip() + "\n" + " ".join(link_tags)
         mem.save_message(user_id, "user",      user_message)
         mem.save_message(user_id, "assistant", reply)
+        _update_master_context(user_id, master, facts, user_message, reply)
 
         return ok({"reply": reply})
 

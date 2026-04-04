@@ -57,11 +57,21 @@ def save_message(user_id: str, role: str, content: str) -> None:
     })
 
 
-def load_memory(user_id: str) -> dict:
-    """Return {key: value} dict of remembered facts for the user."""
+MASTER_CONTEXT_KEY = "__master_context__"
+
+
+def load_memory(user_id: str) -> tuple[dict, str]:
+    """Return ({key: value} facts dict, master_context string) for the user."""
     table = db.get_table(MEMORY_TABLE)
     items = db.query_by_user(table, user_id)
-    return {item["memory_key"]: item["value"] for item in items}
+    facts  = {}
+    master = ""
+    for item in items:
+        if item["memory_key"] == MASTER_CONTEXT_KEY:
+            master = item.get("value", "")
+        else:
+            facts[item["memory_key"]] = item["value"]
+    return facts, master
 
 
 def save_memory(user_id: str, key: str, value: str) -> None:
@@ -74,3 +84,8 @@ def save_memory(user_id: str, key: str, value: str) -> None:
         "value":      value,
         "updated_at": now,
     })
+
+
+def save_master_context(user_id: str, context: str) -> None:
+    """Persist the master context paragraph."""
+    save_memory(user_id, MASTER_CONTEXT_KEY, context)
