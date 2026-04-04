@@ -74,7 +74,7 @@ def lambda_handler(event, context):
 
         # Skip if already completed today
         log = logs_table.get_item(
-            Key={"habit_id": habit["habit_id"], "log_date": today_str}
+            Key={"user_id": habit["user_id"], "log_id": f"{habit['habit_id']}#{today_str}"}
         ).get("Item")
         if log:
             continue

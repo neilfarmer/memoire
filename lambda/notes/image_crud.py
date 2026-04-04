@@ -3,6 +3,7 @@
 import base64
 import boto3
 import os
+import posixpath
 import uuid
 
 from response import ok, error, not_found
@@ -34,14 +35,19 @@ def generate_upload_url(user_id: str, body: dict) -> dict:
 
 
 def download_image(user_id: str, key: str) -> dict:
-    # Validate the key belongs to this user: note-images/{user_id}/...
-    parts = key.split("/")
+    # Normalize to resolve any ../ traversal sequences before validating.
+    # posixpath.normpath collapses ".." components, so an attack key like
+    # "note-images/USER/../../other/file.png" resolves to "other/file.png",
+    # which then fails the prefix check below.
+    normalized = posixpath.normpath(key)
+
+    parts = normalized.split("/")
     if len(parts) < 3 or parts[0] != "note-images" or parts[1] != user_id:
         return {"statusCode": 403, "headers": {"Content-Type": "application/json"},
                 "body": '{"error":"Forbidden"}', "isBase64Encoded": False}
 
     try:
-        obj = _s3.get_object(Bucket=FRONTEND_BUCKET, Key=key)
+        obj = _s3.get_object(Bucket=FRONTEND_BUCKET, Key=normalized)
         content = obj["Body"].read()
         content_type = obj.get("ContentType", "image/png")
         return {

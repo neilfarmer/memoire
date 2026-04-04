@@ -27,7 +27,7 @@ def tbls():
     with mock_aws():
         ddb = boto3.resource("dynamodb", region_name="us-east-1")
         make_table(ddb, HABITS_TABLE, "user_id", "habit_id")
-        make_table(ddb, LOGS_TABLE, "habit_id", "log_date")
+        make_table(ddb, LOGS_TABLE, "user_id", "log_id")
         yield ddb
 
 
@@ -187,7 +187,7 @@ class TestDeleteHabit:
         crud.delete_habit(USER, habit_id)
         # Log should be gone
         logs_tbl = boto3.resource("dynamodb", region_name="us-east-1").Table(LOGS_TABLE)
-        resp = logs_tbl.get_item(Key={"habit_id": habit_id, "log_date": TODAY})
+        resp = logs_tbl.get_item(Key={"user_id": USER, "log_id": f"{habit_id}#{TODAY}"})
         assert "Item" not in resp
 
 
@@ -248,7 +248,7 @@ class TestBuildHistory:
     @freeze_time(TODAY)
     def test_no_logs_zero_streaks(self, tbls):
         habit_id = json.loads(crud.create_habit(USER, {"name": "Run"})["body"])["habit_id"]
-        history, done_today, current, best = crud._build_history(habit_id, TODAY, THIRTY_AGO)
+        history, done_today, current, best = crud._build_history(USER, habit_id, TODAY, THIRTY_AGO)
         assert current == 0
         assert best == 0
         assert done_today is False
@@ -259,7 +259,7 @@ class TestBuildHistory:
         for i in range(3):
             d = (date.fromisoformat(TODAY) - timedelta(days=i)).isoformat()
             crud.toggle_log(USER, habit_id, {"date": d})
-        _, _, current, best = crud._build_history(habit_id, TODAY, THIRTY_AGO)
+        _, _, current, best = crud._build_history(USER, habit_id, TODAY, THIRTY_AGO)
         assert current == 3
         assert best == 3
 
@@ -272,12 +272,12 @@ class TestBuildHistory:
         crud.toggle_log(USER, habit_id, {"date": TODAY})
         two_ago = (date.fromisoformat(TODAY) - timedelta(days=2)).isoformat()
         crud.toggle_log(USER, habit_id, {"date": two_ago})
-        _, _, current, best = crud._build_history(habit_id, TODAY, THIRTY_AGO)
+        _, _, current, best = crud._build_history(USER, habit_id, TODAY, THIRTY_AGO)
         assert current == 1
         assert best == 1
 
     @freeze_time(TODAY)
     def test_history_length_is_30(self, tbls):
         habit_id = json.loads(crud.create_habit(USER, {"name": "Run"})["body"])["habit_id"]
-        history, _, _, _ = crud._build_history(habit_id, TODAY, THIRTY_AGO)
+        history, _, _, _ = crud._build_history(USER, habit_id, TODAY, THIRTY_AGO)
         assert len(history) == 30

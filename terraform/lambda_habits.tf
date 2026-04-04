@@ -15,7 +15,7 @@ resource "aws_lambda_function" "habits" {
   environment {
     variables = {
       HABITS_TABLE     = aws_dynamodb_table.habits.name
-      HABIT_LOGS_TABLE = aws_dynamodb_table.habit_logs.name
+      HABIT_LOGS_TABLE = aws_dynamodb_table.habit_logs_v2.name
     }
   }
 }
@@ -51,7 +51,7 @@ resource "aws_iam_role_policy" "habits_dynamodb" {
           "dynamodb:DeleteItem",
           "dynamodb:Query",
         ]
-        Resource = aws_dynamodb_table.habit_logs.arn
+        Resource = aws_dynamodb_table.habit_logs_v2.arn
       },
     ]
   })

@@ -25,19 +25,29 @@ def _logs():
     return _dynamodb.Table(HABIT_LOGS_TABLE)
 
 
+def _log_sk(habit_id: str, log_date: str) -> str:
+    """Composite sort key: "{habit_id}#{log_date}"."""
+    return f"{habit_id}#{log_date}"
+
+
 def _window():
     """Return (today_str, thirty_days_ago_str)."""
     today = date.today()
     return today.isoformat(), (today - timedelta(days=29)).isoformat()
 
 
-def _build_history(habit_id: str, today_str: str, thirty_ago_str: str) -> tuple[list, bool, int, int]:
+def _build_history(user_id: str, habit_id: str, today_str: str, thirty_ago_str: str) -> tuple[list, bool, int, int]:
     """Fetch logs and return (history, done_today, current_streak, best_streak)."""
     resp = _logs().query(
-        KeyConditionExpression=Key("habit_id").eq(habit_id)
-            & Key("log_date").between(thirty_ago_str, today_str)
+        KeyConditionExpression=
+            Key("user_id").eq(user_id) &
+            Key("log_id").between(
+                _log_sk(habit_id, thirty_ago_str),
+                _log_sk(habit_id, today_str),
+            )
     )
-    logged = {item["log_date"] for item in resp.get("Items", [])}
+    # Extract the date portion from the composite SK
+    logged = {item["log_id"].split("#")[1] for item in resp.get("Items", [])}
 
     today  = date.fromisoformat(today_str)
     history = [
@@ -72,7 +82,7 @@ def list_habits(user_id: str) -> dict:
 
     for habit in habits:
         history, done_today, current_streak, best_streak = _build_history(
-            habit["habit_id"], today_str, thirty_ago
+            user_id, habit["habit_id"], today_str, thirty_ago
         )
         result.append({
             **habit,
@@ -162,15 +172,15 @@ def delete_habit(user_id: str, habit_id: str) -> dict:
 
     _habits().delete_item(Key={"user_id": user_id, "habit_id": habit_id})
 
-    # Delete all logs for this habit
-    today_str, thirty_ago = _window()
+    # Delete all logs for this habit — query by user_id PK and habit_id# prefix
     resp = _logs().query(
-        KeyConditionExpression=Key("habit_id").eq(habit_id)
-            & Key("log_date").between(thirty_ago, today_str)
+        KeyConditionExpression=
+            Key("user_id").eq(user_id) &
+            Key("log_id").begins_with(f"{habit_id}#")
     )
     with _logs().batch_writer() as batch:
         for item in resp.get("Items", []):
-            batch.delete_item(Key={"habit_id": habit_id, "log_date": item["log_date"]})
+            batch.delete_item(Key={"user_id": user_id, "log_id": item["log_id"]})
 
     return no_content()
 
@@ -196,15 +206,15 @@ def toggle_log(user_id: str, habit_id: str, body: dict) -> dict:
     if log_d > today or log_d < today - timedelta(days=29):
         return error("Date must be within the last 30 days")
 
-    existing = _logs().get_item(
-        Key={"habit_id": habit_id, "log_date": log_date}
-    ).get("Item")
+    log_key = {"user_id": user_id, "log_id": _log_sk(habit_id, log_date)}
+
+    existing = _logs().get_item(Key=log_key).get("Item")
 
     if existing:
-        _logs().delete_item(Key={"habit_id": habit_id, "log_date": log_date})
+        _logs().delete_item(Key=log_key)
         return ok({"logged": False, "date": log_date})
     else:
-        _logs().put_item(Item={"habit_id": habit_id, "log_date": log_date, "user_id": user_id})
+        _logs().put_item(Item={**log_key, "habit_id": habit_id})
         return ok({"logged": True, "date": log_date})
 
 
