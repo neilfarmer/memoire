@@ -41,10 +41,12 @@ resource "aws_cloudfront_response_headers_policy" "security" {
         "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: blob:",
-        # When no custom domain, local.api_url depends on api_gateway_stage which
-        # depends on api_gateway_api which depends on local.frontend_origin which
-        # depends on CloudFront — a cycle. Use https: (any HTTPS) in that case.
-        local.custom_domain_enabled ? "connect-src 'self' ${local.api_url}" : "connect-src 'self' https:",
+        # connect-src uses https: rather than local.api_url to avoid a dependency
+        # cycle: api_gateway_api → local.frontend_origin → cloudfront_distribution
+        # → response_headers_policy → local.api_url → api_gateway_stage → api_gateway_api.
+        # Terraform evaluates both branches of a conditional for graph purposes,
+        # so the conditional approach does not break the cycle — omit api_url entirely.
+        "connect-src 'self' https:",
         "frame-ancestors 'none'",
       ])
       override = true
