@@ -124,6 +124,16 @@ class TestListHabits:
         assert items[0]["done_today"] is True
 
     @freeze_time(TODAY)
+    def test_multiple_habits_all_returned(self, tbls):
+        """Parallel fetch via ThreadPoolExecutor should return all habits."""
+        for name in ("Habit A", "Habit B", "Habit C"):
+            crud.create_habit(USER, {"name": name})
+        items = json.loads(crud.list_habits(USER)["body"])
+        assert len(items) == 3
+        names = {i["name"] for i in items}
+        assert names == {"Habit A", "Habit B", "Habit C"}
+
+    @freeze_time(TODAY)
     def test_isolates_users(self, tbls):
         crud.create_habit(USER, {"name": "Mine"})
         crud.create_habit("other", {"name": "Theirs"})

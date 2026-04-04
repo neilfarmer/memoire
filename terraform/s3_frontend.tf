@@ -41,7 +41,10 @@ resource "aws_cloudfront_response_headers_policy" "security" {
         "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: blob:",
-        "connect-src 'self' ${local.api_url}",
+        # When no custom domain, local.api_url depends on api_gateway_stage which
+        # depends on api_gateway_api which depends on local.frontend_origin which
+        # depends on CloudFront — a cycle. Use https: (any HTTPS) in that case.
+        local.custom_domain_enabled ? "connect-src 'self' ${local.api_url}" : "connect-src 'self' https:",
         "frame-ancestors 'none'",
       ])
       override = true
