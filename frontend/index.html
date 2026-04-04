@@ -6999,6 +6999,79 @@
           </div>`;
       }
 
+      // Bedrock / AI usage card
+      if (stats?.bedrock) {
+        const b = stats.bedrock;
+        const fmtTokens = n => n == null ? "—" : n >= 1000000 ? `${(n/1000000).toFixed(2)}M` : n >= 1000 ? `${(n/1000).toFixed(1)}K` : n;
+        const fmtCost   = n => n == null ? "—" : n < 0.001 ? "<$0.001" : `$${n.toFixed(4)}`;
+        const fmtMs     = n => n == null ? "—" : `${n.toLocaleString()} ms`;
+        const fmtSec    = n => n == null ? "—" : `${n}s`;
+        const fmtPct    = n => n == null ? "—" : `${n}%`;
+
+        const model = b.model_id || "—";
+
+        // Sparkline for daily input tokens
+        const daily = b.daily_input_tokens || [];
+        let spark = "";
+        if (daily.length >= 2) {
+          const W = 300, H = 36, pad = 2;
+          const vals = daily.map(d => d.value);
+          const max  = Math.max(...vals, 1);
+          const pts  = vals.map((v, i) => {
+            const x = pad + (i / (vals.length - 1)) * (W - pad * 2);
+            const y = pad + (1 - v / max) * (H - pad * 2);
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+          }).join(" ");
+          spark = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:36px;margin-top:8px;" preserveAspectRatio="none">
+            <polyline points="${pts}" fill="none" stroke="var(--primary)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+          </svg>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">Daily input tokens (7d)</div>`;
+        }
+
+        html += `
+          <div class="admin-card" style="grid-column: span 2;">
+            <div class="admin-card-title">AI Pal — Bedrock Usage</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:12px;font-family:monospace;">${escHtml(model)}</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px;">
+              <div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Input tokens (7d)</div>
+                <div style="font-size:16px;font-weight:700;">${fmtTokens(b.input_tokens_7d)}</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Output tokens (7d)</div>
+                <div style="font-size:16px;font-weight:700;">${fmtTokens(b.output_tokens_7d)}</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Est. cost (7d)</div>
+                <div style="font-size:16px;font-weight:700;">${fmtCost(b.estimated_cost_7d)}</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Est. cost (30d)</div>
+                <div style="font-size:16px;font-weight:700;">${fmtCost(b.estimated_cost_30d)}</div>
+              </div>
+            </div>
+            ${spark}
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+              <div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Invocations (7d)</div>
+                <div style="font-weight:600;">${b.invocations_7d?.toLocaleString() ?? "—"}</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Avg duration</div>
+                <div style="font-weight:600;">${fmtSec(b.avg_duration_sec)}</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Avg latency</div>
+                <div style="font-weight:600;">${fmtMs(b.avg_latency_ms)}</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Error rate</div>
+                <div style="font-weight:600;${b.error_rate_pct > 5 ? 'color:var(--danger)' : ''}">${fmtPct(b.error_rate_pct)}</div>
+              </div>
+            </div>
+          </div>`;
+      }
+
       $("admin-grid").innerHTML = html || `<div class="admin-card"><p style="color:var(--muted);font-size:14px;">No data available.</p></div>`;
     },
   };
