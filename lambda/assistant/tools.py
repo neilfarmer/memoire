@@ -175,6 +175,127 @@ TOOL_SPECS = [
     },
     {
         "toolSpec": {
+            "name": "complete_task",
+            "description": "Mark a task as done. Use list_tasks first to find the task_id.",
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "The task_id to mark as done"},
+                    },
+                    "required": ["task_id"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "delete_task",
+            "description": "Permanently delete a task. Use list_tasks first to find the task_id.",
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "The task_id to delete"},
+                    },
+                    "required": ["task_id"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "list_notes",
+            "description": "List the user's notes, optionally filtered by folder.",
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "folder_name": {"type": "string", "description": "Filter notes by folder name (optional)"},
+                    },
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "delete_note",
+            "description": "Permanently delete a note. Use list_notes first to find the note_id.",
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "note_id": {"type": "string", "description": "The note_id to delete"},
+                    },
+                    "required": ["note_id"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "toggle_habit",
+            "description": "Mark a habit as completed for today (or un-complete it if already done). Use list_habits first to find the habit_id.",
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "habit_id": {"type": "string", "description": "The habit_id to toggle"},
+                    },
+                    "required": ["habit_id"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "delete_habit",
+            "description": "Permanently delete a habit. Use list_habits first to find the habit_id.",
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "habit_id": {"type": "string", "description": "The habit_id to delete"},
+                    },
+                    "required": ["habit_id"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "update_goal_progress",
+            "description": "Update the progress percentage (0-100) or status of a goal. Use list_goals first to find the goal_id.",
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "goal_id":  {"type": "string", "description": "The goal_id to update"},
+                        "progress": {"type": "integer", "description": "Progress percentage 0-100"},
+                        "status":   {"type": "string", "enum": ["active", "completed", "abandoned"]},
+                    },
+                    "required": ["goal_id"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "delete_goal",
+            "description": "Permanently delete a goal. Use list_goals first to find the goal_id.",
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "goal_id": {"type": "string", "description": "The goal_id to delete"},
+                    },
+                    "required": ["goal_id"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
             "name": "remember_fact",
             "description": "Remember a fact about the user for future conversations.",
             "inputSchema": {
@@ -198,13 +319,21 @@ def handle_tool(user_id: str, name: str, inputs: dict) -> str:
     handlers = {
         "create_task":          _create_task,
         "list_tasks":           _list_tasks,
+        "complete_task":        _complete_task,
+        "delete_task":          _delete_task,
         "create_note":          _create_note,
+        "list_notes":           _list_notes,
+        "delete_note":          _delete_note,
         "create_note_folder":   _create_note_folder,
         "list_note_folders":    _list_note_folders,
         "create_habit":         _create_habit,
         "list_habits":          _list_habits,
+        "toggle_habit":         _toggle_habit,
+        "delete_habit":         _delete_habit,
         "create_goal":          _create_goal,
         "list_goals":           _list_goals,
+        "update_goal_progress": _update_goal_progress,
+        "delete_goal":          _delete_goal,
         "create_journal_entry": _create_journal_entry,
         "remember_fact":        _remember_fact,
     }
@@ -377,6 +506,133 @@ def _list_goals(user_id: str, inputs: dict) -> str:
         target_date = f" → {g['target_date']}" if g.get("target_date") else ""
         lines.append(f"- {g['title']} ({progress}%){target_date}")
     return "\n".join(lines)
+
+
+def _complete_task(user_id: str, inputs: dict) -> str:
+    table = db.get_table(TASKS_TABLE)
+    task_id = inputs["task_id"]
+    existing = db.get_item(table, user_id, "task_id", task_id)
+    if not existing:
+        return f"Task {task_id} not found."
+    table.update_item(
+        Key={"user_id": user_id, "task_id": task_id},
+        UpdateExpression="SET #s = :s, updated_at = :u",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={":s": "done", ":u": _now()},
+    )
+    return f"Marked '{existing.get('title', task_id)}' as done."
+
+
+def _delete_task(user_id: str, inputs: dict) -> str:
+    table = db.get_table(TASKS_TABLE)
+    task_id = inputs["task_id"]
+    existing = db.get_item(table, user_id, "task_id", task_id)
+    if not existing:
+        return f"Task {task_id} not found."
+    db.delete_item(table, user_id, "task_id", task_id)
+    return f"Deleted task '{existing.get('title', task_id)}'."
+
+
+def _list_notes(user_id: str, inputs: dict) -> str:
+    notes_table   = db.get_table(NOTES_TABLE)
+    folders_table = db.get_table(NOTE_FOLDERS_TABLE)
+    notes = db.query_by_user(notes_table, user_id)
+
+    folder_name = inputs.get("folder_name")
+    if folder_name:
+        folders = db.query_by_user(folders_table, user_id)
+        folder_id = next(
+            (f["folder_id"] for f in folders if f.get("name", "").lower() == folder_name.strip().lower()),
+            None,
+        )
+        if not folder_id:
+            return f"No folder named '{folder_name}' found."
+        notes = [n for n in notes if n.get("folder_id") == folder_id]
+
+    if not notes:
+        return "No notes found."
+    lines = [f"- [{n['note_id']}] {n.get('title', '(untitled)')}" for n in notes[:20]]
+    return "\n".join(lines)
+
+
+def _delete_note(user_id: str, inputs: dict) -> str:
+    table = db.get_table(NOTES_TABLE)
+    note_id = inputs["note_id"]
+    existing = db.get_item(table, user_id, "note_id", note_id)
+    if not existing:
+        return f"Note {note_id} not found."
+    db.delete_item(table, user_id, "note_id", note_id)
+    return f"Deleted note '{existing.get('title', note_id)}'."
+
+
+def _toggle_habit(user_id: str, inputs: dict) -> str:
+    table    = db.get_table(HABITS_TABLE)
+    habit_id = inputs["habit_id"]
+    existing = db.get_item(table, user_id, "habit_id", habit_id)
+    if not existing:
+        return f"Habit {habit_id} not found."
+    today = date.today().isoformat()
+    history: list = existing.get("completion_history", [])
+    if today in history:
+        history.remove(today)
+        action = "un-completed"
+    else:
+        history.append(today)
+        action = "completed"
+    table.update_item(
+        Key={"user_id": user_id, "habit_id": habit_id},
+        UpdateExpression="SET completion_history = :h",
+        ExpressionAttributeValues={":h": history},
+    )
+    return f"{action.capitalize()} habit '{existing.get('name', habit_id)}' for today."
+
+
+def _delete_habit(user_id: str, inputs: dict) -> str:
+    table    = db.get_table(HABITS_TABLE)
+    habit_id = inputs["habit_id"]
+    existing = db.get_item(table, user_id, "habit_id", habit_id)
+    if not existing:
+        return f"Habit {habit_id} not found."
+    db.delete_item(table, user_id, "habit_id", habit_id)
+    return f"Deleted habit '{existing.get('name', habit_id)}'."
+
+
+def _update_goal_progress(user_id: str, inputs: dict) -> str:
+    table   = db.get_table(GOALS_TABLE)
+    goal_id = inputs["goal_id"]
+    existing = db.get_item(table, user_id, "goal_id", goal_id)
+    if not existing:
+        return f"Goal {goal_id} not found."
+    updates = ["updated_at = :u"]
+    values  = {":u": _now()}
+    if "progress" in inputs:
+        updates.append("progress = :p")
+        values[":p"] = inputs["progress"]
+    if "status" in inputs:
+        updates.append("#s = :s")
+        values[":s"] = inputs["status"]
+    table.update_item(
+        Key={"user_id": user_id, "goal_id": goal_id},
+        UpdateExpression="SET " + ", ".join(updates),
+        ExpressionAttributeNames={"#s": "status"} if "status" in inputs else {},
+        ExpressionAttributeValues=values,
+    )
+    parts = []
+    if "progress" in inputs:
+        parts.append(f"progress to {inputs['progress']}%")
+    if "status" in inputs:
+        parts.append(f"status to {inputs['status']}")
+    return f"Updated goal '{existing.get('title', goal_id)}': {', '.join(parts)}."
+
+
+def _delete_goal(user_id: str, inputs: dict) -> str:
+    table   = db.get_table(GOALS_TABLE)
+    goal_id = inputs["goal_id"]
+    existing = db.get_item(table, user_id, "goal_id", goal_id)
+    if not existing:
+        return f"Goal {goal_id} not found."
+    db.delete_item(table, user_id, "goal_id", goal_id)
+    return f"Deleted goal '{existing.get('title', goal_id)}'."
 
 
 def _create_journal_entry(user_id: str, inputs: dict) -> str:
