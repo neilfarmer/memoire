@@ -4,6 +4,16 @@
 # These routes are intentionally unauthenticated — the browser is not yet
 # authenticated when it calls /auth/callback.
 
+resource "aws_iam_role" "auth" {
+  name               = "${local.name_prefix}-auth"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+}
+
+resource "aws_iam_role_policy_attachment" "auth_basic" {
+  role       = aws_iam_role.auth.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
 data "archive_file" "lambda_auth" {
   type        = "zip"
   source_dir  = "${path.module}/../lambda/auth"
@@ -14,7 +24,7 @@ resource "aws_lambda_function" "auth" {
   function_name    = "${local.name_prefix}-auth"
   runtime          = var.lambda_runtime
   handler          = "handler.lambda_handler"
-  role             = aws_iam_role.lambda_exec.arn
+  role             = aws_iam_role.auth.arn
   filename         = data.archive_file.lambda_auth.output_path
   source_code_hash = data.archive_file.lambda_auth.output_base64sha256
   timeout          = 15

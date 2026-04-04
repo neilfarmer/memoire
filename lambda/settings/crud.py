@@ -1,6 +1,9 @@
 """Settings CRUD operations against DynamoDB."""
 
+import ipaddress
 import os
+import socket
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 import db
@@ -22,6 +25,36 @@ def _table():
     return db.get_table(TABLE_NAME)
 
 
+def _validate_ntfy_url(url: str) -> str | None:
+    """Return an error string if the URL is unsafe, or None if it's acceptable."""
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return "ntfy_url is not a valid URL"
+
+    if parsed.scheme != "https":
+        return "ntfy_url must use HTTPS"
+
+    hostname = parsed.hostname
+    if not hostname:
+        return "ntfy_url has no hostname"
+
+    try:
+        ip = socket.gethostbyname(hostname)
+    except socket.gaierror:
+        return f"ntfy_url hostname could not be resolved: {hostname}"
+
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return "ntfy_url resolved to an invalid IP address"
+
+    if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
+        return "ntfy_url must not point to a private or reserved address"
+
+    return None
+
+
 def get_settings(user_id: str) -> dict:
     item = _table().get_item(Key={"user_id": user_id}).get("Item")
     if not item:
@@ -35,6 +68,11 @@ def update_settings(user_id: str, body: dict) -> dict:
 
     if not fields:
         return ok(DEFAULTS)
+
+    if "ntfy_url" in fields and fields["ntfy_url"]:
+        err = _validate_ntfy_url(fields["ntfy_url"])
+        if err:
+            return error(err)
 
     set_parts = []
     names     = {}
@@ -67,6 +105,10 @@ def test_notification(user_id: str, body: dict) -> dict:
 
     if not ntfy_url:
         return error("No ntfy URL configured")
+
+    err = _validate_ntfy_url(ntfy_url)
+    if err:
+        return error(err)
 
     try:
         req = Request(

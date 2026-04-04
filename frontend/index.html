@@ -8,6 +8,7 @@
   <link rel="apple-touch-icon" href="/icon.svg"/>
   <script src="/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
@@ -4623,7 +4624,7 @@
           : `<a href="#" class="note-ref note-ref-task" data-task-ref="${safeId}">${safeLabel}</a>`;
       }
     );
-    return marked.parse(processed);
+    return DOMPurify.sanitize(marked.parse(processed));
   }
 
   function formatBytes(b) {
@@ -5406,7 +5407,7 @@
     togglePreview() {
       journal.isPreviewing = !journal.isPreviewing;
       if (journal.isPreviewing) {
-        $("entry-preview-pane").innerHTML = marked.parse($("entry-body-input").value || "");
+        $("entry-preview-pane").innerHTML = DOMPurify.sanitize(marked.parse($("entry-body-input").value || ""));
         $("entry-preview-pane").classList.add("show");
         $("entry-body-input").classList.add("hide");
         $("entry-preview-btn").textContent = "Edit";

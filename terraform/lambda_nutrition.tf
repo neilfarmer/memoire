@@ -1,10 +1,20 @@
 # ── Nutrition Lambda ──────────────────────────────────────────────────────────
 
+resource "aws_iam_role" "nutrition" {
+  name               = "${local.name_prefix}-nutrition"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+}
+
+resource "aws_iam_role_policy_attachment" "nutrition_basic" {
+  role       = aws_iam_role.nutrition.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
 resource "aws_lambda_function" "nutrition" {
   function_name    = "${local.name_prefix}-nutrition"
   runtime          = var.lambda_runtime
   handler          = "handler.lambda_handler"
-  role             = aws_iam_role.lambda_exec.arn
+  role             = aws_iam_role.nutrition.arn
   filename         = data.archive_file.lambda_nutrition.output_path
   source_code_hash = data.archive_file.lambda_nutrition.output_base64sha256
   layers           = [aws_lambda_layer_version.shared.arn]
@@ -26,7 +36,7 @@ resource "aws_cloudwatch_log_group" "nutrition" {
 
 resource "aws_iam_role_policy" "nutrition_dynamodb" {
   name = "${local.name_prefix}-nutrition-dynamodb"
-  role = aws_iam_role.lambda_exec.id
+  role = aws_iam_role.nutrition.id
 
   policy = jsonencode({
     Version = "2012-10-17"

@@ -37,7 +37,7 @@ resource "aws_cloudfront_response_headers_policy" "security" {
     content_security_policy {
       content_security_policy = join("; ", [
         "default-src 'self'",
-        "script-src 'self' https://cdn.jsdelivr.net",
+        "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
         "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: blob:",

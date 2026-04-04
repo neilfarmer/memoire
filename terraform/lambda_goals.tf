@@ -1,10 +1,20 @@
 # ── Goals Lambda ──────────────────────────────────────────────────────────────
 
+resource "aws_iam_role" "goals" {
+  name               = "${local.name_prefix}-goals"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+}
+
+resource "aws_iam_role_policy_attachment" "goals_basic" {
+  role       = aws_iam_role.goals.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
 resource "aws_lambda_function" "goals" {
   function_name    = "${local.name_prefix}-goals"
   runtime          = var.lambda_runtime
   handler          = "handler.lambda_handler"
-  role             = aws_iam_role.lambda_exec.arn
+  role             = aws_iam_role.goals.arn
   filename         = data.archive_file.lambda_goals.output_path
   source_code_hash = data.archive_file.lambda_goals.output_base64sha256
   layers           = [aws_lambda_layer_version.shared.arn]
@@ -27,7 +37,7 @@ resource "aws_cloudwatch_log_group" "goals" {
 # DynamoDB permissions scoped to the goals table only
 resource "aws_iam_role_policy" "goals_dynamodb" {
   name = "${local.name_prefix}-goals-dynamodb"
-  role = aws_iam_role.lambda_exec.id
+  role = aws_iam_role.goals.id
 
   policy = jsonencode({
     Version = "2012-10-17"

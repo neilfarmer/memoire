@@ -1,11 +1,21 @@
 # ── Watcher Lambda ────────────────────────────────────────────────────────────
 # Runs hourly via EventBridge. Scans active tasks and sends ntfy notifications.
 
+resource "aws_iam_role" "watcher" {
+  name               = "${local.name_prefix}-watcher"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+}
+
+resource "aws_iam_role_policy_attachment" "watcher_basic" {
+  role       = aws_iam_role.watcher.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
 resource "aws_lambda_function" "watcher" {
   function_name    = "${local.name_prefix}-watcher"
   runtime          = var.lambda_runtime
   handler          = "handler.lambda_handler"
-  role             = aws_iam_role.lambda_exec.arn
+  role             = aws_iam_role.watcher.arn
   filename         = data.archive_file.lambda_watcher.output_path
   source_code_hash = data.archive_file.lambda_watcher.output_base64sha256
   layers           = [aws_lambda_layer_version.shared.arn]
@@ -30,7 +40,7 @@ resource "aws_cloudwatch_log_group" "watcher" {
 
 resource "aws_iam_role_policy" "watcher_dynamodb" {
   name = "${local.name_prefix}-watcher-dynamodb"
-  role = aws_iam_role.lambda_exec.id
+  role = aws_iam_role.watcher.id
 
   policy = jsonencode({
     Version = "2012-10-17"

@@ -1,10 +1,20 @@
 # ── Journal Lambda ────────────────────────────────────────────────────────────
 
+resource "aws_iam_role" "journal" {
+  name               = "${local.name_prefix}-journal"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+}
+
+resource "aws_iam_role_policy_attachment" "journal_basic" {
+  role       = aws_iam_role.journal.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
 resource "aws_lambda_function" "journal" {
   function_name    = "${local.name_prefix}-journal"
   runtime          = var.lambda_runtime
   handler          = "handler.lambda_handler"
-  role             = aws_iam_role.lambda_exec.arn
+  role             = aws_iam_role.journal.arn
   filename         = data.archive_file.lambda_journal.output_path
   source_code_hash = data.archive_file.lambda_journal.output_base64sha256
   layers           = [aws_lambda_layer_version.shared.arn]
@@ -26,7 +36,7 @@ resource "aws_cloudwatch_log_group" "journal" {
 
 resource "aws_iam_role_policy" "journal_dynamodb" {
   name = "${local.name_prefix}-journal-dynamodb"
-  role = aws_iam_role.lambda_exec.id
+  role = aws_iam_role.journal.id
 
   policy = jsonencode({
     Version = "2012-10-17"
