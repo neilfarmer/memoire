@@ -2569,16 +2569,18 @@
       font-size: 14px;
     }
     #pal-header span { flex: 1; }
-    #pal-close {
+    #pal-close, #pal-clear {
       background: none;
       border: none;
       cursor: pointer;
       color: var(--muted);
-      font-size: 18px;
       line-height: 1;
       padding: 2px 4px;
+      display: flex;
+      align-items: center;
     }
-    #pal-close:hover { color: var(--text); }
+    #pal-close:hover, #pal-clear:hover { color: var(--text); }
+    #pal-close { font-size: 18px; }
     #pal-messages {
       flex: 1;
       overflow-y: auto;
@@ -7412,7 +7414,9 @@
 <div id="pal-window" class="hidden">
   <div id="pal-header">
     <span>✨ AI Pal</span>
-    <button id="pal-clear" aria-label="Clear chat" title="Clear chat history">🗑</button>
+    <button id="pal-clear" aria-label="Clear chat" title="Clear chat history">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+    </button>
     <button id="pal-close" aria-label="Close">✕</button>
   </div>
   <div id="pal-messages"></div>

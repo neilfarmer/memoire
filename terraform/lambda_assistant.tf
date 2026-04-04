@@ -57,6 +57,7 @@ resource "aws_iam_role_policy" "assistant_dynamodb" {
         "dynamodb:UpdateItem",
         "dynamodb:DeleteItem",
         "dynamodb:Query",
+        "dynamodb:BatchWriteItem",
       ]
       Resource = [
         aws_dynamodb_table.assistant_conversations.arn,
