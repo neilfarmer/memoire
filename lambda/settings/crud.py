@@ -8,6 +8,7 @@ from urllib.request import Request, urlopen
 
 import db
 from response import ok, error
+from utils import build_update_expression
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 
@@ -75,18 +76,11 @@ def update_settings(user_id: str, body: dict) -> dict:
         if err:
             return error(err)
 
-    set_parts = []
-    names     = {}
-    values    = {}
-
-    for i, (key, val) in enumerate(fields.items()):
-        names[f"#f{i}"]  = key
-        values[f":v{i}"] = val
-        set_parts.append(f"#f{i} = :v{i}")
+    update_expr, names, values = build_update_expression(fields)
 
     result = _table().update_item(
         Key={"user_id": user_id},
-        UpdateExpression="SET " + ", ".join(set_parts),
+        UpdateExpression=update_expr,
         ExpressionAttributeNames=names,
         ExpressionAttributeValues=values,
         ReturnValues="ALL_NEW",

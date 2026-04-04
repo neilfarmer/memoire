@@ -21,6 +21,8 @@ note_folders = load_lambda("notes", "folders.py")
 image_crud = load_lambda("notes", "image_crud.py")
 attachment_crud = load_lambda("notes", "attachment_crud.py")
 
+import utils  # noqa: E402
+
 NOTES_TABLE = "test-notes"
 FOLDERS_TABLE_NAME = "test-note-folders"
 BUCKET = "test-bucket"
@@ -49,16 +51,16 @@ def _make_folder(user=USER, name="Inbox"):
 
 class TestParseTags:
     def test_none_returns_empty(self):
-        assert note_crud._parse_tags(None) == []
+        assert utils.parse_tags(None) == []
 
     def test_list(self):
-        assert note_crud._parse_tags(["a", " b "]) == ["a", "b"]
+        assert utils.parse_tags(["a", " b "]) == ["a", "b"]
 
     def test_comma_string(self):
-        assert note_crud._parse_tags("x, y, z") == ["x", "y", "z"]
+        assert utils.parse_tags("x, y, z") == ["x", "y", "z"]
 
     def test_empty_list_items_skipped(self):
-        assert note_crud._parse_tags(["", "  ", "ok"]) == ["ok"]
+        assert utils.parse_tags(["", "  ", "ok"]) == ["ok"]
 
 
 class TestSummary:

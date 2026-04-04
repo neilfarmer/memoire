@@ -2,11 +2,11 @@
 
 import os
 import uuid
-from datetime import datetime, timezone
 
 import db
 import note_crud
 from response import ok, created, no_content, error, not_found
+from utils import now_iso
 
 FOLDERS_TABLE = os.environ["FOLDERS_TABLE"]
 NOTES_TABLE   = os.environ["NOTES_TABLE"]
@@ -14,10 +14,6 @@ NOTES_TABLE   = os.environ["NOTES_TABLE"]
 
 def _table():
     return db.get_table(FOLDERS_TABLE)
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 # ── List (auto-creates Inbox on first use) ────────────────────────────────────
@@ -31,7 +27,7 @@ def list_folders(user_id: str) -> dict:
 
 
 def _create_inbox(user_id: str) -> dict:
-    now    = _now()
+    now    = now_iso()
     folder = {
         "user_id":    user_id,
         "folder_id":  str(uuid.uuid4()),
@@ -61,7 +57,7 @@ def create_folder(user_id: str, body: dict) -> dict:
         "folder_id":  str(uuid.uuid4()),
         "name":       name,
         "parent_id":  parent_id,
-        "created_at": _now(),
+        "created_at": now_iso(),
     }
     _table().put_item(Item={k: v for k, v in folder.items() if v is not None})
     return created(folder)

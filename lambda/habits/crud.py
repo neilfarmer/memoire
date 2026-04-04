@@ -11,6 +11,7 @@ from boto3.dynamodb.conditions import Key
 
 import db
 from response import ok, created, no_content, error, not_found
+from utils import build_update_expression
 
 HABITS_TABLE     = os.environ["HABITS_TABLE"]
 HABIT_LOGS_TABLE = os.environ["HABIT_LOGS_TABLE"]
@@ -154,15 +155,11 @@ def update_habit(user_id: str, habit_id: str, body: dict) -> dict:
     if not fields:
         return ok(habit)
 
-    set_parts, names, values = [], {}, {}
-    for i, (k, v) in enumerate(fields.items()):
-        names[f"#f{i}"]  = k
-        values[f":v{i}"] = v
-        set_parts.append(f"#f{i} = :v{i}")
+    update_expr, names, values = build_update_expression(fields)
 
     result = _habits().update_item(
         Key={"user_id": user_id, "habit_id": habit_id},
-        UpdateExpression="SET " + ", ".join(set_parts),
+        UpdateExpression=update_expr,
         ExpressionAttributeNames=names,
         ExpressionAttributeValues=values,
         ReturnValues="ALL_NEW",

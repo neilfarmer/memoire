@@ -2,11 +2,11 @@
 
 import os
 import uuid
-from datetime import datetime, timezone
 
 import boto3
 from response import ok, created, no_content, error, not_found
 import db
+from utils import now_iso, build_update_expression
 
 _dynamodb_client = boto3.client("dynamodb")
 
@@ -21,10 +21,6 @@ MAX_DESCRIPTION_LEN = 10_000
 
 def _table():
     return db.get_table(TABLE_NAME)
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def _validate_fields(body: dict) -> str | None:
@@ -57,7 +53,7 @@ def create_goal(user_id: str, body: dict) -> dict:
     if err:
         return error(err)
 
-    now = _now()
+    now = now_iso()
     goal = {
         "user_id": user_id,
         "goal_id": str(uuid.uuid4()),
@@ -107,24 +103,14 @@ def update_goal(user_id: str, goal_id: str, body: dict) -> dict:
     if err:
         return error(err)
 
-    fields["updated_at"] = _now()
+    fields["updated_at"] = now_iso()
 
-    # Build a dynamic UpdateExpression
-    set_parts = []
-    names = {}
-    values = {}
-
-    for i, (key, val) in enumerate(fields.items()):
-        placeholder_name = f"#f{i}"
-        placeholder_val = f":v{i}"
-        set_parts.append(f"{placeholder_name} = {placeholder_val}")
-        names[placeholder_name] = key
-        values[placeholder_val] = val
+    update_expr, names, values = build_update_expression(fields)
 
     try:
         result = _table().update_item(
             Key={"user_id": user_id, SORT_KEY: goal_id},
-            UpdateExpression="SET " + ", ".join(set_parts),
+            UpdateExpression=update_expr,
             ExpressionAttributeNames=names,
             ExpressionAttributeValues=values,
             ConditionExpression="attribute_exists(goal_id)",

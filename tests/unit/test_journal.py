@@ -14,6 +14,8 @@ os.environ["TABLE_NAME"] = "test-journal"
 
 crud = load_lambda("journal", "crud.py")
 
+import utils  # noqa: E402 — loaded via conftest after env vars set
+
 TABLE = "test-journal"
 
 
@@ -29,22 +31,22 @@ def tbl():
 
 class TestParseTags:
     def test_none_returns_empty(self):
-        assert crud._parse_tags(None) == []
+        assert utils.parse_tags(None) == []
 
     def test_empty_string_returns_empty(self):
-        assert crud._parse_tags("") == []
+        assert utils.parse_tags("") == []
 
     def test_list_input(self):
-        assert crud._parse_tags(["a", "b", " c "]) == ["a", "b", "c"]
+        assert utils.parse_tags(["a", "b", " c "]) == ["a", "b", "c"]
 
     def test_list_strips_blanks(self):
-        assert crud._parse_tags(["  ", "x"]) == ["x"]
+        assert utils.parse_tags(["  ", "x"]) == ["x"]
 
     def test_comma_string(self):
-        assert crud._parse_tags("foo, bar, baz") == ["foo", "bar", "baz"]
+        assert utils.parse_tags("foo, bar, baz") == ["foo", "bar", "baz"]
 
     def test_comma_string_strips_whitespace(self):
-        assert crud._parse_tags("  hello , world ") == ["hello", "world"]
+        assert utils.parse_tags("  hello , world ") == ["hello", "world"]
 
 
 # ── _summary ──────────────────────────────────────────────────────────────────

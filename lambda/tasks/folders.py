@@ -2,10 +2,10 @@
 
 import os
 import uuid
-from datetime import datetime, timezone
 
 import db
 from response import ok, created, no_content, error, not_found
+from utils import now_iso
 
 FOLDERS_TABLE = os.environ["FOLDERS_TABLE"]
 TASKS_TABLE   = os.environ["TABLE_NAME"]
@@ -13,10 +13,6 @@ TASKS_TABLE   = os.environ["TABLE_NAME"]
 
 def _table():
     return db.get_table(FOLDERS_TABLE)
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def list_folders(user_id: str) -> dict:
@@ -32,7 +28,7 @@ def _create_inbox(user_id: str) -> dict:
         "user_id":    user_id,
         "folder_id":  str(uuid.uuid4()),
         "name":       "Inbox",
-        "created_at": _now(),
+        "created_at": now_iso(),
     }
     _table().put_item(Item=folder)
     return folder
@@ -47,7 +43,7 @@ def create_folder(user_id: str, body: dict) -> dict:
         "user_id":    user_id,
         "folder_id":  str(uuid.uuid4()),
         "name":       name,
-        "created_at": _now(),
+        "created_at": now_iso(),
     }
     _table().put_item(Item=folder)
     return created(folder)

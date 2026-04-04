@@ -5,12 +5,12 @@ import boto3
 import os
 import os.path
 import uuid
-from datetime import datetime, timezone
 from urllib.parse import quote
 
 import db
 from botocore.exceptions import ClientError
 from response import ok, error, no_content, not_found
+from utils import now_iso
 
 NOTES_TABLE     = os.environ["NOTES_TABLE"]
 FRONTEND_BUCKET = os.environ["FRONTEND_BUCKET"]
@@ -49,10 +49,6 @@ EXTENSION_MIME = {
     ".ppt":  "application/vnd.ms-powerpoint",
     ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 }
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def _table():
@@ -98,7 +94,7 @@ def create_attachment(user_id: str, note_id: str, body: dict) -> dict:
         "size":       size,
         "type":       content_type,
         "key":        key,
-        "created_at": _now(),
+        "created_at": now_iso(),
     }
 
     _table().update_item(
@@ -108,7 +104,7 @@ def create_attachment(user_id: str, note_id: str, body: dict) -> dict:
         ExpressionAttributeValues={
             ":new":   [attachment],
             ":empty": [],
-            ":now":   _now(),
+            ":now":   now_iso(),
         },
     )
 
@@ -166,7 +162,7 @@ def delete_attachment(user_id: str, note_id: str, att_id: str) -> dict:
         Key={"user_id": user_id, "note_id": note_id},
         UpdateExpression="SET #atts = :atts, updated_at = :now",
         ExpressionAttributeNames={"#atts": "attachments"},
-        ExpressionAttributeValues={":atts": updated, ":now": _now()},
+        ExpressionAttributeValues={":atts": updated, ":now": now_iso()},
     )
 
     return no_content()
