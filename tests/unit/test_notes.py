@@ -226,6 +226,29 @@ class TestDeleteNote:
     def test_not_found(self, tbls):
         assert note_crud.delete_note(USER, "ghost")["statusCode"] == 404
 
+    def test_delete_removes_s3_attachments(self, tbls):
+        _, s3 = tbls
+        fid = _make_folder()
+        note_id = json.loads(note_crud.create_note(USER, {"folder_id": fid, "title": "With attach"})["body"])["note_id"]
+        key = f"note-attachments/{USER}/{note_id}/att-001/file.txt"
+        s3.put_object(Bucket=BUCKET, Key=key, Body=b"data")
+        note_crud.delete_note(USER, note_id)
+        resp = s3.list_objects_v2(Bucket=BUCKET, Prefix=f"note-attachments/{USER}/{note_id}/")
+        assert resp.get("KeyCount", 0) == 0
+
+    def test_delete_removes_inline_images(self, tbls):
+        _, s3 = tbls
+        fid = _make_folder()
+        img_key = f"note-images/{USER}/abc123.png"
+        s3.put_object(Bucket=BUCKET, Key=img_key, Body=b"png")
+        body_with_image = f"Look at this: ![img]({img_key})"
+        note_id = json.loads(
+            note_crud.create_note(USER, {"folder_id": fid, "title": "Img note", "body": body_with_image})["body"]
+        )["note_id"]
+        note_crud.delete_note(USER, note_id)
+        resp = s3.list_objects_v2(Bucket=BUCKET, Prefix=f"note-images/{USER}/")
+        assert resp.get("KeyCount", 0) == 0
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # note_folders
@@ -299,6 +322,16 @@ class TestDeleteFolder:
         note_crud.create_note(USER, {"folder_id": child_id, "title": "In child"})
         note_folders.delete_folder(USER, parent_id)
         assert json.loads(note_crud.list_notes(USER)["body"]) == []
+
+    def test_recursive_delete_cleans_s3_assets(self, tbls):
+        _, s3 = tbls
+        fid = _make_folder(name="ToDelete")
+        note_id = json.loads(note_crud.create_note(USER, {"folder_id": fid, "title": "N"})["body"])["note_id"]
+        att_key = f"note-attachments/{USER}/{note_id}/att/file.pdf"
+        s3.put_object(Bucket=BUCKET, Key=att_key, Body=b"pdf")
+        note_folders.delete_folder(USER, fid)
+        resp = s3.list_objects_v2(Bucket=BUCKET, Prefix=f"note-attachments/{USER}/{note_id}/")
+        assert resp.get("KeyCount", 0) == 0
 
     def test_notes_outside_subtree_survive(self, tbls):
         fid1 = _make_folder(name="Deleted")

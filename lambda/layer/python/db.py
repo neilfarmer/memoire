@@ -11,10 +11,15 @@ def get_table(table_name: str):
 
 
 def query_by_user(table, user_id: str) -> list[dict]:
-    result = table.query(
-        KeyConditionExpression=Key("user_id").eq(user_id)
-    )
-    return result.get("Items", [])
+    items = []
+    params: dict = {"KeyConditionExpression": Key("user_id").eq(user_id)}
+    while True:
+        resp = table.query(**params)
+        items.extend(resp.get("Items", []))
+        if "LastEvaluatedKey" not in resp:
+            break
+        params["ExclusiveStartKey"] = resp["LastEvaluatedKey"]
+    return items
 
 
 def get_item(table, user_id: str, sort_key_name: str, sort_key_value: str) -> dict | None:

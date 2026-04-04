@@ -1,14 +1,19 @@
 """Note CRUD for the notes Lambda."""
 
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 
+import boto3
 import db
 from response import ok, created, no_content, error, not_found
 
-NOTES_TABLE   = os.environ["NOTES_TABLE"]
-FOLDERS_TABLE = os.environ["FOLDERS_TABLE"]
+NOTES_TABLE     = os.environ["NOTES_TABLE"]
+FOLDERS_TABLE   = os.environ["FOLDERS_TABLE"]
+FRONTEND_BUCKET = os.environ["FRONTEND_BUCKET"]
+
+_s3 = boto3.client("s3")
 PREVIEW_LEN   = 200
 
 MAX_TITLE_LEN = 500
@@ -151,9 +156,31 @@ def update_note(user_id: str, note_id: str, body: dict) -> dict:
 
 # ── Delete ────────────────────────────────────────────────────────────────────
 
+def _delete_note_s3_assets(user_id: str, note: dict) -> None:
+    """Delete all S3 objects associated with a note: attachment prefix + inline images."""
+    note_id = note["note_id"]
+    keys: list[str] = []
+
+    # Attachments stored under note-attachments/{user_id}/{note_id}/
+    paginator = _s3.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=FRONTEND_BUCKET, Prefix=f"note-attachments/{user_id}/{note_id}/"):
+        keys.extend(obj["Key"] for obj in page.get("Contents", []))
+
+    # Inline images embedded in the note body as S3 key paths
+    body = note.get("body", "")
+    keys.extend(re.findall(rf"note-images/{re.escape(user_id)}/[^\s\)\"\'\]]+", body))
+
+    # Batch delete in chunks of 1,000 (S3 delete_objects limit)
+    for i in range(0, len(keys), 1000):
+        chunk = [{"Key": k} for k in keys[i : i + 1000]]
+        if chunk:
+            _s3.delete_objects(Bucket=FRONTEND_BUCKET, Delete={"Objects": chunk})
+
+
 def delete_note(user_id: str, note_id: str) -> dict:
     note = db.get_item(_table(), user_id, "note_id", note_id)
     if not note:
         return not_found("Note")
+    _delete_note_s3_assets(user_id, note)
     _table().delete_item(Key={"user_id": user_id, "note_id": note_id})
     return no_content()

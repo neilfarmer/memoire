@@ -5,7 +5,7 @@ import re
 import uuid
 from datetime import datetime, timezone
 
-from db import get_table
+from db import get_table, query_by_user
 from response import ok, no_content, error, not_found
 
 TABLE_NAME = os.environ["TABLE_NAME"]
@@ -36,12 +36,7 @@ def _summary(item: dict) -> dict:
 
 
 def list_logs(user_id: str) -> dict:
-    table = _table()
-    resp  = table.query(
-        KeyConditionExpression="user_id = :uid",
-        ExpressionAttributeValues={":uid": user_id},
-    )
-    items = sorted(resp.get("Items", []), key=lambda x: x["log_date"], reverse=True)
+    items = sorted(query_by_user(_table(), user_id), key=lambda x: x["log_date"], reverse=True)
     return ok([_summary(i) for i in items])
 
 
