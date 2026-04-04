@@ -76,7 +76,7 @@ class TestDownloadImagePathTraversal(unittest.TestCase):
         self.assertTrue(_forbidden(image_crud.download_image(USER_ID, key)))
 
     def test_wrong_user_prefix_blocked(self):
-        key = f"note-images/other-user/image.png"
+        key = "note-images/other-user/image.png"
         self.assertTrue(_forbidden(image_crud.download_image(USER_ID, key)))
 
     def test_wrong_top_prefix_blocked(self):

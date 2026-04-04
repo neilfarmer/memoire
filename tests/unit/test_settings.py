@@ -8,7 +8,7 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from conftest import USER, load_lambda, make_table
+from conftest import USER, load_lambda
 
 os.environ["TABLE_NAME"] = "test-settings"
 

@@ -1,0 +1,4 @@
+[lint]
+# E402: module-level import not at top — needed in tests that manipulate sys.path
+# E701: multiple statements on one line — used intentionally for compact cleanup loops
+ignore = ["E402", "E701"]

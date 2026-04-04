@@ -459,7 +459,7 @@ def test_notes(token: str) -> None:
     check("Deleted note returns 404",
           api("GET", f"/notes/{note_id}", token).status_code == 404)
     check("Delete non-existent → 404",
-          api("DELETE", f"/notes/no-such-id", token).status_code == 404)
+          api("DELETE", "/notes/no-such-id", token).status_code == 404)
 
     section("Notes — folder delete (recursive)")
     # Create a note in sub_folder to verify recursive delete
@@ -762,7 +762,7 @@ def validate_config(pat: str) -> None:
         print("No PAT provided. Set TEST_PAT or pass --pat <token>.")
         sys.exit(1)
     if not pat.startswith("pat_"):
-        print(f"Warning: token doesn't start with 'pat_' — is this a valid PAT?")
+        print("Warning: token doesn't start with 'pat_' — is this a valid PAT?")
 
 
 def main() -> None:

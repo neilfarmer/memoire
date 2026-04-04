@@ -4,8 +4,6 @@ import os
 import sys
 import unittest
 
-import pytest
-from moto import mock_aws
 
 from conftest import load_lambda
 

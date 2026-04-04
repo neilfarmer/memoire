@@ -3265,7 +3265,8 @@
         credentials: "include",
       });
       if (!resp.ok) throw new Error(`Export failed: ${resp.status}`);
-      return resp.blob();
+      const { url } = await resp.json();
+      return url;
     },
   };
 
@@ -4020,14 +4021,8 @@
     btn.textContent = "Exporting...";
     msg.classList.add("hidden");
     try {
-      const blob = await api.downloadExport();
-      const today = todayStr();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `memoire-export-${today}.zip`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const url = await api.downloadExport();
+      window.location.href = url;
       msg.textContent = "Export downloaded.";
       msg.className = "msg-ok";
       msg.classList.remove("hidden");

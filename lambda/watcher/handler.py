@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 import boto3
-from boto3.dynamodb.conditions import Attr, Key
+from boto3.dynamodb.conditions import Attr
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -56,73 +56,81 @@ def lambda_handler(event, context):
     habits_table   = _dynamodb.Table(HABITS_TABLE)
     logs_table     = _dynamodb.Table(HABIT_LOGS_TABLE)
 
-    settings_cache = {}
+    # Scan only the settings table (one row per user) to find users who have
+    # ntfy_url configured.  Then query tasks/habits per user by PK instead of
+    # scanning the full tasks and habits tables every hour.
+    users = _users_with_ntfy(settings_table)
+    logger.info("Found %d users with ntfy_url configured", len(users))
 
-    # ── Tasks ─────────────────────────────────────────────────────────────────
-    tasks = _scan(tasks_table, FilterExpression=Attr("status").ne("done"))
-    logger.info("Checking %d active tasks", len(tasks))
+    today_str = now.date().isoformat()
 
-    for task in tasks:
-        if not task.get("notifications"):
-            continue
-        ntfy_url = _get_ntfy_url(settings_table, settings_cache, task["user_id"])
-        if ntfy_url:
+    for user_id, ntfy_url in users:
+        # ── Tasks ─────────────────────────────────────────────────────────────
+        user_tasks = _query_user(tasks_table, user_id)
+        active_tasks = [t for t in user_tasks if t.get("status") != "done" and t.get("notifications")]
+        logger.info("User %s: checking %d active tasks with notifications", user_id, len(active_tasks))
+        for task in active_tasks:
             _process_task(tasks_table, task, ntfy_url, now)
 
-    # ── Habits ────────────────────────────────────────────────────────────────
-    habits = _scan(habits_table, FilterExpression=Attr("notify_time").exists())
-    logger.info("Checking %d habits with notify_time", len(habits))
+        # ── Habits ────────────────────────────────────────────────────────────
+        user_habits = _query_user(habits_table, user_id)
+        for habit in user_habits:
+            notify_time = habit.get("notify_time", "")
+            if not notify_time:
+                continue
+            try:
+                notify_hour = int(notify_time.split(":")[0])
+            except (ValueError, IndexError):
+                continue
+            if notify_hour != now.hour:
+                continue
 
-    for habit in habits:
-        notify_time = habit.get("notify_time", "")
-        if not notify_time:
-            continue
-        try:
-            notify_hour = int(notify_time.split(":")[0])
-        except (ValueError, IndexError):
-            continue
-        if notify_hour != now.hour:
-            continue
+            if habit.get("last_notified_date") == today_str:
+                continue  # already sent today
 
-        today_str = now.date().isoformat()
-        if habit.get("last_notified_date") == today_str:
-            continue  # already sent today
+            # Skip if already completed today
+            log = logs_table.get_item(
+                Key={"user_id": user_id, "log_id": f"{habit['habit_id']}#{today_str}"}
+            ).get("Item")
+            if log:
+                continue
 
-        # Skip if already completed today
-        log = logs_table.get_item(
-            Key={"user_id": habit["user_id"], "log_id": f"{habit['habit_id']}#{today_str}"}
-        ).get("Item")
-        if log:
-            continue
-
-        ntfy_url = _get_ntfy_url(settings_table, settings_cache, habit["user_id"])
-        if not ntfy_url:
-            continue
-
-        if _send_habit(ntfy_url, habit):
-            habits_table.update_item(
-                Key={"user_id": habit["user_id"], "habit_id": habit["habit_id"]},
-                UpdateExpression="SET last_notified_date = :d",
-                ExpressionAttributeValues={":d": today_str},
-            )
+            if _send_habit(ntfy_url, habit):
+                habits_table.update_item(
+                    Key={"user_id": user_id, "habit_id": habit["habit_id"]},
+                    UpdateExpression="SET last_notified_date = :d",
+                    ExpressionAttributeValues={":d": today_str},
+                )
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
 
-def _scan(table, **kwargs):
-    resp  = table.scan(**kwargs)
-    items = resp.get("Items", [])
+def _users_with_ntfy(settings_table) -> list[tuple[str, str]]:
+    """Return (user_id, ntfy_url) for every user with a non-empty ntfy_url."""
+    users: list[tuple[str, str]] = []
+    kwargs = {"FilterExpression": Attr("ntfy_url").exists() & Attr("ntfy_url").ne("")}
+    resp = settings_table.scan(**kwargs)
+    for item in resp.get("Items", []):
+        users.append((item["user_id"], item["ntfy_url"]))
     while "LastEvaluatedKey" in resp:
-        resp = table.scan(ExclusiveStartKey=resp["LastEvaluatedKey"], **kwargs)
+        resp = settings_table.scan(ExclusiveStartKey=resp["LastEvaluatedKey"], **kwargs)
+        for item in resp.get("Items", []):
+            users.append((item["user_id"], item["ntfy_url"]))
+    return users
+
+
+def _query_user(table, user_id: str) -> list[dict]:
+    """Fetch all items for a user via PK query (avoids full-table scan)."""
+    from boto3.dynamodb.conditions import Key as DKey
+    items: list[dict] = []
+    params: dict = {"KeyConditionExpression": DKey("user_id").eq(user_id)}
+    while True:
+        resp = table.query(**params)
         items.extend(resp.get("Items", []))
+        if "LastEvaluatedKey" not in resp:
+            break
+        params["ExclusiveStartKey"] = resp["LastEvaluatedKey"]
     return items
-
-
-def _get_ntfy_url(settings_table, cache, user_id):
-    if user_id not in cache:
-        item = settings_table.get_item(Key={"user_id": user_id}).get("Item", {})
-        cache[user_id] = item.get("ntfy_url", "")
-    return cache[user_id]
 
 
 def _ntfy_post(url, title, body, priority="3"):

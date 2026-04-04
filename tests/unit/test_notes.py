@@ -401,7 +401,7 @@ class TestDownloadImage:
         assert decoded == b"fake-png-data"
 
     def test_wrong_user_returns_403(self, tbls):
-        key = f"note-images/alice/secret.png"
+        key = "note-images/alice/secret.png"
         r = image_crud.download_image("bob", key)
         assert r["statusCode"] == 403
 

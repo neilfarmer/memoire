@@ -5,7 +5,7 @@ import pytest
 import boto3
 from moto import mock_aws
 
-from conftest import REPO_ROOT, LAYER_DIR, USER, load_lambda, make_table
+from conftest import LAYER_DIR, USER, load_lambda, make_table
 
 # Set env vars before module load
 os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
@@ -62,7 +62,7 @@ class TestQueryByUser:
 
     def test_paginates_across_multiple_pages(self):
         """query_by_user must follow LastEvaluatedKey until exhausted."""
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import MagicMock
 
         page1 = {"Items": [{"user_id": USER, "item_id": "a"}], "LastEvaluatedKey": {"user_id": USER, "item_id": "a"}}
         page2 = {"Items": [{"user_id": USER, "item_id": "b"}]}
