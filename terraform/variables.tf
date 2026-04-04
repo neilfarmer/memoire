@@ -149,3 +149,10 @@ variable "admin_user_ids" {
   type        = string
   default     = ""
 }
+
+variable "assistant_model_id" {
+  description = "Bedrock model ID for the AI assistant. Use an inference profile ID (e.g. us.anthropic.claude-haiku-4-5-20251001-v1:0) or a direct model ID (e.g. amazon.nova-lite-v1:0)."
+  type        = string
+  default     = "amazon.nova-lite-v1:0"
+}
+

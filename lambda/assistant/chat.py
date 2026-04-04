@@ -13,7 +13,7 @@ from response import ok, server_error
 
 logger = logging.getLogger(__name__)
 
-MODEL_ID   = "amazon.nova-lite-v1:0"
+MODEL_ID   = os.environ.get("ASSISTANT_MODEL_ID", "amazon.nova-lite-v1:0")
 MAX_TOKENS = 1024
 MAX_LOOPS  = 6
 

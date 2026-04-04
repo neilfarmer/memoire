@@ -31,6 +31,7 @@ resource "aws_lambda_function" "assistant" {
       HABITS_TABLE        = aws_dynamodb_table.habits.name
       GOALS_TABLE         = aws_dynamodb_table.goals.name
       JOURNAL_TABLE       = aws_dynamodb_table.journal.name
+      ASSISTANT_MODEL_ID  = var.assistant_model_id
     }
   }
 }
