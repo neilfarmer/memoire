@@ -11,14 +11,18 @@ logger.setLevel(logging.INFO)
 
 def lambda_handler(event: dict, context) -> dict:
     logger.info("Event: %s", json.dumps(event))
+    try:
+        from auth import get_user_id
+        user_id = get_user_id(event)
 
-    from auth import get_user_id
-    user_id = get_user_id(event)
+        method = event.get("requestContext", {}).get("http", {}).get("method", "")
+        path   = event.get("rawPath", "")
 
-    method = event.get("requestContext", {}).get("http", {}).get("method", "")
-    path   = event.get("rawPath", "")
+        if method == "GET" and path == "/export":
+            return build_export(user_id)
 
-    if method == "GET" and path == "/export":
-        return build_export(user_id)
-
-    return {"statusCode": 404, "body": "Not found"}
+        return {"statusCode": 404, "body": "Not found"}
+    except Exception:
+        logger.exception("Unhandled exception in lambda_handler")
+        from response import server_error
+        return server_error()

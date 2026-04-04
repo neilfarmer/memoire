@@ -18,7 +18,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install requests pytest
+        run: pip install -r requirements-test.txt requests
 
       - name: Run unit tests
         run: make test-unit
