@@ -3221,7 +3221,7 @@
       auth._clearUserInfo();
       const params = new URLSearchParams({
         client_id:  cfg.cognitoClientId,
-        logout_uri: window.location.origin + "/",
+        logout_uri: window.location.origin,
       });
       window.location.href = `${cfg.authDomain}/logout?${params}`;
     },
