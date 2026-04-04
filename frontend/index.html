@@ -7484,9 +7484,14 @@
       palInput.style.height = Math.min(palInput.scrollHeight, 100) + "px";
     });
 
-    // Hide pal when not logged in
-    document.addEventListener("pal:hide", () => palBtn.classList.add("hidden"));
+    // Show/hide based on auth state
+    document.addEventListener("pal:hide", () => { palBtn.classList.add("hidden"); palWindow.classList.add("hidden"); palOpen = false; });
     document.addEventListener("pal:show", () => palBtn.classList.remove("hidden"));
+
+    // In case pal:show already fired before this script ran (app was already loaded)
+    if (!document.getElementById("app-view").classList.contains("hidden")) {
+      palBtn.classList.remove("hidden");
+    }
   })();
 </script>
 </body>
