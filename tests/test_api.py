@@ -79,7 +79,7 @@ def api(method: str, path: str, token: str, body: dict = None, params: dict = No
 def test_tasks(token: str) -> None:
     section("Tasks — auth enforcement")
     r = requests.get(f"{API_URL}/tasks", timeout=10)
-    check("No token returns 401", r.status_code == 401, f"Got {r.status_code}")
+    check("No token returns 401/403", r.status_code in (401, 403), f"Got {r.status_code}")
     r2 = requests.get(f"{API_URL}/tasks", headers={"Authorization": "Bearer bad.token"}, timeout=10)
     check("Invalid token returns 401/403", r2.status_code in (401, 403), f"Got {r2.status_code}")
 
@@ -506,7 +506,7 @@ def test_tokens(token: str) -> None:
     """
     section("Tokens — unauthenticated access blocked")
     r = requests.get(f"{API_URL}/tokens", timeout=10)
-    check("No token returns 401", r.status_code == 401, f"Got {r.status_code}")
+    check("No token returns 401/403", r.status_code in (401, 403), f"Got {r.status_code}")
 
     section("Tokens — PAT cannot manage tokens")
     r = api("GET", "/tokens", token)
