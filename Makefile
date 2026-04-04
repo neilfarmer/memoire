@@ -16,7 +16,7 @@ destroy:
 	@bash -c 'source scripts/load-env.sh && cd terraform && terraform destroy'
 
 test-unit:
-	python -m pytest tests/test_auth_handler.py tests/test_authorizer.py tests/test_image_crud.py -v
+	python -m pytest tests/test_auth_handler.py tests/test_authorizer.py tests/test_image_crud.py tests/test_habits_crud.py -v
 
 test:
 	TEST_PAT=$(TEST_PAT) python tests/test_api.py

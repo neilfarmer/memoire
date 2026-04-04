@@ -78,14 +78,10 @@ resource "aws_dynamodb_table" "habits" {
   }
 }
 
-# ── Habit logs table ───────────────────────────────────────────────────────────
+# ── Habit logs table (deprecated — kept until data migration is complete) ──────
 #
-# PK: habit_id  (String) — parent habit
-# SK: log_date  (String) — YYYY-MM-DD
-#
-# Access patterns:
-#   Get logs for a habit in a date range → Query PK=habit_id, SK between dates
-#   Toggle a specific day               → PutItem / DeleteItem
+# DO NOT WRITE TO THIS TABLE. All Lambda functions now use habit_logs_v2.
+# Remove this resource once migrate_habit_logs.py has been run in production.
 
 resource "aws_dynamodb_table" "habit_logs" {
   name         = "${local.name_prefix}-habit-logs"
@@ -100,6 +96,40 @@ resource "aws_dynamodb_table" "habit_logs" {
 
   attribute {
     name = "log_date"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
+# ── Habit logs v2 table ────────────────────────────────────────────────────────
+#
+# PK: user_id  (String) — Cognito sub, enforces per-user isolation
+# SK: log_id   (String) — composite "{habit_id}#{log_date}" (YYYY-MM-DD)
+#
+# Access patterns:
+#   Logs for a habit in a date range → Query PK=user_id, SK between
+#                                      "{habit_id}#{from}" and "{habit_id}#{to}"
+#   Toggle a specific day            → GetItem / PutItem / DeleteItem on
+#                                      PK=user_id, SK="{habit_id}#{date}"
+#   Delete all logs for a habit      → Query PK=user_id, SK begins_with
+#                                      "{habit_id}#", then batch delete
+
+resource "aws_dynamodb_table" "habit_logs_v2" {
+  name         = "${local.name_prefix}-habit-logs-v2"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "log_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "log_id"
     type = "S"
   }
 

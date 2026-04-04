@@ -357,12 +357,14 @@ def build_export(user_id: str) -> dict:
     goals        = db.query_by_user(db.get_table(GOALS_TABLE),        user_id)
     habits       = db.query_by_user(db.get_table(HABITS_TABLE),       user_id)
 
-    # Fetch all habit logs for each habit (habit_logs PK is habit_id, not user_id)
+    # Fetch all habit logs for the user (habit_logs_v2 PK is user_id)
     habit_logs: list[dict] = []
     logs_table = db.get_table(HABIT_LOGS_TABLE)
     for habit in habits:
         resp = logs_table.query(
-            KeyConditionExpression=Key("habit_id").eq(habit["habit_id"])
+            KeyConditionExpression=
+                Key("user_id").eq(user_id) &
+                Key("log_id").begins_with(f"{habit['habit_id']}#")
         )
         habit_logs.extend(resp.get("Items", []))
 

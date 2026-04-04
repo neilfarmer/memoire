@@ -22,7 +22,7 @@ resource "aws_lambda_function" "export" {
       NUTRITION_TABLE    = aws_dynamodb_table.nutrition.name
       GOALS_TABLE        = aws_dynamodb_table.goals.name
       HABITS_TABLE       = aws_dynamodb_table.habits.name
-      HABIT_LOGS_TABLE   = aws_dynamodb_table.habit_logs.name
+      HABIT_LOGS_TABLE   = aws_dynamodb_table.habit_logs_v2.name
       FRONTEND_BUCKET    = aws_s3_bucket.frontend.id
     }
   }
@@ -52,7 +52,7 @@ resource "aws_iam_role_policy" "export_dynamodb" {
         aws_dynamodb_table.nutrition.arn,
         aws_dynamodb_table.goals.arn,
         aws_dynamodb_table.habits.arn,
-        aws_dynamodb_table.habit_logs.arn,
+        aws_dynamodb_table.habit_logs_v2.arn,
       ]
     }]
   })

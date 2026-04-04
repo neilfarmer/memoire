@@ -18,7 +18,7 @@ resource "aws_lambda_function" "watcher" {
       TASKS_TABLE      = aws_dynamodb_table.tasks.name
       SETTINGS_TABLE   = aws_dynamodb_table.settings.name
       HABITS_TABLE     = aws_dynamodb_table.habits.name
-      HABIT_LOGS_TABLE = aws_dynamodb_table.habit_logs.name
+      HABIT_LOGS_TABLE = aws_dynamodb_table.habit_logs_v2.name
     }
   }
 }
@@ -53,7 +53,7 @@ resource "aws_iam_role_policy" "watcher_dynamodb" {
       {
         Effect   = "Allow"
         Action   = ["dynamodb:GetItem"]
-        Resource = aws_dynamodb_table.habit_logs.arn
+        Resource = aws_dynamodb_table.habit_logs_v2.arn
       },
     ]
   })
