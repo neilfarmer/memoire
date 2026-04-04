@@ -77,6 +77,15 @@ def api(method: str, path: str, token: str, body: dict = None, params: dict = No
 # ── Tasks ─────────────────────────────────────────────────────────────────────
 
 def test_tasks(token: str) -> None:
+    created_ids: list[str] = []
+    try:
+        _test_tasks_body(token, created_ids)
+    finally:
+        for tid in created_ids:
+            api("DELETE", f"/tasks/{tid}", token)
+
+
+def _test_tasks_body(token: str, created_ids: list) -> None:
     section("Tasks — auth enforcement")
     r = requests.get(f"{API_URL}/tasks", timeout=10)
     check("No token returns 401/403", r.status_code in (401, 403), f"Got {r.status_code}")
@@ -108,12 +117,15 @@ def test_tasks(token: str) -> None:
     check("Invalid priority → 400",
           api("POST", "/tasks", token, {"title": "T", "priority": "critical"}).status_code == 400)
 
+    if task_id:
+        created_ids.append(task_id)
+
     r5 = api("POST", "/tasks", token, {"title": "Minimal"})
     check("Title-only create returns 201",    r5.status_code == 201, f"Got {r5.status_code}")
     check("Defaults status to todo",          r5.json().get("status")   == "todo")
     check("Defaults priority to medium",      r5.json().get("priority") == "medium")
     if r5.json().get("task_id"):
-        api("DELETE", f"/tasks/{r5.json()['task_id']}", token)
+        created_ids.append(r5.json()["task_id"])
 
     if not task_id:
         print(f"  [{SKIP}] Skipping remaining task tests — creation failed")
@@ -150,6 +162,7 @@ def test_tasks(token: str) -> None:
     section("Tasks — delete")
     check("Delete returns 204",
           api("DELETE", f"/tasks/{task_id}", token).status_code == 204)
+    created_ids.remove(task_id)  # already deleted
     check("Deleted task returns 404",
           api("GET", f"/tasks/{task_id}", token).status_code == 404)
     check("Double delete returns 404",
@@ -159,6 +172,15 @@ def test_tasks(token: str) -> None:
 # ── Habits ────────────────────────────────────────────────────────────────────
 
 def test_habits(token: str) -> None:
+    created_ids: list[str] = []
+    try:
+        _test_habits_body(token, created_ids)
+    finally:
+        for hid in created_ids:
+            api("DELETE", f"/habits/{hid}", token)
+
+
+def _test_habits_body(token: str, created_ids: list) -> None:
     section("Habits — create")
     r = api("POST", "/habits", token, {"name": "Integration test habit", "notify_time": "08:00"})
     check("Valid create returns 201", r.status_code == 201, f"Got {r.status_code}: {r.text}")
@@ -172,6 +194,9 @@ def test_habits(token: str) -> None:
     check("current_streak is int", isinstance(habit.get("current_streak"), int))
     check("best_streak is int",    isinstance(habit.get("best_streak"), int))
 
+    if habit_id:
+        created_ids.append(habit_id)
+
     check("Missing name → 400",
           api("POST", "/habits", token, {}).status_code == 400)
     check("Invalid notify_time format → 400",
@@ -182,7 +207,7 @@ def test_habits(token: str) -> None:
     r2 = api("POST", "/habits", token, {"name": "Name-only habit"})
     check("Name-only create returns 201", r2.status_code == 201, f"Got {r2.status_code}")
     if r2.json().get("habit_id"):
-        api("DELETE", f"/habits/{r2.json()['habit_id']}", token)
+        created_ids.append(r2.json()["habit_id"])
 
     if not habit_id:
         print(f"  [{SKIP}] Skipping remaining habit tests — creation failed")
@@ -230,6 +255,7 @@ def test_habits(token: str) -> None:
     section("Habits — delete")
     check("Delete returns 204",
           api("DELETE", f"/habits/{habit_id}", token).status_code == 204)
+    created_ids.remove(habit_id)
     r = api("GET", "/habits", token)
     ids_after = [h["habit_id"] for h in r.json()]
     check("Deleted habit gone from list", habit_id not in ids_after)
@@ -519,15 +545,212 @@ def test_tokens(token: str) -> None:
     check("PAT blocked from revoking token (401/403)", r.status_code in (401, 403), f"Got {r.status_code}: {r.text}")
 
 
+# ── Health ────────────────────────────────────────────────────────────────────
+
+TEST_HEALTH_DATE = "2099-07-01"
+
+
+def test_health(token: str) -> None:
+    api("DELETE", f"/health/{TEST_HEALTH_DATE}", token)  # pre-clean
+    try:
+        section("Health — upsert (create)")
+        r = api("PUT", f"/health/{TEST_HEALTH_DATE}", token, {
+            "exercises": [{"name": "Running", "sets": 1, "reps": 0, "weight": 0}],
+            "notes": "Integration test health log",
+        })
+        check("Create returns 200", r.status_code == 200, f"Got {r.status_code}: {r.text}")
+        log = r.json()
+        check("log_date matches",    log.get("log_date") == TEST_HEALTH_DATE)
+        check("exercises is list",   isinstance(log.get("exercises"), list))
+        check("exercise has id",     bool(log["exercises"][0].get("id")) if log.get("exercises") else False)
+        check("notes matches",       log.get("notes") == "Integration test health log")
+        check("Has created_at",      "created_at" in log)
+
+        check("Invalid date format → 400",
+              api("PUT", "/health/not-a-date", token, {}).status_code == 400)
+
+        section("Health — get")
+        r = api("GET", f"/health/{TEST_HEALTH_DATE}", token)
+        check("Get returns 200",       r.status_code == 200)
+        check("Full log returned",     r.json().get("log_date") == TEST_HEALTH_DATE)
+        check("Non-existent → 404",    api("GET", "/health/2099-01-01", token).status_code == 404)
+        check("Invalid date → 400",    api("GET", "/health/bad-date", token).status_code == 400)
+
+        section("Health — list")
+        r = api("GET", "/health", token)
+        check("List returns 200",      r.status_code == 200)
+        check("Returns list",          isinstance(r.json(), list))
+        dates = [e["log_date"] for e in r.json()]
+        check("Test log in list",      TEST_HEALTH_DATE in dates, f"Dates: {dates}")
+
+        section("Health — upsert (update)")
+        r = api("PUT", f"/health/{TEST_HEALTH_DATE}", token, {"notes": "Updated note"})
+        check("Update returns 200",    r.status_code == 200)
+        check("notes updated",         r.json().get("notes") == "Updated note")
+        check("created_at preserved",  r.json().get("created_at") == log.get("created_at"))
+
+        section("Health — delete")
+        check("Delete returns 204",    api("DELETE", f"/health/{TEST_HEALTH_DATE}", token).status_code == 204)
+        check("Deleted log → 404",     api("GET", f"/health/{TEST_HEALTH_DATE}", token).status_code == 404)
+        check("Delete non-existent → 404",
+              api("DELETE", f"/health/{TEST_HEALTH_DATE}", token).status_code == 404)
+    finally:
+        api("DELETE", f"/health/{TEST_HEALTH_DATE}", token)
+
+
+# ── Nutrition ─────────────────────────────────────────────────────────────────
+
+TEST_NUTRITION_DATE = "2099-07-02"
+
+
+def test_nutrition(token: str) -> None:
+    api("DELETE", f"/nutrition/{TEST_NUTRITION_DATE}", token)  # pre-clean
+    try:
+        section("Nutrition — upsert (create)")
+        r = api("PUT", f"/nutrition/{TEST_NUTRITION_DATE}", token, {
+            "meals": [{"name": "Breakfast", "calories": 450, "protein": 30}],
+            "notes": "Integration test nutrition log",
+        })
+        check("Create returns 200",    r.status_code == 200, f"Got {r.status_code}: {r.text}")
+        log = r.json()
+        check("log_date matches",      log.get("log_date") == TEST_NUTRITION_DATE)
+        check("meals is list",         isinstance(log.get("meals"), list))
+        check("meal has name",         log["meals"][0].get("name") == "Breakfast" if log.get("meals") else False)
+        check("notes matches",         log.get("notes") == "Integration test nutrition log")
+        check("Has created_at",        "created_at" in log)
+
+        check("Invalid date format → 400",
+              api("PUT", "/nutrition/not-a-date", token, {}).status_code == 400)
+
+        section("Nutrition — get")
+        r = api("GET", f"/nutrition/{TEST_NUTRITION_DATE}", token)
+        check("Get returns 200",       r.status_code == 200)
+        check("Full log returned",     r.json().get("log_date") == TEST_NUTRITION_DATE)
+        check("Non-existent → 404",    api("GET", "/nutrition/2099-01-01", token).status_code == 404)
+        check("Invalid date → 400",    api("GET", "/nutrition/bad-date", token).status_code == 400)
+
+        section("Nutrition — list")
+        r = api("GET", "/nutrition", token)
+        check("List returns 200",      r.status_code == 200)
+        check("Returns list",          isinstance(r.json(), list))
+        dates = [e["log_date"] for e in r.json()]
+        check("Test log in list",      TEST_NUTRITION_DATE in dates, f"Dates: {dates}")
+
+        section("Nutrition — upsert (update)")
+        r = api("PUT", f"/nutrition/{TEST_NUTRITION_DATE}", token, {"notes": "Updated note"})
+        check("Update returns 200",    r.status_code == 200)
+        check("notes updated",         r.json().get("notes") == "Updated note")
+        check("created_at preserved",  r.json().get("created_at") == log.get("created_at"))
+
+        section("Nutrition — delete")
+        check("Delete returns 204",    api("DELETE", f"/nutrition/{TEST_NUTRITION_DATE}", token).status_code == 204)
+        check("Deleted log → 404",     api("GET", f"/nutrition/{TEST_NUTRITION_DATE}", token).status_code == 404)
+        check("Delete non-existent → 404",
+              api("DELETE", f"/nutrition/{TEST_NUTRITION_DATE}", token).status_code == 404)
+    finally:
+        api("DELETE", f"/nutrition/{TEST_NUTRITION_DATE}", token)
+
+
+# ── Goals ─────────────────────────────────────────────────────────────────────
+
+def test_goals(token: str) -> None:
+    created_ids: list[str] = []
+    try:
+        section("Goals — create")
+        r = api("POST", "/goals", token, {
+            "title":       "Integration test goal",
+            "description": "Created by test_api.py",
+            "status":      "active",
+        })
+        check("Valid create returns 201", r.status_code == 201, f"Got {r.status_code}: {r.text}")
+        goal = r.json()
+        goal_id = goal.get("goal_id")
+        check("Has goal_id",        bool(goal_id))
+        check("Title matches",      goal.get("title")  == "Integration test goal")
+        check("Status is active",   goal.get("status") == "active")
+        check("Has created_at",     "created_at" in goal)
+        check("Has updated_at",     "updated_at" in goal)
+
+        if goal_id:
+            created_ids.append(goal_id)
+
+        check("Missing title → 400",
+              api("POST", "/goals", token, {"description": "No title"}).status_code == 400)
+        check("Invalid status → 400",
+              api("POST", "/goals", token, {"title": "T", "status": "invalid"}).status_code == 400)
+
+        if not goal_id:
+            print(f"  [{SKIP}] Skipping remaining goal tests — creation failed")
+            return
+
+        section("Goals — get")
+        r = api("GET", f"/goals/{goal_id}", token)
+        check("Get returns 200",      r.status_code == 200)
+        check("goal_id matches",      r.json().get("goal_id") == goal_id)
+        check("Non-existent → 404",   api("GET", "/goals/no-such-id", token).status_code == 404)
+
+        section("Goals — list")
+        r = api("GET", "/goals", token)
+        check("List returns 200",         r.status_code == 200)
+        check("Returns list",             isinstance(r.json(), list))
+        ids = [g["goal_id"] for g in r.json()]
+        check("Created goal in list",     goal_id in ids, f"IDs: {ids}")
+
+        section("Goals — update")
+        r = api("PUT", f"/goals/{goal_id}", token, {
+            "title":  "Updated goal title",
+            "status": "completed",
+        })
+        check("Update returns 200",   r.status_code == 200)
+        check("Title updated",        r.json().get("title")  == "Updated goal title")
+        check("Status updated",       r.json().get("status") == "completed")
+
+        check("Invalid status → 400",
+              api("PUT", f"/goals/{goal_id}", token, {"status": "invalid"}).status_code == 400)
+        check("Update non-existent → 404",
+              api("PUT", "/goals/no-such-id", token, {"title": "Ghost"}).status_code == 404)
+
+        section("Goals — delete")
+        check("Delete returns 204",
+              api("DELETE", f"/goals/{goal_id}", token).status_code == 204)
+        created_ids.remove(goal_id)
+        check("Deleted goal → 404",
+              api("GET", f"/goals/{goal_id}", token).status_code == 404)
+        check("Delete non-existent → 404",
+              api("DELETE", f"/goals/{goal_id}", token).status_code == 404)
+    finally:
+        for gid in created_ids:
+            api("DELETE", f"/goals/{gid}", token)
+
+
+# ── Export ────────────────────────────────────────────────────────────────────
+
+def test_export(token: str) -> None:
+    section("Export — download")
+    r = api("GET", "/export", token)
+    check("Export returns 200",         r.status_code == 200, f"Got {r.status_code}: {r.text}")
+    check("Content-Type is application/zip",
+          r.headers.get("Content-Type", "").startswith("application/zip"),
+          f"Content-Type: {r.headers.get('Content-Type')}")
+    check("Body is non-empty",          len(r.content) > 0)
+
+    # Verify it's a valid ZIP by checking the PK magic bytes
+    check("Response is valid ZIP",      r.content[:2] == b"PK", f"First bytes: {r.content[:4]!r}")
+
+
 # ── Suites + entry point ──────────────────────────────────────────────────────
 
 SUITES = {
-    "tasks":    test_tasks,
-    "habits":   test_habits,
-    "journal":  test_journal,
-    "notes":    test_notes,
-    "settings": test_settings,
-    "tokens":   test_tokens,
+    "tasks":     test_tasks,
+    "habits":    test_habits,
+    "journal":   test_journal,
+    "notes":     test_notes,
+    "settings":  test_settings,
+    "tokens":    test_tokens,
+    "health":    test_health,
+    "nutrition": test_nutrition,
+    "goals":     test_goals,
+    "export":    test_export,
 }
 
 

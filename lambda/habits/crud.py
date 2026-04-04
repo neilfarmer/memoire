@@ -3,6 +3,7 @@
 import os
 import re
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 
 import boto3
@@ -76,21 +77,27 @@ def _build_history(user_id: str, habit_id: str, today_str: str, thirty_ago_str: 
 # ── List ──────────────────────────────────────────────────────────────────────
 
 def list_habits(user_id: str) -> dict:
-    habits  = db.query_by_user(_habits(), user_id)
-    today_str, thirty_ago = _window()
-    result  = []
+    habits = db.query_by_user(_habits(), user_id)
+    if not habits:
+        return ok([])
 
-    for habit in habits:
+    today_str, thirty_ago = _window()
+
+    def _enrich(habit: dict) -> dict:
         history, done_today, current_streak, best_streak = _build_history(
             user_id, habit["habit_id"], today_str, thirty_ago
         )
-        result.append({
+        return {
             **habit,
             "history":        history,
             "done_today":     done_today,
             "current_streak": current_streak,
             "best_streak":    best_streak,
-        })
+        }
+
+    # Parallel log queries — one DynamoDB call per habit instead of serial
+    with ThreadPoolExecutor(max_workers=min(len(habits), 10)) as pool:
+        result = list(pool.map(_enrich, habits))
 
     return ok(result)
 
