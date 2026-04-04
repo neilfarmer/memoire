@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import re
 from datetime import date
 
 import boto3
@@ -18,6 +19,17 @@ MAX_TOKENS = 1024
 MAX_LOOPS  = 6
 
 _bedrock = boto3.client("bedrock-runtime", region_name=os.environ.get("AWS_REGION", "us-east-1"))
+
+
+def _clean_reply(text: str) -> str:
+    """Strip XML reasoning/wrapper tags some models emit (e.g. Nova Lite)."""
+    # Remove <thinking>...</thinking> blocks
+    text = re.sub(r"<thinking>.*?</thinking>", "", text, flags=re.DOTALL)
+    # Unwrap <response>...</response> if present
+    m = re.search(r"<response>(.*?)</response>", text, re.DOTALL)
+    if m:
+        text = m.group(1)
+    return text.strip()
 
 
 def _system_prompt(memories: dict) -> list[dict]:
@@ -86,6 +98,7 @@ def chat(user_id: str, user_message: str) -> dict:
                         break
                 break
 
+        reply = _clean_reply(reply)
         mem.save_message(user_id, "user",      user_message)
         mem.save_message(user_id, "assistant", reply)
 
