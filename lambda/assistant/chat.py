@@ -49,7 +49,7 @@ What you know about the user:
 Guidelines:
 - Be concise and friendly.
 - When the user asks to create something, call the appropriate tool immediately — don't ask for confirmation.
-- After taking action, confirm briefly in 1-2 sentences. Include any [pal-link:...] tags returned by tools verbatim in your reply so the user can navigate directly to the created item.
+- After taking action, confirm briefly in 1-2 sentences what was created or done.
 - If you learn something meaningful about the user (preferences, routines, goals), call remember_fact.
 - When listing items, keep it brief."""
     }]
@@ -62,7 +62,8 @@ def chat(user_id: str, user_message: str) -> dict:
         system    = _system_prompt(memories)
         messages  = history + [{"role": "user", "content": [{"text": user_message}]}]
 
-        reply = ""
+        reply      = ""
+        link_tags  = []  # [pal-link:...] tags collected from tool results
 
         for _ in range(MAX_LOOPS):
             resp   = _bedrock.converse(
@@ -84,6 +85,9 @@ def chat(user_id: str, user_message: str) -> dict:
                         tu     = block["toolUse"]
                         result = handle_tool(user_id, tu["name"], tu["input"])
                         logger.info("Tool %s → %s", tu["name"], result)
+                        # Extract any pal-link tags from the tool result
+                        for tag in re.findall(r"\[pal-link:[^\]]+\]", result):
+                            link_tags.append(tag)
                         tool_results.append({
                             "toolResult": {
                                 "toolUseId": tu["toolUseId"],
@@ -99,6 +103,9 @@ def chat(user_id: str, user_message: str) -> dict:
                 break
 
         reply = _clean_reply(reply)
+        # Append any navigation links collected from tool results
+        if link_tags:
+            reply = reply.rstrip() + "\n" + " ".join(link_tags)
         mem.save_message(user_id, "user",      user_message)
         mem.save_message(user_id, "assistant", reply)
 
