@@ -82,6 +82,16 @@ resource "aws_iam_role_policy" "notes_s3" {
     Statement = [
       {
         Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
+        Resource = aws_s3_bucket.frontend.arn
+        Condition = {
+          StringLike = {
+            "s3:prefix" = ["note-attachments/*"]
+          }
+        }
+      },
+      {
+        Effect   = "Allow"
         Action   = ["s3:PutObject"]
         Resource = [
           "${aws_s3_bucket.frontend.arn}/note-images/*",
@@ -90,7 +100,7 @@ resource "aws_iam_role_policy" "notes_s3" {
       },
       {
         Effect   = "Allow"
-        Action   = ["s3:GetObject"]
+        Action   = ["s3:GetObject", "s3:DeleteObject"]
         Resource = "${aws_s3_bucket.frontend.arn}/note-images/*"
       },
       {

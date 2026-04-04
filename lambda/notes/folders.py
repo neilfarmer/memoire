@@ -98,9 +98,12 @@ def delete_folder(user_id: str, folder_id: str) -> dict:
     all_folders = db.query_by_user(_table(), user_id)
     ids_to_delete = _subtree_ids(all_folders, folder_id)
 
-    # Delete all notes in every folder in the subtree
+    # Delete all notes in every folder in the subtree (S3 assets first)
     all_notes = db.query_by_user(db.get_table(NOTES_TABLE), user_id)
     notes_to_delete = [n for n in all_notes if n.get("folder_id") in ids_to_delete]
+
+    for note in notes_to_delete:
+        note_crud._delete_note_s3_assets(user_id, note)
 
     notes_table = db.get_table(NOTES_TABLE)
     with notes_table.batch_writer() as batch:

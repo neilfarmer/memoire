@@ -172,15 +172,20 @@ def delete_habit(user_id: str, habit_id: str) -> dict:
 
     _habits().delete_item(Key={"user_id": user_id, "habit_id": habit_id})
 
-    # Delete all logs for this habit — query by user_id PK and habit_id# prefix
-    resp = _logs().query(
-        KeyConditionExpression=
+    # Delete ALL logs for this habit — paginate to handle histories > 1,000 entries
+    params: dict = {
+        "KeyConditionExpression":
             Key("user_id").eq(user_id) &
             Key("log_id").begins_with(f"{habit_id}#")
-    )
+    }
     with _logs().batch_writer() as batch:
-        for item in resp.get("Items", []):
-            batch.delete_item(Key={"user_id": user_id, "log_id": item["log_id"]})
+        while True:
+            resp = _logs().query(**params)
+            for item in resp.get("Items", []):
+                batch.delete_item(Key={"user_id": user_id, "log_id": item["log_id"]})
+            if "LastEvaluatedKey" not in resp:
+                break
+            params["ExclusiveStartKey"] = resp["LastEvaluatedKey"]
 
     return no_content()
 

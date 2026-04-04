@@ -1,11 +1,4 @@
-"""Unit tests for lambda/health/crud.py.
-
-Note: health/crud.py uses a raw string KeyConditionExpression
-  ``KeyConditionExpression="user_id = :uid"``
-instead of the Key() helper used everywhere else.  Moto supports this form, so
-the tests exercise the real code path.  The inconsistency is tracked in
-GitHub issue #16.
-"""
+"""Unit tests for lambda/health/crud.py."""
 
 import json
 import os

@@ -60,6 +60,23 @@ class TestQueryByUser:
             ids = {r["item_id"] for r in result}
             assert ids == {"a", "b"}
 
+    def test_paginates_across_multiple_pages(self):
+        """query_by_user must follow LastEvaluatedKey until exhausted."""
+        from unittest.mock import MagicMock, patch
+
+        page1 = {"Items": [{"user_id": USER, "item_id": "a"}], "LastEvaluatedKey": {"user_id": USER, "item_id": "a"}}
+        page2 = {"Items": [{"user_id": USER, "item_id": "b"}]}
+
+        mock_table = MagicMock()
+        mock_table.query.side_effect = [page1, page2]
+
+        result = db_mod.query_by_user(mock_table, USER)
+        assert len(result) == 2
+        assert mock_table.query.call_count == 2
+        # Second call must include ExclusiveStartKey
+        second_call_kwargs = mock_table.query.call_args_list[1][1]
+        assert second_call_kwargs["ExclusiveStartKey"] == {"user_id": USER, "item_id": "a"}
+
     def test_does_not_return_other_users_data(self, ddb_table):
         with mock_aws():
             ddb = boto3.resource("dynamodb", region_name="us-east-1")
