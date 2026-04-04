@@ -13,7 +13,7 @@ from response import ok, server_error
 
 logger = logging.getLogger(__name__)
 
-MODEL_ID   = "anthropic.claude-haiku-4-5-20251001-v1:0"
+MODEL_ID   = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 MAX_TOKENS = 1024
 MAX_LOOPS  = 6
 
