@@ -105,6 +105,9 @@ def list_habits(user_id: str) -> dict:
 
 # ── Create ────────────────────────────────────────────────────────────────────
 
+VALID_TIME_OF_DAY = {"morning", "afternoon", "evening", "anytime"}
+
+
 def create_habit(user_id: str, body: dict) -> dict:
     name = (body.get("name") or "").strip()
     if not name:
@@ -116,11 +119,16 @@ def create_habit(user_id: str, body: dict) -> dict:
         if err:
             return error(err)
 
+    time_of_day = body.get("time_of_day", "anytime")
+    if time_of_day not in VALID_TIME_OF_DAY:
+        return error(f"time_of_day must be one of: {', '.join(sorted(VALID_TIME_OF_DAY))}")
+
     habit = {
         "user_id":     user_id,
         "habit_id":    str(uuid.uuid4()),
         "name":        name,
         "notify_time": notify_time,
+        "time_of_day": time_of_day,
         "created_at":  date.today().isoformat(),
     }
     habit = {k: v for k, v in habit.items() if v is not None and v != ""}
@@ -151,6 +159,12 @@ def update_habit(user_id: str, habit_id: str, body: dict) -> dict:
             if err:
                 return error(err)
         fields["notify_time"] = nt
+
+    if "time_of_day" in body:
+        tod = body["time_of_day"] or "anytime"
+        if tod not in VALID_TIME_OF_DAY:
+            return error(f"time_of_day must be one of: {', '.join(sorted(VALID_TIME_OF_DAY))}")
+        fields["time_of_day"] = tod
 
     if not fields:
         return ok(habit)

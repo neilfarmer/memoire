@@ -586,6 +586,7 @@
       text-transform: uppercase;
       cursor: pointer;
       appearance: auto;
+      width: fit-content;
     }
     .status-select:focus { outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
     .status-select.badge-todo        { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
@@ -617,6 +618,8 @@
     html[data-theme="dark"] .task-card.is-due-today {
       background: linear-gradient(to right, rgba(251,191,36,.07), var(--surface));
     }
+    .task-card.task-card-done { opacity: 0.5; }
+    .task-card.task-card-done:hover { opacity: 0.75; }
 
     .empty-state {
       text-align: center;
@@ -730,6 +733,63 @@
     }
 
     /* ── Habit cards ── */
+    .goal-progress-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 0 2px;
+    }
+    .goal-progress-track {
+      flex: 1;
+      height: 5px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .goal-progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 99px;
+    }
+    .goal-progress-pct {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      min-width: 30px;
+      text-align: right;
+    }
+
+    .habits-group-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+      padding: 12px 0 6px;
+    }
+    .habits-progress {
+      padding: 0 0 16px;
+    }
+    .habits-progress-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .habits-progress-track {
+      height: 6px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .habits-progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 99px;
+      transition: width 0.3s ease;
+    }
+
     .habit-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -767,7 +827,8 @@
 
     .habit-meta { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); }
 
-    .streak { font-weight: 700; color: var(--accent); }
+    .streak      { font-weight: 700; color: var(--accent); }
+    .streak-none { color: var(--muted); font-weight: 400; }
 
     .btn-done {
       flex-shrink: 0;
@@ -984,6 +1045,17 @@
       color: var(--muted);
       font-style: italic;
     }
+    .home-widget-footer {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+    .home-widget-link {
+      font-size: 12px;
+      color: var(--primary);
+      cursor: pointer;
+    }
+    .home-widget-link:hover { text-decoration: underline; }
 
     /* ── Admin page ── */
     .admin-grid {
@@ -1418,6 +1490,14 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .notes-toolbar-sep {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+      margin: 0 4px;
+      flex-shrink: 0;
     }
 
     .notes-editor-body {
@@ -2466,8 +2546,9 @@
       Search
       <span class="search-btn-hint">/</span>
     </button>
-    <button class="btn btn-ghost btn-sm" id="logout-btn" title="Sign out" style="color:var(--muted);">
+    <button class="btn btn-ghost btn-sm" id="logout-btn" title="Sign out" style="color:var(--muted);gap:5px;">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign out
     </button>
   </header>
 
@@ -2570,8 +2651,14 @@
   <main id="page-tasks" class="hidden">
     <div class="toolbar">
       <h2>Tasks</h2>
-      <button class="btn btn-secondary" id="pomo-toggle-visibility-btn">Pomodoro</button>
-      <button class="btn btn-secondary" id="task-view-btn">Calendar</button>
+      <button class="btn btn-secondary" id="pomo-toggle-visibility-btn" style="display:flex;align-items:center;gap:5px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Pomodoro
+      </button>
+      <button class="btn btn-secondary" id="task-view-btn" style="display:flex;align-items:center;gap:5px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Calendar
+      </button>
       <button class="btn btn-primary" id="new-task-btn">+ New task</button>
     </div>
     <div class="filters">
@@ -2618,6 +2705,7 @@
       <h2>Habits</h2>
       <button class="btn btn-primary" id="new-habit-btn">+ New habit</button>
     </div>
+    <div id="habits-progress" class="habits-progress hidden"></div>
     <div id="habits-loader" class="page-loader hidden"><div class="spinner"></div></div>
     <div id="habit-list"></div>
   </main>
@@ -2645,6 +2733,7 @@
       <!-- Shown when no note is open -->
       <div class="notes-empty-state" id="notes-empty-state">
         <p>Select a note from the tree, or create a new one.</p>
+        <button class="btn btn-primary" onclick="notesApp.newNote()">+ New note</button>
       </div>
 
       <!-- Editor pane (hidden until a note is opened) -->
@@ -2653,11 +2742,12 @@
         <div class="notes-editor-header">
           <span class="notes-folder-crumb" id="notes-entry-label"></span>
           <button class="btn btn-secondary" id="notes-preview-btn">Preview</button>
-          <button class="btn btn-danger hidden" id="notes-delete-btn">Delete</button>
           <button class="btn btn-secondary hidden" id="notes-attach-btn">Attach</button>
           <input type="file" id="notes-attach-input" style="display:none" multiple>
           <button class="btn btn-primary" id="notes-save-btn">Save</button>
           <button class="btn btn-secondary" id="notes-close-btn">Close</button>
+          <span class="notes-toolbar-sep hidden" id="notes-delete-sep"></span>
+          <button class="btn btn-danger hidden" id="notes-delete-btn">Delete</button>
         </div>
         <div class="notes-editor-body">
           <input type="text" class="entry-title-input" id="notes-title-input" placeholder="Untitled" />
@@ -2988,6 +3078,15 @@
         <input type="text" id="habit-name" placeholder="e.g. Morning run, Read 20 minutes" />
       </div>
       <div class="field">
+        <label for="habit-time-of-day">Time of day</label>
+        <select id="habit-time-of-day">
+          <option value="anytime">Anytime</option>
+          <option value="morning">Morning</option>
+          <option value="afternoon">Afternoon</option>
+          <option value="evening">Evening</option>
+        </select>
+      </div>
+      <div class="field">
         <label for="habit-notify-time">Daily reminder time (UTC, optional)</label>
         <input type="time" id="habit-notify-time" placeholder="HH:MM" />
         <div style="font-size:12px; color:var(--muted); margin-top:4px;">Leave blank for no reminder. Requires ntfy to be configured in Settings.</div>
@@ -3033,6 +3132,11 @@
             <option value="abandoned">Abandoned</option>
           </select>
         </div>
+      </div>
+      <div class="field">
+        <label for="goal-progress">Progress: <span id="goal-progress-label">0%</span></label>
+        <input type="range" id="goal-progress" min="0" max="100" step="5" value="0"
+          oninput="$('goal-progress-label').textContent = this.value + '%'" />
       </div>
       <div class="modal-footer">
         <div class="modal-footer-left">
@@ -3366,6 +3470,7 @@
       const today   = active && isDueToday(task.due_date);
       const isFocus = pomodoro.taskId === task.task_id && pomodoro.state !== "idle";
       let cardClass = overdue ? "task-card is-overdue" : today ? "task-card is-due-today" : "task-card";
+      if (!active) cardClass += " task-card-done";
       if (isFocus) cardClass += " is-active-focus";
       const dateClass = overdue ? "due-date overdue" : today ? "due-date due-today" : "due-date";
 
@@ -4161,14 +4266,15 @@
   // ── Notes ─────────────────────────────────────────────────────────────────────
 
   const notesApp = {
-    folders:     [],
-    notes:       [],          // all summaries
-    expanded:    new Set(),
-    currentNote: null,        // full note in editor { note_id, folder_id, ... }
-    isNew:       false,       // note not yet POSTed
-    saveTimer:   null,
-    isDirty:     false,
-    isPreviewing: false,
+    folders:          [],
+    notes:            [],          // all summaries
+    expanded:         new Set(),
+    selectedFolderId: null,        // last folder clicked in tree
+    currentNote:      null,        // full note in editor { note_id, folder_id, ... }
+    isNew:            false,       // note not yet POSTed
+    saveTimer:        null,
+    isDirty:          false,
+    isPreviewing:     false,
 
     async load() {
       showLoader("notes-loader");
@@ -4255,7 +4361,26 @@
     toggleFolder(folderId) {
       if (notesApp.expanded.has(folderId)) notesApp.expanded.delete(folderId);
       else notesApp.expanded.add(folderId);
+      notesApp.selectedFolderId = folderId;
       notesApp.renderTree();
+      notesApp.updateEmptyState();
+    },
+
+    updateEmptyState() {
+      const emptyEl = $("notes-empty-state");
+      if (!emptyEl || notesApp.currentNote) return;
+      const fId = notesApp.selectedFolderId;
+      const folder = fId ? notesApp.folders.find(f => f.folder_id === fId) : null;
+      const hasNotes = fId ? notesApp.notes.some(n => n.folder_id === fId) : false;
+      if (folder && !hasNotes) {
+        emptyEl.innerHTML = `
+          <p>No notes in <strong>${escHtml(folder.name)}</strong> yet.</p>
+          <button class="btn btn-primary" onclick="notesApp.newNote('${fId}')">+ New note</button>`;
+      } else {
+        emptyEl.innerHTML = `
+          <p>Select a note from the tree, or create a new one.</p>
+          <button class="btn btn-primary" onclick="notesApp.newNote()">+ New note</button>`;
+      }
     },
 
     // ── Folder actions ──────────────────────────────────────────────────────
@@ -4395,6 +4520,7 @@
       $("notes-tags-input").value   = "";
       $("notes-save-status").textContent = "";
       $("notes-delete-btn").classList.add("hidden");
+      $("notes-delete-sep").classList.add("hidden");
       $("notes-attach-btn").classList.add("hidden");
       $("notes-preview-btn").textContent = "Preview";
       $("notes-body-input").classList.remove("hide");
@@ -4425,6 +4551,7 @@
         $("notes-tags-input").value   = (note.tags || []).join(", ");
         $("notes-save-status").textContent = "";
         $("notes-delete-btn").classList.remove("hidden");
+        $("notes-delete-sep").classList.remove("hidden");
         $("notes-attach-btn").classList.remove("hidden");
         $("notes-preview-btn").textContent = "Edit";
         $("notes-preview-pane").innerHTML  = renderNoteMarkdown(note.body || "");
@@ -4513,6 +4640,7 @@
           notesApp.isNew       = false;
           notesApp.notes.unshift({ ...saved, preview: saved.body.slice(0, 200) });
           $("notes-delete-btn").classList.remove("hidden");
+          $("notes-delete-sep").classList.remove("hidden");
         } else {
           saved = await api.call("PUT", `/notes/${notesApp.currentNote.note_id}`, payload);
           notesApp.currentNote = saved;
@@ -6060,7 +6188,9 @@
 
     render() {
       const list = $("habit-list");
+      const progressEl = $("habits-progress");
       if (habits.data.length === 0) {
+        progressEl.classList.add("hidden");
         list.innerHTML = `
           <div class="empty-state">
             <p>No habits yet.</p>
@@ -6069,25 +6199,34 @@
         return;
       }
 
-      list.innerHTML = habits.data.map(h => {
+      const today    = todayStr();
+      const total    = habits.data.length;
+      const done     = habits.data.filter(h => h.done_today || h.last_completed === today).length;
+      const pct      = total ? Math.round((done / total) * 100) : 0;
+      progressEl.innerHTML = `
+        <div class="habits-progress-header">
+          <span>${done} / ${total} completed today</span>
+          <span>${pct}%</span>
+        </div>
+        <div class="habits-progress-track"><div class="habits-progress-fill" style="width:${pct}%"></div></div>`;
+      progressEl.classList.remove("hidden");
+
+      const renderHabit = h => {
         const streak     = h.current_streak;
         const bestStreak = h.best_streak;
         const streakText = streak > 0 ? `${streak} day streak` : "No streak yet";
         const bestText   = bestStreak > 0 ? ` &middot; Best: ${bestStreak}` : "";
-
         const heatmapCells = [...h.history].map(entry => {
           const cls = entry.done ? "done" : "missed";
           return `<div class="hm-cell ${cls}" title="${entry.date}: ${entry.done ? "done" : "missed"}"></div>`;
         }).join("");
-        const historyRows = `<div class="habit-heatmap">${heatmapCells}</div>`;
-
         return `
           <div class="habit-card">
             <div class="habit-card-main">
               <div class="habit-card-body">
                 <div class="habit-name">${escHtml(h.name)}</div>
                 <div class="habit-meta">
-                  <span class="streak">${streakText}</span>
+                  <span class="${streak > 0 ? 'streak' : 'streak-none'}">${streakText}</span>
                   <span>${bestText}</span>
                 </div>
               </div>
@@ -6102,10 +6241,29 @@
               <span class="hh-chevron">&#9656;</span> History
             </button>
             <div class="habit-history">
-              ${historyRows}
+              <div class="habit-heatmap">${heatmapCells}</div>
             </div>
           </div>`;
+      };
+
+      const groups = [
+        { key: "morning",   label: "Morning" },
+        { key: "afternoon", label: "Afternoon" },
+        { key: "evening",   label: "Evening" },
+        { key: "anytime",   label: "Anytime" },
+      ];
+
+      const grouped = groups.map(g => {
+        const items = habits.data.filter(h => (h.time_of_day || "anytime") === g.key);
+        if (!items.length) return "";
+        const hasMultipleGroups = groups.some(gg =>
+          gg.key !== g.key && habits.data.some(h => (h.time_of_day || "anytime") === gg.key));
+        const header = hasMultipleGroups
+          ? `<div class="habits-group-label">${g.label}</div>` : "";
+        return header + items.map(renderHabit).join("");
       }).join("");
+
+      list.innerHTML = grouped;
     },
 
     async toggle(habitId, dateStr, btn) {
@@ -6150,11 +6308,13 @@
         if (!h) return;
         $("habit-modal-title").textContent   = "Edit habit";
         $("habit-name").value                = h.name;
+        $("habit-time-of-day").value         = h.time_of_day || "anytime";
         $("habit-notify-time").value         = h.notify_time || "";
         $("habit-delete-btn").classList.remove("hidden");
       } else {
         $("habit-modal-title").textContent   = "New habit";
         $("habit-name").value                = "";
+        $("habit-time-of-day").value         = "anytime";
         $("habit-notify-time").value         = "";
         $("habit-delete-btn").classList.add("hidden");
       }
@@ -6184,6 +6344,7 @@
 
     const body = {
       name,
+      time_of_day: $("habit-time-of-day").value || "anytime",
       notify_time: $("habit-notify-time").value || "",
     };
 
@@ -6260,16 +6421,28 @@
       list.innerHTML = filtered.map(g => {
         const statusLabel = { active: "Active", completed: "Completed", abandoned: "Abandoned" }[g.status] || g.status;
         const statusClass = { active: "badge-in_progress", completed: "badge-done", abandoned: "badge-todo" }[g.status] || "";
-        const dateHtml = g.target_date
-          ? `<span class="due-date ${g.target_date < todayStr() && g.status === "active" ? "overdue" : ""}">${g.target_date < todayStr() && g.status === "active" ? "Overdue &middot; " : ""}Target: ${g.target_date}</span>`
+        const targetFormatted = g.target_date
+          ? new Date(g.target_date + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+          : null;
+        const dateHtml = targetFormatted
+          ? `<span class="due-date ${g.target_date < todayStr() && g.status === "active" ? "overdue" : ""}">${g.target_date < todayStr() && g.status === "active" ? "Overdue &middot; " : ""}Target: ${targetFormatted}</span>`
           : "";
         const descHtml = g.description ? `<div class="task-desc">${escHtml(g.description)}</div>` : "";
+        const progress = g.progress ?? 0;
+        const progressHtml = `
+          <div class="goal-progress-row">
+            <div class="goal-progress-track">
+              <div class="goal-progress-fill" style="width:${progress}%"></div>
+            </div>
+            <span class="goal-progress-pct">${progress}%</span>
+          </div>`;
         return `
           <div class="task-card" onclick="goalModal.open('${g.goal_id}')">
             <div class="task-card-main">
               <div class="task-card-body">
                 <div class="task-title">${escHtml(g.title)}</div>
                 ${descHtml}
+                ${progressHtml}
                 <div class="task-meta">
                   <span class="badge ${statusClass}">${statusLabel}</span>
                   ${dateHtml}
@@ -6289,18 +6462,22 @@
       if (goalId) {
         const g = goals.data.find(g => g.goal_id === goalId);
         if (!g) return;
-        $("goal-modal-title").textContent = "Edit goal";
-        $("goal-title").value             = g.title;
-        $("goal-desc").value              = g.description || "";
-        $("goal-target-date").value       = g.target_date || "";
-        $("goal-status").value            = g.status || "active";
+        $("goal-modal-title").textContent   = "Edit goal";
+        $("goal-title").value               = g.title;
+        $("goal-desc").value                = g.description || "";
+        $("goal-target-date").value         = g.target_date || "";
+        $("goal-status").value              = g.status || "active";
+        $("goal-progress").value            = g.progress ?? 0;
+        $("goal-progress-label").textContent = (g.progress ?? 0) + "%";
         $("goal-delete-btn").classList.remove("hidden");
       } else {
-        $("goal-modal-title").textContent = "New goal";
-        $("goal-title").value             = "";
-        $("goal-desc").value              = "";
-        $("goal-target-date").value       = "";
-        $("goal-status").value            = "active";
+        $("goal-modal-title").textContent   = "New goal";
+        $("goal-title").value               = "";
+        $("goal-desc").value                = "";
+        $("goal-target-date").value         = "";
+        $("goal-status").value              = "active";
+        $("goal-progress").value            = 0;
+        $("goal-progress-label").textContent = "0%";
         $("goal-delete-btn").classList.add("hidden");
       }
 
@@ -6341,6 +6518,7 @@
       description:  $("goal-desc").value.trim(),
       target_date:  $("goal-target-date").value || null,
       status:       $("goal-status").value,
+      progress:     parseInt($("goal-progress").value, 10),
     };
 
     $("goal-save-btn").disabled    = true;
@@ -6688,7 +6866,7 @@
     const email    = auth.getEmail();
     const hour     = new Date().getHours();
     const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-    const rawName  = state.settings?.display_name || (email ? email.split("@")[0].split(".")[0] : "");
+    const rawName  = state.settings?.display_name || (email ? email.split("@")[0].split(".")[0].replace(/\d+$/, "") : "");
     const name     = rawName.charAt(0).toUpperCase() + rawName.slice(1);
     const today    = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
     $("home-greeting").innerHTML = `
@@ -6754,18 +6932,22 @@
       <div class="home-widget">
         <div class="home-widget-title">Tasks</div>
         ${tasksHtml}
+        <div class="home-widget-footer"><span class="home-widget-link" onclick="pages.show('tasks')">View all →</span></div>
       </div>
       <div class="home-widget">
         <div class="home-widget-title">Habits</div>
         ${habitsHtml}
+        <div class="home-widget-footer"><span class="home-widget-link" onclick="pages.show('habits')">View all →</span></div>
       </div>
       <div class="home-widget">
         <div class="home-widget-title">Journal</div>
         ${journalHtml}
+        <div class="home-widget-footer"><span class="home-widget-link" onclick="pages.show('journal')">Open journal →</span></div>
       </div>
       <div class="home-widget">
         <div class="home-widget-title">Goals</div>
         ${goalsHtml}
+        <div class="home-widget-footer"><span class="home-widget-link" onclick="pages.show('goals')">View all →</span></div>
       </div>`;
   }
 
