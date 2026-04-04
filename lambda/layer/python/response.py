@@ -39,5 +39,9 @@ def not_found(resource: str = "Resource") -> dict:
     return error(f"{resource} not found", status=404)
 
 
+def forbidden(message: str = "Forbidden") -> dict:
+    return error(message, status=403)
+
+
 def server_error(message: str = "Internal server error") -> dict:
     return error(message, status=500)
