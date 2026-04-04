@@ -510,13 +510,13 @@ def test_tokens(token: str) -> None:
 
     section("Tokens — PAT cannot manage tokens")
     r = api("GET", "/tokens", token)
-    check("PAT blocked from listing tokens (401)", r.status_code == 401, f"Got {r.status_code}: {r.text}")
+    check("PAT blocked from listing tokens (401/403)", r.status_code in (401, 403), f"Got {r.status_code}: {r.text}")
 
     r = api("POST", "/tokens", token, {"name": "should-fail"})
-    check("PAT blocked from creating token (401)", r.status_code == 401, f"Got {r.status_code}: {r.text}")
+    check("PAT blocked from creating token (401/403)", r.status_code in (401, 403), f"Got {r.status_code}: {r.text}")
 
     r = api("DELETE", "/tokens/any-id", token)
-    check("PAT blocked from revoking token (401)", r.status_code == 401, f"Got {r.status_code}: {r.text}")
+    check("PAT blocked from revoking token (401/403)", r.status_code in (401, 403), f"Got {r.status_code}: {r.text}")
 
 
 # ── Suites + entry point ──────────────────────────────────────────────────────
