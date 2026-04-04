@@ -53,6 +53,13 @@ def create_goal(user_id: str, body: dict) -> dict:
     if err:
         return error(err)
 
+    progress = body.get("progress", 0)
+    try:
+        progress = int(progress)
+    except (TypeError, ValueError):
+        progress = 0
+    progress = max(0, min(100, progress))
+
     now = now_iso()
     goal = {
         "user_id": user_id,
@@ -61,6 +68,7 @@ def create_goal(user_id: str, body: dict) -> dict:
         "description": description,
         "target_date": body.get("target_date"),
         "status": body.get("status", "active"),
+        "progress": progress,
         "created_at": now,
         "updated_at": now,
     }
@@ -84,7 +92,7 @@ def get_goal(user_id: str, goal_id: str) -> dict:
 # ── Update ────────────────────────────────────────────────────────────────────
 
 def update_goal(user_id: str, goal_id: str, body: dict) -> dict:
-    updatable = {"title", "description", "target_date", "status"}
+    updatable = {"title", "description", "target_date", "status", "progress"}
     fields = {k: v for k, v in body.items() if k in updatable}
 
     if not fields:
@@ -98,6 +106,15 @@ def update_goal(user_id: str, goal_id: str, body: dict) -> dict:
             return error(f"title exceeds maximum length of {MAX_TITLE_LEN}")
     if "description" in fields and len(fields["description"]) > MAX_DESCRIPTION_LEN:
         return error(f"description exceeds maximum length of {MAX_DESCRIPTION_LEN}")
+
+    if "progress" in fields:
+        try:
+            p = int(fields["progress"])
+        except (TypeError, ValueError):
+            return error("progress must be an integer between 0 and 100")
+        if not 0 <= p <= 100:
+            return error("progress must be between 0 and 100")
+        fields["progress"] = p
 
     err = _validate_fields(fields)
     if err:

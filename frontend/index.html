@@ -733,6 +733,40 @@
     }
 
     /* ── Habit cards ── */
+    .goal-progress-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 0 2px;
+    }
+    .goal-progress-track {
+      flex: 1;
+      height: 5px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .goal-progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 99px;
+    }
+    .goal-progress-pct {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      min-width: 30px;
+      text-align: right;
+    }
+
+    .habits-group-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+      padding: 12px 0 6px;
+    }
     .habits-progress {
       padding: 0 0 16px;
     }
@@ -3044,6 +3078,15 @@
         <input type="text" id="habit-name" placeholder="e.g. Morning run, Read 20 minutes" />
       </div>
       <div class="field">
+        <label for="habit-time-of-day">Time of day</label>
+        <select id="habit-time-of-day">
+          <option value="anytime">Anytime</option>
+          <option value="morning">Morning</option>
+          <option value="afternoon">Afternoon</option>
+          <option value="evening">Evening</option>
+        </select>
+      </div>
+      <div class="field">
         <label for="habit-notify-time">Daily reminder time (UTC, optional)</label>
         <input type="time" id="habit-notify-time" placeholder="HH:MM" />
         <div style="font-size:12px; color:var(--muted); margin-top:4px;">Leave blank for no reminder. Requires ntfy to be configured in Settings.</div>
@@ -3089,6 +3132,11 @@
             <option value="abandoned">Abandoned</option>
           </select>
         </div>
+      </div>
+      <div class="field">
+        <label for="goal-progress">Progress: <span id="goal-progress-label">0%</span></label>
+        <input type="range" id="goal-progress" min="0" max="100" step="5" value="0"
+          oninput="$('goal-progress-label').textContent = this.value + '%'" />
       </div>
       <div class="modal-footer">
         <div class="modal-footer-left">
@@ -4218,14 +4266,15 @@
   // ── Notes ─────────────────────────────────────────────────────────────────────
 
   const notesApp = {
-    folders:     [],
-    notes:       [],          // all summaries
-    expanded:    new Set(),
-    currentNote: null,        // full note in editor { note_id, folder_id, ... }
-    isNew:       false,       // note not yet POSTed
-    saveTimer:   null,
-    isDirty:     false,
-    isPreviewing: false,
+    folders:          [],
+    notes:            [],          // all summaries
+    expanded:         new Set(),
+    selectedFolderId: null,        // last folder clicked in tree
+    currentNote:      null,        // full note in editor { note_id, folder_id, ... }
+    isNew:            false,       // note not yet POSTed
+    saveTimer:        null,
+    isDirty:          false,
+    isPreviewing:     false,
 
     async load() {
       showLoader("notes-loader");
@@ -4312,7 +4361,26 @@
     toggleFolder(folderId) {
       if (notesApp.expanded.has(folderId)) notesApp.expanded.delete(folderId);
       else notesApp.expanded.add(folderId);
+      notesApp.selectedFolderId = folderId;
       notesApp.renderTree();
+      notesApp.updateEmptyState();
+    },
+
+    updateEmptyState() {
+      const emptyEl = $("notes-empty-state");
+      if (!emptyEl || notesApp.currentNote) return;
+      const fId = notesApp.selectedFolderId;
+      const folder = fId ? notesApp.folders.find(f => f.folder_id === fId) : null;
+      const hasNotes = fId ? notesApp.notes.some(n => n.folder_id === fId) : false;
+      if (folder && !hasNotes) {
+        emptyEl.innerHTML = `
+          <p>No notes in <strong>${escHtml(folder.name)}</strong> yet.</p>
+          <button class="btn btn-primary" onclick="notesApp.newNote('${fId}')">+ New note</button>`;
+      } else {
+        emptyEl.innerHTML = `
+          <p>Select a note from the tree, or create a new one.</p>
+          <button class="btn btn-primary" onclick="notesApp.newNote()">+ New note</button>`;
+      }
     },
 
     // ── Folder actions ──────────────────────────────────────────────────────
@@ -6143,18 +6211,15 @@
         <div class="habits-progress-track"><div class="habits-progress-fill" style="width:${pct}%"></div></div>`;
       progressEl.classList.remove("hidden");
 
-      list.innerHTML = habits.data.map(h => {
+      const renderHabit = h => {
         const streak     = h.current_streak;
         const bestStreak = h.best_streak;
         const streakText = streak > 0 ? `${streak} day streak` : "No streak yet";
         const bestText   = bestStreak > 0 ? ` &middot; Best: ${bestStreak}` : "";
-
         const heatmapCells = [...h.history].map(entry => {
           const cls = entry.done ? "done" : "missed";
           return `<div class="hm-cell ${cls}" title="${entry.date}: ${entry.done ? "done" : "missed"}"></div>`;
         }).join("");
-        const historyRows = `<div class="habit-heatmap">${heatmapCells}</div>`;
-
         return `
           <div class="habit-card">
             <div class="habit-card-main">
@@ -6176,10 +6241,29 @@
               <span class="hh-chevron">&#9656;</span> History
             </button>
             <div class="habit-history">
-              ${historyRows}
+              <div class="habit-heatmap">${heatmapCells}</div>
             </div>
           </div>`;
+      };
+
+      const groups = [
+        { key: "morning",   label: "Morning" },
+        { key: "afternoon", label: "Afternoon" },
+        { key: "evening",   label: "Evening" },
+        { key: "anytime",   label: "Anytime" },
+      ];
+
+      const grouped = groups.map(g => {
+        const items = habits.data.filter(h => (h.time_of_day || "anytime") === g.key);
+        if (!items.length) return "";
+        const hasMultipleGroups = groups.some(gg =>
+          gg.key !== g.key && habits.data.some(h => (h.time_of_day || "anytime") === gg.key));
+        const header = hasMultipleGroups
+          ? `<div class="habits-group-label">${g.label}</div>` : "";
+        return header + items.map(renderHabit).join("");
       }).join("");
+
+      list.innerHTML = grouped;
     },
 
     async toggle(habitId, dateStr, btn) {
@@ -6224,11 +6308,13 @@
         if (!h) return;
         $("habit-modal-title").textContent   = "Edit habit";
         $("habit-name").value                = h.name;
+        $("habit-time-of-day").value         = h.time_of_day || "anytime";
         $("habit-notify-time").value         = h.notify_time || "";
         $("habit-delete-btn").classList.remove("hidden");
       } else {
         $("habit-modal-title").textContent   = "New habit";
         $("habit-name").value                = "";
+        $("habit-time-of-day").value         = "anytime";
         $("habit-notify-time").value         = "";
         $("habit-delete-btn").classList.add("hidden");
       }
@@ -6258,6 +6344,7 @@
 
     const body = {
       name,
+      time_of_day: $("habit-time-of-day").value || "anytime",
       notify_time: $("habit-notify-time").value || "",
     };
 
@@ -6341,12 +6428,21 @@
           ? `<span class="due-date ${g.target_date < todayStr() && g.status === "active" ? "overdue" : ""}">${g.target_date < todayStr() && g.status === "active" ? "Overdue &middot; " : ""}Target: ${targetFormatted}</span>`
           : "";
         const descHtml = g.description ? `<div class="task-desc">${escHtml(g.description)}</div>` : "";
+        const progress = g.progress ?? 0;
+        const progressHtml = `
+          <div class="goal-progress-row">
+            <div class="goal-progress-track">
+              <div class="goal-progress-fill" style="width:${progress}%"></div>
+            </div>
+            <span class="goal-progress-pct">${progress}%</span>
+          </div>`;
         return `
           <div class="task-card" onclick="goalModal.open('${g.goal_id}')">
             <div class="task-card-main">
               <div class="task-card-body">
                 <div class="task-title">${escHtml(g.title)}</div>
                 ${descHtml}
+                ${progressHtml}
                 <div class="task-meta">
                   <span class="badge ${statusClass}">${statusLabel}</span>
                   ${dateHtml}
@@ -6366,18 +6462,22 @@
       if (goalId) {
         const g = goals.data.find(g => g.goal_id === goalId);
         if (!g) return;
-        $("goal-modal-title").textContent = "Edit goal";
-        $("goal-title").value             = g.title;
-        $("goal-desc").value              = g.description || "";
-        $("goal-target-date").value       = g.target_date || "";
-        $("goal-status").value            = g.status || "active";
+        $("goal-modal-title").textContent   = "Edit goal";
+        $("goal-title").value               = g.title;
+        $("goal-desc").value                = g.description || "";
+        $("goal-target-date").value         = g.target_date || "";
+        $("goal-status").value              = g.status || "active";
+        $("goal-progress").value            = g.progress ?? 0;
+        $("goal-progress-label").textContent = (g.progress ?? 0) + "%";
         $("goal-delete-btn").classList.remove("hidden");
       } else {
-        $("goal-modal-title").textContent = "New goal";
-        $("goal-title").value             = "";
-        $("goal-desc").value              = "";
-        $("goal-target-date").value       = "";
-        $("goal-status").value            = "active";
+        $("goal-modal-title").textContent   = "New goal";
+        $("goal-title").value               = "";
+        $("goal-desc").value                = "";
+        $("goal-target-date").value         = "";
+        $("goal-status").value              = "active";
+        $("goal-progress").value            = 0;
+        $("goal-progress-label").textContent = "0%";
         $("goal-delete-btn").classList.add("hidden");
       }
 
@@ -6418,6 +6518,7 @@
       description:  $("goal-desc").value.trim(),
       target_date:  $("goal-target-date").value || null,
       status:       $("goal-status").value,
+      progress:     parseInt($("goal-progress").value, 10),
     };
 
     $("goal-save-btn").disabled    = true;
