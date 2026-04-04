@@ -143,3 +143,9 @@ variable "note_attachment_glacier_days" {
   type        = number
   default     = 365
 }
+
+variable "admin_user_ids" {
+  description = "Comma-separated list of Cognito sub claims allowed to access /admin/stats. Leave empty to disable the endpoint for all users."
+  type        = string
+  default     = ""
+}

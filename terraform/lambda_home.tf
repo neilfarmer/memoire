@@ -25,6 +25,7 @@ resource "aws_lambda_function" "home" {
       HEALTH_TABLE    = aws_dynamodb_table.health.name
       NUTRITION_TABLE = aws_dynamodb_table.nutrition.name
       SETTINGS_TABLE  = aws_dynamodb_table.settings.name
+      ADMIN_USER_IDS  = var.admin_user_ids
     }
   }
 }

@@ -15,7 +15,7 @@ resource "aws_s3_bucket_cors_configuration" "frontend" {
   cors_rule {
     allowed_headers = ["Content-Type"]
     allowed_methods = ["PUT"]
-    allowed_origins = ["*"]
+    allowed_origins = [local.frontend_origin]
     max_age_seconds = 3000
   }
 }
@@ -26,6 +26,47 @@ resource "aws_s3_bucket_public_access_block" "frontend" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
+}
+
+# ── CloudFront Response Headers Policy (security headers) ────────────────────
+
+resource "aws_cloudfront_response_headers_policy" "security" {
+  name = "${local.name_prefix}-security-headers"
+
+  security_headers_config {
+    content_security_policy {
+      content_security_policy = join("; ", [
+        "default-src 'self'",
+        "script-src 'self' https://cdn.jsdelivr.net",
+        "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data: blob:",
+        "connect-src 'self' ${local.api_url}",
+        "frame-ancestors 'none'",
+      ])
+      override = true
+    }
+
+    frame_options {
+      frame_option = "DENY"
+      override     = true
+    }
+
+    content_type_options {
+      override = true
+    }
+
+    strict_transport_security {
+      access_control_max_age_sec = 31536000
+      include_subdomains         = true
+      override                   = true
+    }
+
+    referrer_policy {
+      referrer_policy = "strict-origin-when-cross-origin"
+      override        = true
+    }
+  }
 }
 
 # ── CloudFront Origin Access Control ─────────────────────────────────────────
@@ -54,11 +95,12 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   default_cache_behavior {
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "s3-frontend"
-    viewer_protocol_policy = "redirect-to-https"
-    compress               = true
+    allowed_methods              = ["GET", "HEAD"]
+    cached_methods               = ["GET", "HEAD"]
+    target_origin_id             = "s3-frontend"
+    viewer_protocol_policy       = "redirect-to-https"
+    compress                     = true
+    response_headers_policy_id   = aws_cloudfront_response_headers_policy.security.id
 
     forwarded_values {
       query_string = false
