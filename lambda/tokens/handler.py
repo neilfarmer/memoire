@@ -1,7 +1,8 @@
 """Tokens Lambda — Personal Access Token management.
 
-Routes are protected by the Cognito JWT authorizer only.
-PATs cannot be used to create or revoke other PATs.
+Routes are protected by the Lambda authorizer.
+PATs cannot be used to create or revoke other PATs — requests authenticated
+via PAT are rejected here with 403.
 """
 
 import json
@@ -16,9 +17,14 @@ logger.setLevel(logging.INFO)
 def lambda_handler(event: dict, context) -> dict:
     logger.info("Event: %s", json.dumps(event))
 
-    # These routes only accept the JWT authorizer, so jwt.claims is always present.
-    claims  = event["requestContext"]["authorizer"]["jwt"]["claims"]
-    user_id = claims["sub"]
+    authorizer  = event["requestContext"]["authorizer"]["lambda"]
+    user_id     = authorizer["user_id"]
+    auth_method = authorizer.get("auth_method", "jwt")
+
+    if auth_method == "pat":
+        logger.warning("PAT-authenticated request rejected on /tokens (user_id=%s)", user_id)
+        from response import error
+        return error("PATs cannot be used to manage other PATs", status=403)
 
     body = {}
     if event.get("body"):

@@ -70,14 +70,15 @@ locals {
   ]
 }
 
-# Token management routes require Cognito JWT auth only.
-# PATs cannot be used to manage other PATs.
+# Token management routes use the Lambda authorizer so cookie-based browser
+# sessions work. PAT-authenticated requests are rejected inside the Lambda
+# itself (auth_method == "pat" check in handler.py).
 resource "aws_apigatewayv2_route" "tokens" {
   for_each = toset(local.tokens_routes)
 
   api_id             = aws_apigatewayv2_api.main.id
   route_key          = each.value
   target             = "integrations/${aws_apigatewayv2_integration.tokens.id}"
-  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
-  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.lambda.id
+  authorization_type = "CUSTOM"
 }

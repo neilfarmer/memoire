@@ -59,6 +59,14 @@ resource "aws_cognito_user_pool_client" "main" {
   refresh_token_validity = 30
 
   supported_identity_providers = ["COGNITO"]
+
+  allowed_oauth_flows                  = ["code"]
+  allowed_oauth_scopes                 = ["openid", "email", "profile"]
+  allowed_oauth_flows_user_pool_client = true
+
+  # Must match window.location.origin + "/" used in the PKCE flow and logout redirect.
+  callback_urls = ["${local.frontend_origin}/"]
+  logout_urls   = ["${local.frontend_origin}/"]
 }
 
 resource "aws_cognito_user_pool_domain" "main" {
