@@ -2645,6 +2645,19 @@
     }
     #pal-send:hover { background: var(--primary-h); }
     #pal-send:disabled { opacity: 0.5; cursor: not-allowed; }
+    .pal-link-btn {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 4px 10px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .pal-link-btn:hover { background: var(--primary-h); }
   </style>
 </head>
 <body>
@@ -7445,10 +7458,45 @@
       }
     }
 
+    window.palNavigate = function palNavigate(type, id) {
+      if (type === "task") {
+        pages.show("tasks");
+        modal.open(id);
+      } else if (type === "note") {
+        pages.show("notes");
+        if (notesApp.folders.length === 0) {
+          notesApp.load().then(() => notesApp.openNote(id));
+        } else {
+          notesApp.openNote(id);
+        }
+      } else if (type === "goal") {
+        pages.show("goals");
+        goalModal.open(id);
+      } else if (type === "journal") {
+        pages.show("journal");
+        if (journal.entries.length === 0) {
+          journal.load().then(() => journal.openEntry(id));
+        } else {
+          journal.openEntry(id);
+        }
+      }
+    };
+
+    function palRenderText(text) {
+      // Replace [pal-link:type:id:label] with clickable buttons
+      return text.replace(/\[pal-link:(\w+):([^:]+):([^\]]+)\]/g, (_, type, id, label) => {
+        return `<button class="pal-link-btn" onclick="palNavigate('${type}','${escHtml(id)}')">${escHtml(label)}</button>`;
+      });
+    }
+
     function palAddMsg(role, text) {
       const div = document.createElement("div");
       div.className = "pal-msg pal-msg-" + role;
-      div.textContent = text;
+      if (role === "assistant") {
+        div.innerHTML = palRenderText(escHtml(text));
+      } else {
+        div.textContent = text;
+      }
       palMsgs.appendChild(div);
       palMsgs.scrollTop = palMsgs.scrollHeight;
       return div;

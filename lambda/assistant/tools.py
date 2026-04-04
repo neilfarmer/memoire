@@ -231,7 +231,7 @@ def _create_task(user_id: str, inputs: dict) -> str:
         task["due_date"] = inputs["due_date"]
     task = {k: v for k, v in task.items() if v is not None and v != ""}
     table.put_item(Item=task)
-    return f"Created task: {task['title']}"
+    return f"Created task: {task['title']} [pal-link:task:{task['task_id']}:Open task →]"
 
 
 def _list_tasks(user_id: str, inputs: dict) -> str:
@@ -294,7 +294,7 @@ def _create_note(user_id: str, inputs: dict) -> str:
     note = {k: v for k, v in note.items() if v is not None}
     table.put_item(Item=note)
     location = f" in '{inputs['folder_name']}'" if inputs.get("folder_name") else ""
-    return f"Created note: {note.get('title', '(untitled)')}{location}"
+    return f"Created note: {note.get('title', '(untitled)')}{location} [pal-link:note:{note['note_id']}:Open note →]"
 
 
 def _create_note_folder(user_id: str, inputs: dict) -> str:
@@ -362,7 +362,7 @@ def _create_goal(user_id: str, inputs: dict) -> str:
         goal["target_date"] = inputs["target_date"]
     goal = {k: v for k, v in goal.items() if v is not None and v != ""}
     table.put_item(Item=goal)
-    return f"Created goal: {goal['title']}"
+    return f"Created goal: {goal['title']} [pal-link:goal:{goal['goal_id']}:Open goal →]"
 
 
 def _list_goals(user_id: str, inputs: dict) -> str:
@@ -399,7 +399,7 @@ def _create_journal_entry(user_id: str, inputs: dict) -> str:
     item = {k: v for k, v in item.items() if v is not None and v != ""}
     table.put_item(Item=item)
     action = "Updated" if existing else "Created"
-    return f"{action} journal entry for {entry_date}"
+    return f"{action} journal entry for {entry_date} [pal-link:journal:{entry_date}:Open entry →]"
 
 
 def _remember_fact(user_id: str, inputs: dict) -> str:
