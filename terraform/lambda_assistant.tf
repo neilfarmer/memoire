@@ -78,7 +78,7 @@ resource "aws_iam_role_policy" "assistant_bedrock" {
       Effect   = "Allow"
       Action   = ["bedrock:InvokeModel"]
       Resource = [
-        "arn:aws:bedrock:${var.aws_region}::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
+        "arn:aws:bedrock:*::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
         "arn:aws:bedrock:${var.aws_region}:*:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0",
       ]
     }]
