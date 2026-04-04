@@ -18,6 +18,9 @@ VALID_PRIORITIES  = {"low", "medium", "high"}
 VALID_BEFORE_DUE  = {"1h", "1d", "3d"}
 VALID_RECURRING   = {"1h", "1d", "1w"}
 
+MAX_TITLE_LEN       = 500
+MAX_DESCRIPTION_LEN = 10_000
+
 
 def _table():
     return db.get_table(TABLE_NAME)
@@ -59,6 +62,12 @@ def create_task(user_id: str, body: dict) -> dict:
     title = (body.get("title") or "").strip()
     if not title:
         return error("title is required")
+    if len(title) > MAX_TITLE_LEN:
+        return error(f"title exceeds maximum length of {MAX_TITLE_LEN}")
+
+    description = body.get("description", "")
+    if len(description) > MAX_DESCRIPTION_LEN:
+        return error(f"description exceeds maximum length of {MAX_DESCRIPTION_LEN}")
 
     err = _validate_fields(body)
     if err:
@@ -69,7 +78,7 @@ def create_task(user_id: str, body: dict) -> dict:
         "user_id": user_id,
         "task_id": str(uuid.uuid4()),
         "title": title,
-        "description": body.get("description", ""),
+        "description": description,
         "status": body.get("status", "todo"),
         "priority": body.get("priority", "medium"),
         "due_date": body.get("due_date"),
@@ -108,6 +117,10 @@ def update_task(user_id: str, task_id: str, body: dict) -> dict:
         fields["title"] = fields["title"].strip()
         if not fields["title"]:
             return error("title cannot be empty")
+        if len(fields["title"]) > MAX_TITLE_LEN:
+            return error(f"title exceeds maximum length of {MAX_TITLE_LEN}")
+    if "description" in fields and len(fields["description"]) > MAX_DESCRIPTION_LEN:
+        return error(f"description exceeds maximum length of {MAX_DESCRIPTION_LEN}")
 
     err = _validate_fields(fields)
     if err:

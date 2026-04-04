@@ -3,6 +3,7 @@
 import base64
 import boto3
 import os
+import os.path
 import uuid
 from datetime import datetime, timezone
 from urllib.parse import quote
@@ -14,6 +15,39 @@ NOTES_TABLE     = os.environ["NOTES_TABLE"]
 FRONTEND_BUCKET = os.environ["FRONTEND_BUCKET"]
 
 _s3 = boto3.client("s3")
+
+# Whitelist of allowed attachment extensions
+ALLOWED_EXTENSIONS = {
+    ".pdf", ".txt", ".md",
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg",
+    ".mp3", ".mp4", ".wav",
+    ".zip", ".csv",
+    ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+}
+
+# Map whitelisted extensions to canonical MIME types
+EXTENSION_MIME = {
+    ".pdf":  "application/pdf",
+    ".txt":  "text/plain",
+    ".md":   "text/markdown",
+    ".png":  "image/png",
+    ".jpg":  "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif":  "image/gif",
+    ".webp": "image/webp",
+    ".svg":  "image/svg+xml",
+    ".mp3":  "audio/mpeg",
+    ".mp4":  "video/mp4",
+    ".wav":  "audio/wav",
+    ".zip":  "application/zip",
+    ".csv":  "text/csv",
+    ".doc":  "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".xls":  "application/vnd.ms-excel",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".ppt":  "application/vnd.ms-powerpoint",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+}
 
 
 def _now() -> str:
@@ -36,15 +70,23 @@ def create_attachment(user_id: str, note_id: str, body: dict) -> dict:
     if not name:
         return error("name is required")
 
-    att_id    = str(uuid.uuid4())
     safe_name = "".join(c for c in name if c.isalnum() or c in "._- ")[:200].strip()
     if not safe_name:
-        safe_name = att_id
+        return error("name contains no valid characters")
+
+    ext = os.path.splitext(safe_name)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        return error(f"File type '{ext or 'unknown'}' is not allowed")
+
+    # Use the canonical MIME type for the extension — ignore the client-declared type
+    content_type = EXTENSION_MIME[ext]
+
+    att_id = str(uuid.uuid4())
     key = f"note-attachments/{user_id}/{note_id}/{att_id}/{safe_name}"
 
     upload_url = _s3.generate_presigned_url(
         "put_object",
-        Params={"Bucket": FRONTEND_BUCKET, "Key": key, "ContentType": file_type},
+        Params={"Bucket": FRONTEND_BUCKET, "Key": key, "ContentType": content_type},
         ExpiresIn=300,
     )
 
@@ -52,7 +94,7 @@ def create_attachment(user_id: str, note_id: str, body: dict) -> dict:
         "id":         att_id,
         "name":       name,
         "size":       size,
-        "type":       file_type,
+        "type":       content_type,
         "key":        key,
         "created_at": _now(),
     }

@@ -27,6 +27,19 @@ from boto3.dynamodb.conditions import Key
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+# Emit structured JSON so CloudWatch Logs Insights can query individual fields.
+class _JsonFormatter(logging.Formatter):
+    def format(self, record):
+        log = {"level": record.levelname, "message": record.getMessage()}
+        if record.exc_info:
+            log["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log)
+
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(_JsonFormatter())
+    logger.addHandler(_handler)
+
 TOKENS_TABLE = os.environ["TOKENS_TABLE"]
 JWKS_URI     = os.environ["JWKS_URI"]
 JWT_ISSUER   = os.environ["JWT_ISSUER"]
@@ -168,6 +181,7 @@ def _verify_pat(token: str) -> str | None:
     )
     items = result.get("Items", [])
     if not items:
+        logger.warning("Auth rejected: PAT hash not found in tokens table")
         return None
     return items[0].get("user_id")
 
