@@ -1,10 +1,20 @@
 # ── Export Lambda ─────────────────────────────────────────────────────────────
 
+resource "aws_iam_role" "export" {
+  name               = "${local.name_prefix}-export"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+}
+
+resource "aws_iam_role_policy_attachment" "export_basic" {
+  role       = aws_iam_role.export.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
 resource "aws_lambda_function" "export" {
   function_name    = "${local.name_prefix}-export"
   runtime          = var.lambda_runtime
   handler          = "handler.lambda_handler"
-  role             = aws_iam_role.lambda_exec.arn
+  role             = aws_iam_role.export.arn
   filename         = data.archive_file.lambda_export.output_path
   source_code_hash = data.archive_file.lambda_export.output_base64sha256
   layers           = [aws_lambda_layer_version.shared.arn]
@@ -35,7 +45,7 @@ resource "aws_cloudwatch_log_group" "export" {
 
 resource "aws_iam_role_policy" "export_dynamodb" {
   name = "${local.name_prefix}-export-dynamodb"
-  role = aws_iam_role.lambda_exec.id
+  role = aws_iam_role.export.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -60,7 +70,7 @@ resource "aws_iam_role_policy" "export_dynamodb" {
 
 resource "aws_iam_role_policy" "export_s3" {
   name = "${local.name_prefix}-export-s3"
-  role = aws_iam_role.lambda_exec.id
+  role = aws_iam_role.export.id
 
   policy = jsonencode({
     Version = "2012-10-17"

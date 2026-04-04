@@ -1,8 +1,11 @@
 """Watcher Lambda — runs hourly, sends ntfy notifications for tasks and habits."""
 
+import ipaddress
 import logging
 import os
+import socket
 from datetime import datetime, date, timezone, timedelta
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 import boto3
@@ -31,6 +34,19 @@ RECURRING_INTERVALS = {
 }
 
 NTFY_PRIORITY = {"high": "5", "medium": "3", "low": "1"}
+
+
+def _is_safe_ntfy_url(url: str) -> bool:
+    """Return True only if the URL is HTTPS and resolves to a public IP."""
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or not parsed.hostname:
+            return False
+        ip = socket.gethostbyname(parsed.hostname)
+        addr = ipaddress.ip_address(ip)
+        return not (addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved)
+    except Exception:
+        return False
 
 
 def lambda_handler(event, context):
@@ -110,6 +126,9 @@ def _get_ntfy_url(settings_table, cache, user_id):
 
 
 def _ntfy_post(url, title, body, priority="3"):
+    if not _is_safe_ntfy_url(url):
+        logger.warning("Skipping ntfy notification — URL failed safety check: %s", url)
+        return False
     try:
         req = Request(
             url,

@@ -1,10 +1,20 @@
 # ── Notes Lambda ─────────────────────────────────────────────────────────────
 
+resource "aws_iam_role" "notes" {
+  name               = "${local.name_prefix}-notes"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+}
+
+resource "aws_iam_role_policy_attachment" "notes_basic" {
+  role       = aws_iam_role.notes.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
 resource "aws_lambda_function" "notes" {
   function_name    = "${local.name_prefix}-notes"
   runtime          = var.lambda_runtime
   handler          = "handler.lambda_handler"
-  role             = aws_iam_role.lambda_exec.arn
+  role             = aws_iam_role.notes.arn
   filename         = data.archive_file.lambda_notes.output_path
   source_code_hash = data.archive_file.lambda_notes.output_base64sha256
   layers           = [aws_lambda_layer_version.shared.arn]
@@ -29,7 +39,7 @@ resource "aws_cloudwatch_log_group" "notes" {
 
 resource "aws_iam_role_policy" "notes_dynamodb" {
   name = "${local.name_prefix}-notes-dynamodb"
-  role = aws_iam_role.lambda_exec.id
+  role = aws_iam_role.notes.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -65,7 +75,7 @@ resource "aws_iam_role_policy" "notes_dynamodb" {
 
 resource "aws_iam_role_policy" "notes_s3" {
   name = "${local.name_prefix}-notes-s3"
-  role = aws_iam_role.lambda_exec.id
+  role = aws_iam_role.notes.id
 
   policy = jsonencode({
     Version = "2012-10-17"

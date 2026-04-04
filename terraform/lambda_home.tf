@@ -1,10 +1,20 @@
 # ── Home Lambda (cost dashboard + admin stats) ────────────────────────────────
 
+resource "aws_iam_role" "home" {
+  name               = "${local.name_prefix}-home"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+}
+
+resource "aws_iam_role_policy_attachment" "home_basic" {
+  role       = aws_iam_role.home.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
 resource "aws_lambda_function" "home" {
   function_name    = "${local.name_prefix}-home"
   runtime          = var.lambda_runtime
   handler          = "handler.lambda_handler"
-  role             = aws_iam_role.lambda_exec.arn
+  role             = aws_iam_role.home.arn
   filename         = data.archive_file.lambda_home.output_path
   source_code_hash = data.archive_file.lambda_home.output_base64sha256
   layers           = [aws_lambda_layer_version.shared.arn]
@@ -38,7 +48,7 @@ resource "aws_cloudwatch_log_group" "home" {
 # Cost Explorer read-only access
 resource "aws_iam_role_policy" "home_cost_explorer" {
   name = "${local.name_prefix}-home-cost-explorer"
-  role = aws_iam_role.lambda_exec.id
+  role = aws_iam_role.home.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -55,7 +65,7 @@ resource "aws_iam_role_policy" "home_cost_explorer" {
 # Admin stats permissions: DynamoDB DescribeTable, S3 ListBucket, CloudWatch metrics
 resource "aws_iam_role_policy" "home_admin_stats" {
   name = "${local.name_prefix}-home-admin-stats"
-  role = aws_iam_role.lambda_exec.id
+  role = aws_iam_role.home.id
 
   policy = jsonencode({
     Version = "2012-10-17"

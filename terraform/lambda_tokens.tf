@@ -4,11 +4,21 @@
 # Routes are protected by the Cognito JWT authorizer only —
 # PATs cannot be used to create or revoke other PATs.
 
+resource "aws_iam_role" "tokens" {
+  name               = "${local.name_prefix}-tokens"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+}
+
+resource "aws_iam_role_policy_attachment" "tokens_basic" {
+  role       = aws_iam_role.tokens.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
 resource "aws_lambda_function" "tokens" {
   function_name    = "${local.name_prefix}-tokens"
   runtime          = var.lambda_runtime
   handler          = "handler.lambda_handler"
-  role             = aws_iam_role.lambda_exec.arn
+  role             = aws_iam_role.tokens.arn
   filename         = data.archive_file.lambda_tokens.output_path
   source_code_hash = data.archive_file.lambda_tokens.output_base64sha256
   layers           = [aws_lambda_layer_version.shared.arn]
@@ -30,7 +40,7 @@ resource "aws_cloudwatch_log_group" "tokens" {
 
 resource "aws_iam_role_policy" "tokens_dynamodb" {
   name = "${local.name_prefix}-tokens-dynamodb"
-  role = aws_iam_role.lambda_exec.id
+  role = aws_iam_role.tokens.id
 
   policy = jsonencode({
     Version = "2012-10-17"
