@@ -14,9 +14,12 @@ def route(route_key: str, user_id: str, body: dict) -> dict:
 
     if route_key == "GET /assistant/history":
         history = mem.load_history(user_id)
-        # Return as a flat list of {role, content} for the frontend
+        from chat import _clean_reply
         messages = [
-            {"role": msg["role"], "content": msg["content"][0]["text"]}
+            {
+                "role": msg["role"],
+                "content": _clean_reply(msg["content"][0]["text"]) if msg["role"] == "assistant" else msg["content"][0]["text"],
+            }
             for msg in history
         ]
         return ok(messages)
