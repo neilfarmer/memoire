@@ -9,11 +9,12 @@ import memory as mem
 
 # ── Table env vars ────────────────────────────────────────────────────────────
 
-TASKS_TABLE   = os.environ["TASKS_TABLE"]
-NOTES_TABLE   = os.environ["NOTES_TABLE"]
-HABITS_TABLE  = os.environ["HABITS_TABLE"]
-GOALS_TABLE   = os.environ["GOALS_TABLE"]
-JOURNAL_TABLE = os.environ["JOURNAL_TABLE"]
+TASKS_TABLE        = os.environ["TASKS_TABLE"]
+NOTES_TABLE        = os.environ["NOTES_TABLE"]
+NOTE_FOLDERS_TABLE = os.environ["NOTE_FOLDERS_TABLE"]
+HABITS_TABLE       = os.environ["HABITS_TABLE"]
+GOALS_TABLE        = os.environ["GOALS_TABLE"]
+JOURNAL_TABLE      = os.environ["JOURNAL_TABLE"]
 
 
 def _now() -> str:
@@ -62,16 +63,41 @@ TOOL_SPECS = [
     {
         "toolSpec": {
             "name": "create_note",
-            "description": "Create a new note for the user.",
+            "description": "Create a new note for the user, optionally inside a folder.",
             "inputSchema": {
                 "json": {
                     "type": "object",
                     "properties": {
-                        "title": {"type": "string", "description": "Note title"},
-                        "body":  {"type": "string", "description": "Note body / content"},
+                        "title":       {"type": "string", "description": "Note title"},
+                        "body":        {"type": "string", "description": "Note body / content"},
+                        "folder_name": {"type": "string", "description": "Name of the folder to put the note in. The folder will be created if it doesn't exist."},
                     },
                     "required": ["title"],
                 }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "create_note_folder",
+            "description": "Create a new folder to organize notes.",
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string", "description": "Folder name (required)"},
+                    },
+                    "required": ["name"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "list_note_folders",
+            "description": "List the user's note folders.",
+            "inputSchema": {
+                "json": {"type": "object", "properties": {}},
             },
         }
     },
@@ -173,6 +199,8 @@ def handle_tool(user_id: str, name: str, inputs: dict) -> str:
         "create_task":          _create_task,
         "list_tasks":           _list_tasks,
         "create_note":          _create_note,
+        "create_note_folder":   _create_note_folder,
+        "list_note_folders":    _list_note_folders,
         "create_habit":         _create_habit,
         "list_habits":          _list_habits,
         "create_goal":          _create_goal,
@@ -228,10 +256,32 @@ def _list_tasks(user_id: str, inputs: dict) -> str:
     return "\n".join(lines)
 
 
+def _get_or_create_folder(user_id: str, folder_name: str) -> str:
+    """Return folder_id for the named folder, creating it if needed."""
+    table   = db.get_table(NOTE_FOLDERS_TABLE)
+    folders = db.query_by_user(table, user_id)
+    name_lower = folder_name.strip().lower()
+    for f in folders:
+        if f.get("name", "").lower() == name_lower:
+            return f["folder_id"]
+    # Create it
+    folder_id = str(uuid.uuid4())
+    table.put_item(Item={
+        "user_id":    user_id,
+        "folder_id":  folder_id,
+        "name":       folder_name.strip(),
+        "created_at": _now(),
+    })
+    return folder_id
+
+
 def _create_note(user_id: str, inputs: dict) -> str:
-    table = db.get_table(NOTES_TABLE)
-    now   = _now()
-    note  = {
+    table     = db.get_table(NOTES_TABLE)
+    now       = _now()
+    folder_id = None
+    if inputs.get("folder_name"):
+        folder_id = _get_or_create_folder(user_id, inputs["folder_name"])
+    note = {
         "user_id":    user_id,
         "note_id":    str(uuid.uuid4()),
         "title":      inputs.get("title", "").strip(),
@@ -239,9 +289,37 @@ def _create_note(user_id: str, inputs: dict) -> str:
         "created_at": now,
         "updated_at": now,
     }
+    if folder_id:
+        note["folder_id"] = folder_id
     note = {k: v for k, v in note.items() if v is not None}
     table.put_item(Item=note)
-    return f"Created note: {note.get('title', '(untitled)')}"
+    location = f" in '{inputs['folder_name']}'" if inputs.get("folder_name") else ""
+    return f"Created note: {note.get('title', '(untitled)')}{location}"
+
+
+def _create_note_folder(user_id: str, inputs: dict) -> str:
+    name = inputs.get("name", "").strip()
+    table = db.get_table(NOTE_FOLDERS_TABLE)
+    # Check if already exists
+    folders = db.query_by_user(table, user_id)
+    for f in folders:
+        if f.get("name", "").lower() == name.lower():
+            return f"Folder '{name}' already exists"
+    table.put_item(Item={
+        "user_id":    user_id,
+        "folder_id":  str(uuid.uuid4()),
+        "name":       name,
+        "created_at": _now(),
+    })
+    return f"Created folder: {name}"
+
+
+def _list_note_folders(user_id: str, inputs: dict) -> str:
+    table   = db.get_table(NOTE_FOLDERS_TABLE)
+    folders = db.query_by_user(table, user_id)
+    if not folders:
+        return "No note folders found."
+    return "\n".join(f"- {f['name']}" for f in folders[:20])
 
 
 def _create_habit(user_id: str, inputs: dict) -> str:

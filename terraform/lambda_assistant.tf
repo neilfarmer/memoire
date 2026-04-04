@@ -24,14 +24,15 @@ resource "aws_lambda_function" "assistant" {
 
   environment {
     variables = {
-      CONVERSATIONS_TABLE = aws_dynamodb_table.assistant_conversations.name
-      MEMORY_TABLE        = aws_dynamodb_table.assistant_memory.name
-      TASKS_TABLE         = aws_dynamodb_table.tasks.name
-      NOTES_TABLE         = aws_dynamodb_table.notes.name
-      HABITS_TABLE        = aws_dynamodb_table.habits.name
-      GOALS_TABLE         = aws_dynamodb_table.goals.name
-      JOURNAL_TABLE       = aws_dynamodb_table.journal.name
-      ASSISTANT_MODEL_ID  = var.assistant_model_id
+      CONVERSATIONS_TABLE  = aws_dynamodb_table.assistant_conversations.name
+      MEMORY_TABLE         = aws_dynamodb_table.assistant_memory.name
+      TASKS_TABLE          = aws_dynamodb_table.tasks.name
+      NOTES_TABLE          = aws_dynamodb_table.notes.name
+      NOTE_FOLDERS_TABLE   = aws_dynamodb_table.note_folders.name
+      HABITS_TABLE         = aws_dynamodb_table.habits.name
+      GOALS_TABLE          = aws_dynamodb_table.goals.name
+      JOURNAL_TABLE        = aws_dynamodb_table.journal.name
+      ASSISTANT_MODEL_ID   = var.assistant_model_id
     }
   }
 }
@@ -61,6 +62,7 @@ resource "aws_iam_role_policy" "assistant_dynamodb" {
         aws_dynamodb_table.assistant_memory.arn,
         aws_dynamodb_table.tasks.arn,
         aws_dynamodb_table.notes.arn,
+        aws_dynamodb_table.note_folders.arn,
         aws_dynamodb_table.habits.arn,
         aws_dynamodb_table.goals.arn,
         aws_dynamodb_table.journal.arn,
@@ -104,9 +106,18 @@ resource "aws_apigatewayv2_integration" "assistant" {
   payload_format_version = "2.0"
 }
 
-resource "aws_apigatewayv2_route" "assistant_chat" {
+locals {
+  assistant_routes = [
+    "POST /assistant/chat",
+    "GET /assistant/history",
+  ]
+}
+
+resource "aws_apigatewayv2_route" "assistant" {
+  for_each = toset(local.assistant_routes)
+
   api_id             = aws_apigatewayv2_api.main.id
-  route_key          = "POST /assistant/chat"
+  route_key          = each.value
   target             = "integrations/${aws_apigatewayv2_integration.assistant.id}"
   authorizer_id      = aws_apigatewayv2_authorizer.lambda.id
   authorization_type = "CUSTOM"

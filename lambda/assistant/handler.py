@@ -23,7 +23,7 @@ def lambda_handler(event: dict, context) -> dict:
                 from response import error
                 return error("Invalid JSON body")
 
-        route_key = event["routeKey"]
+        route_key    = event["routeKey"]
         return route(route_key, user_id, body)
     except Exception:
         logger.exception("Unhandled exception in lambda_handler")

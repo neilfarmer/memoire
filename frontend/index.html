@@ -7419,13 +7419,29 @@
     const palMsgs    = document.getElementById("pal-messages");
 
     let palOpen = false;
+    let palHistoryLoaded = false;
+
+    async function palLoadHistory() {
+      if (palHistoryLoaded) return;
+      palHistoryLoaded = true;
+      try {
+        const history = await api.call("GET", "/assistant/history");
+        if (history && history.length > 0) {
+          history.forEach(msg => palAddMsg(msg.role, msg.content));
+        } else {
+          palAddMsg("assistant", "Hi! I'm your AI pal. I can create tasks, notes, habits, goals, and journal entries for you. What would you like to do?");
+        }
+      } catch (e) {
+        palAddMsg("assistant", "Hi! I'm your AI pal. I can create tasks, notes, habits, goals, and journal entries for you. What would you like to do?");
+      }
+    }
 
     function palToggle() {
       palOpen = !palOpen;
       palWindow.classList.toggle("hidden", !palOpen);
       if (palOpen) {
         palInput.focus();
-        if (palMsgs.children.length === 0) palAddMsg("assistant", "Hi! I'm your AI pal. I can create tasks, notes, habits, goals, and journal entries for you. What would you like to do?");
+        palLoadHistory();
       }
     }
 
