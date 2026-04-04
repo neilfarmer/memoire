@@ -1,27 +1,17 @@
 """Health/exercise log CRUD operations against DynamoDB."""
 
 import os
-import re
 import uuid
-from datetime import datetime, timezone
 
 from db import get_table, query_by_user
 from response import ok, no_content, error, not_found
+from utils import now_iso, validate_date
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 
 
 def _table():
     return get_table(TABLE_NAME)
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _validate_date(d: str):
-    if not d or not re.match(r"^\d{4}-\d{2}-\d{2}$", d):
-        raise ValueError(f"Invalid date format: {d}")
 
 
 def _summary(item: dict) -> dict:
@@ -41,10 +31,9 @@ def list_logs(user_id: str) -> dict:
 
 
 def get_log(user_id: str, log_date: str) -> dict:
-    try:
-        _validate_date(log_date)
-    except ValueError as e:
-        return error(str(e))
+    err = validate_date(log_date)
+    if err:
+        return error(err)
 
     table = _table()
     resp  = table.get_item(Key={"user_id": user_id, "log_date": log_date})
@@ -55,10 +44,9 @@ def get_log(user_id: str, log_date: str) -> dict:
 
 
 def upsert_log(user_id: str, log_date: str, body: dict) -> dict:
-    try:
-        _validate_date(log_date)
-    except ValueError as e:
-        return error(str(e))
+    err = validate_date(log_date)
+    if err:
+        return error(err)
 
     table    = _table()
     existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
@@ -73,18 +61,17 @@ def upsert_log(user_id: str, log_date: str, body: dict) -> dict:
         "log_date":   log_date,
         "exercises":  exercises,
         "notes":      body.get("notes", ""),
-        "created_at": existing["created_at"] if existing else _now(),
-        "updated_at": _now(),
+        "created_at": existing["created_at"] if existing else now_iso(),
+        "updated_at": now_iso(),
     }
     table.put_item(Item=item)
     return ok(item)
 
 
 def delete_log(user_id: str, log_date: str) -> dict:
-    try:
-        _validate_date(log_date)
-    except ValueError as e:
-        return error(str(e))
+    err = validate_date(log_date)
+    if err:
+        return error(err)
 
     table    = _table()
     existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")

@@ -3,11 +3,11 @@
 import os
 import re
 import uuid
-from datetime import datetime, timezone
 
 import boto3
 import db
 from response import ok, created, no_content, error, not_found
+from utils import now_iso, parse_tags, build_update_expression
 
 NOTES_TABLE     = os.environ["NOTES_TABLE"]
 FOLDERS_TABLE   = os.environ["FOLDERS_TABLE"]
@@ -22,18 +22,6 @@ MAX_BODY_LEN  = 100_000
 
 def _table():
     return db.get_table(NOTES_TABLE)
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _parse_tags(raw) -> list[str]:
-    if not raw:
-        return []
-    if isinstance(raw, list):
-        return [t.strip() for t in raw if t.strip()]
-    return [t.strip() for t in str(raw).split(",") if t.strip()]
 
 
 def _summary(note: dict) -> dict:
@@ -98,14 +86,14 @@ def create_note(user_id: str, body: dict) -> dict:
     if len(note_body) > MAX_BODY_LEN:
         return error(f"body exceeds maximum length of {MAX_BODY_LEN}")
 
-    now  = _now()
+    now  = now_iso()
     note = {
         "user_id":    user_id,
         "note_id":    str(uuid.uuid4()),
         "folder_id":  folder_id,
         "title":      title,
         "body":       note_body,
-        "tags":       _parse_tags(body.get("tags")),
+        "tags":       parse_tags(body.get("tags")),
         "created_at": now,
         "updated_at": now,
     }
@@ -124,7 +112,7 @@ def update_note(user_id: str, note_id: str, body: dict) -> dict:
     fields    = {k: v for k, v in body.items() if k in updatable}
 
     if "tags" in fields:
-        fields["tags"] = _parse_tags(fields["tags"])
+        fields["tags"] = parse_tags(fields["tags"])
     if "title" in fields:
         fields["title"] = (fields["title"] or "").strip()
         if len(fields["title"]) > MAX_TITLE_LEN:
@@ -136,17 +124,13 @@ def update_note(user_id: str, note_id: str, body: dict) -> dict:
         if not folder:
             return not_found("Folder")
 
-    fields["updated_at"] = _now()
+    fields["updated_at"] = now_iso()
 
-    set_parts, names, values = [], {}, {}
-    for i, (k, v) in enumerate(fields.items()):
-        names[f"#f{i}"]  = k
-        values[f":v{i}"] = v
-        set_parts.append(f"#f{i} = :v{i}")
+    update_expr, names, values = build_update_expression(fields)
 
     result = _table().update_item(
         Key={"user_id": user_id, "note_id": note_id},
-        UpdateExpression="SET " + ", ".join(set_parts),
+        UpdateExpression=update_expr,
         ExpressionAttributeNames=names,
         ExpressionAttributeValues=values,
         ReturnValues="ALL_NEW",

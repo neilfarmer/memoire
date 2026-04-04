@@ -13,6 +13,8 @@ os.environ["TABLE_NAME"] = "test-health"
 
 crud = load_lambda("health", "crud.py")
 
+import utils  # noqa: E402
+
 TABLE = "test-health"
 
 
@@ -24,26 +26,20 @@ def tbl():
         yield
 
 
-# ── _validate_date ────────────────────────────────────────────────────────────
+# ── validate_date (now in shared utils) ──────────────────────────────────────
 
 class TestValidateDate:
-    def test_valid_date_does_not_raise(self):
-        crud._validate_date("2024-01-15")  # should not raise
+    def test_valid_date_returns_none(self):
+        assert utils.validate_date("2024-01-15") is None
 
-    def test_invalid_format_raises(self):
-        import pytest as _pytest
-        with _pytest.raises(ValueError):
-            crud._validate_date("15-01-2024")
+    def test_invalid_format_returns_error(self):
+        assert utils.validate_date("15-01-2024") is not None
 
-    def test_none_raises(self):
-        import pytest as _pytest
-        with _pytest.raises(ValueError):
-            crud._validate_date(None)
+    def test_none_returns_error(self):
+        assert utils.validate_date(None) is not None
 
-    def test_empty_string_raises(self):
-        import pytest as _pytest
-        with _pytest.raises(ValueError):
-            crud._validate_date("")
+    def test_empty_string_returns_error(self):
+        assert utils.validate_date("") is not None
 
 
 # ── _summary ──────────────────────────────────────────────────────────────────

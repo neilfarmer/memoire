@@ -1,11 +1,10 @@
 """Journal CRUD operations against DynamoDB."""
 
 import os
-import re
-from datetime import datetime, timezone
 
 import db
 from response import ok, no_content, error, not_found
+from utils import now_iso, validate_date, parse_tags
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 
@@ -15,24 +14,6 @@ PREVIEW_LEN  = 200
 
 def _table():
     return db.get_table(TABLE_NAME)
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _validate_date(d: str) -> str | None:
-    if not re.match(r"^\d{4}-\d{2}-\d{2}$", d):
-        return "date must be YYYY-MM-DD"
-    return None
-
-
-def _parse_tags(raw) -> list[str]:
-    if not raw:
-        return []
-    if isinstance(raw, list):
-        return [t.strip() for t in raw if t.strip()]
-    return [t.strip() for t in str(raw).split(",") if t.strip()]
 
 
 def _summary(item: dict) -> dict:
@@ -74,7 +55,7 @@ def search_entries(user_id: str, q: str) -> dict:
 # ── Get ───────────────────────────────────────────────────────────────────────
 
 def get_entry(user_id: str, entry_date: str) -> dict:
-    err = _validate_date(entry_date)
+    err = validate_date(entry_date)
     if err:
         return error(err)
 
@@ -87,7 +68,7 @@ def get_entry(user_id: str, entry_date: str) -> dict:
 # ── Upsert ────────────────────────────────────────────────────────────────────
 
 def upsert_entry(user_id: str, entry_date: str, body: dict) -> dict:
-    err = _validate_date(entry_date)
+    err = validate_date(entry_date)
     if err:
         return error(err)
 
@@ -95,11 +76,11 @@ def upsert_entry(user_id: str, entry_date: str, body: dict) -> dict:
     if mood and mood not in VALID_MOODS:
         return error(f"mood must be one of: {', '.join(sorted(VALID_MOODS))}")
 
-    tags = _parse_tags(body.get("tags"))
+    tags = parse_tags(body.get("tags"))
 
     # Check if entry already exists to preserve created_at
     existing = db.get_item(_table(), user_id, "entry_date", entry_date)
-    now      = _now()
+    now      = now_iso()
 
     item = {
         "user_id":    user_id,
@@ -120,7 +101,7 @@ def upsert_entry(user_id: str, entry_date: str, body: dict) -> dict:
 # ── Delete ────────────────────────────────────────────────────────────────────
 
 def delete_entry(user_id: str, entry_date: str) -> dict:
-    err = _validate_date(entry_date)
+    err = validate_date(entry_date)
     if err:
         return error(err)
 
