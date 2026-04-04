@@ -219,5 +219,8 @@ def lambda_handler(event: dict, context) -> dict:
 
     return {
         "isAuthorized": True,
-        "context": {"user_id": user_id},
+        "context": {
+            "user_id":     user_id,
+            "auth_method": "pat" if token.startswith("pat_") else "jwt",
+        },
     }
