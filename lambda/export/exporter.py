@@ -1,9 +1,10 @@
 """Build a ZIP archive of all user data as human-readable files."""
 
-import base64
-import io
+import json
 import os
 import re
+import tempfile
+import uuid
 import zipfile
 from datetime import date
 
@@ -92,7 +93,6 @@ def _tasks_markdown(tasks: list[dict], task_folders: list[dict]) -> str:
     if not task_folders:
         return "# Tasks\n\n" + _tasks_section(tasks)
 
-    folder_by_id = {f["folder_id"]: f["name"] for f in task_folders}
     # Group tasks by folder_id; tasks with no folder go to the first folder (Inbox)
     default_id   = task_folders[0]["folder_id"] if task_folders else None
     by_folder: dict[str, list] = {f["folder_id"]: [] for f in task_folders}
@@ -357,80 +357,99 @@ def build_export(user_id: str) -> dict:
     goals        = db.query_by_user(db.get_table(GOALS_TABLE),        user_id)
     habits       = db.query_by_user(db.get_table(HABITS_TABLE),       user_id)
 
-    # Fetch all habit logs for the user (habit_logs_v2 PK is user_id)
+    # Fetch all habit logs for the user with pagination
     habit_logs: list[dict] = []
     logs_table = db.get_table(HABIT_LOGS_TABLE)
     for habit in habits:
-        resp = logs_table.query(
-            KeyConditionExpression=
+        params: dict = {
+            "KeyConditionExpression":
                 Key("user_id").eq(user_id) &
                 Key("log_id").begins_with(f"{habit['habit_id']}#")
-        )
-        habit_logs.extend(resp.get("Items", []))
+        }
+        while True:
+            resp = logs_table.query(**params)
+            habit_logs.extend(resp.get("Items", []))
+            if "LastEvaluatedKey" not in resp:
+                break
+            params["ExclusiveStartKey"] = resp["LastEvaluatedKey"]
 
     folder_paths = _build_folder_paths(folders)
 
     today = date.today().isoformat()
-    buf   = io.BytesIO()
+    export_key = f"exports/{user_id}/{today}-{uuid.uuid4().hex[:8]}.zip"
+    tmp_path = tempfile.mktemp(suffix=".zip")
 
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        root = f"memoire-export-{today}"
+    try:
+        with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            root = f"memoire-export-{today}"
 
-        # ── tasks/tasks.md ────────────────────────────────────────────────────
-        zf.writestr(f"{root}/tasks/tasks.md", _tasks_markdown(tasks, task_folders))
+            # ── tasks/tasks.md ────────────────────────────────────────────────
+            zf.writestr(f"{root}/tasks/tasks.md", _tasks_markdown(tasks, task_folders))
 
-        # ── journal/YYYY-MM-DD.md ─────────────────────────────────────────────
-        for entry in sorted(entries, key=lambda e: e.get("entry_date", "")):
-            filename, content = _journal_file(entry)
-            zf.writestr(f"{root}/journal/{filename}", content)
+            # ── journal/YYYY-MM-DD.md ─────────────────────────────────────────
+            for entry in sorted(entries, key=lambda e: e.get("entry_date", "")):
+                filename, content = _journal_file(entry)
+                zf.writestr(f"{root}/journal/{filename}", content)
 
-        # ── notes/{folder}/{title}.md + images/ + attachments/ ────────────────
-        seen: dict[str, int] = {}
-        for note in sorted(notes, key=lambda n: n.get("created_at", "")):
-            folder_id   = note.get("folder_id")
-            folder_path = folder_paths.get(folder_id, "Uncategorized") if folder_id else "Uncategorized"
-            zip_folder  = f"{root}/notes/{folder_path}"
+            # ── notes/{folder}/{title}.md + images/ + attachments/ ────────────
+            seen: dict[str, int] = {}
+            for note in sorted(notes, key=lambda n: n.get("created_at", "")):
+                folder_id   = note.get("folder_id")
+                folder_path = folder_paths.get(folder_id, "Uncategorized") if folder_id else "Uncategorized"
+                zip_folder  = f"{root}/notes/{folder_path}"
 
-            # Deduplicate note filename within folder
-            base_name = _safe_name(note.get("title", "").strip() or "Untitled") + ".md"
-            path_key  = f"{folder_path}/{base_name}"
-            if path_key in seen:
-                seen[path_key] += 1
-                base = base_name[:-3]
-                base_name = f"{base} ({seen[path_key]}).md"
-            else:
-                seen[path_key] = 0
+                # Deduplicate note filename within folder
+                base_name = _safe_name(note.get("title", "").strip() or "Untitled") + ".md"
+                path_key  = f"{folder_path}/{base_name}"
+                if path_key in seen:
+                    seen[path_key] += 1
+                    base = base_name[:-3]
+                    base_name = f"{base} ({seen[path_key]}).md"
+                else:
+                    seen[path_key] = 0
 
-            for zip_path, data in _note_files(note, zip_folder):
-                # If the note md was deduplicated, rename it in the output too
-                if zip_path.endswith(".md") and not zip_path.endswith(base_name):
-                    zip_path = zip_path.rsplit("/", 1)[0] + "/" + base_name
-                zf.writestr(zip_path, data)
+                for zip_path, data in _note_files(note, zip_folder):
+                    # If the note md was deduplicated, rename it in the output too
+                    if zip_path.endswith(".md") and not zip_path.endswith(base_name):
+                        zip_path = zip_path.rsplit("/", 1)[0] + "/" + base_name
+                    zf.writestr(zip_path, data)
 
-        # ── health/YYYY-MM-DD.md ──────────────────────────────────────────────
-        for log in sorted(health, key=lambda l: l.get("log_date", "")):
-            filename, content = _health_file(log)
-            zf.writestr(f"{root}/health/{filename}", content)
+            # ── health/YYYY-MM-DD.md ──────────────────────────────────────────
+            for log in sorted(health, key=lambda x: x.get("log_date", "")):
+                filename, content = _health_file(log)
+                zf.writestr(f"{root}/health/{filename}", content)
 
-        # ── nutrition/YYYY-MM-DD.md ───────────────────────────────────────────
-        for log in sorted(nutrition, key=lambda l: l.get("log_date", "")):
-            filename, content = _nutrition_file(log)
-            zf.writestr(f"{root}/nutrition/{filename}", content)
+            # ── nutrition/YYYY-MM-DD.md ───────────────────────────────────────
+            for log in sorted(nutrition, key=lambda x: x.get("log_date", "")):
+                filename, content = _nutrition_file(log)
+                zf.writestr(f"{root}/nutrition/{filename}", content)
 
-        # ── goals/goals.md ────────────────────────────────────────────────────
-        zf.writestr(f"{root}/goals/goals.md", _goals_markdown(goals))
+            # ── goals/goals.md ────────────────────────────────────────────────
+            zf.writestr(f"{root}/goals/goals.md", _goals_markdown(goals))
 
-        # ── habits/habits.md ──────────────────────────────────────────────────
-        zf.writestr(f"{root}/habits/habits.md", _habits_markdown(habits, habit_logs))
+            # ── habits/habits.md ──────────────────────────────────────────────
+            zf.writestr(f"{root}/habits/habits.md", _habits_markdown(habits, habit_logs))
 
-    zip_bytes = buf.getvalue()
+        s3.upload_file(tmp_path, FRONTEND_BUCKET, export_key)
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+    url = s3.generate_presigned_url(
+        "get_object",
+        Params={
+            "Bucket": FRONTEND_BUCKET,
+            "Key":    export_key,
+            "ResponseContentDisposition": f'attachment; filename="memoire-export-{today}.zip"',
+            "ResponseContentType":        "application/zip",
+        },
+        ExpiresIn=300,  # 5 minutes
+    )
 
     return {
         "statusCode": 200,
-        "headers": {
-            "Content-Type":        "application/zip",
-            "Content-Disposition": f'attachment; filename="memoire-export-{today}.zip"',
-        },
-        "body":            base64.b64encode(zip_bytes).decode(),
-        "isBase64Encoded": True,
+        "headers": {"Content-Type": "application/json"},
+        "body": json.dumps({"url": url}),
     }

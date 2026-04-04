@@ -69,8 +69,6 @@ def create_attachment(user_id: str, note_id: str, body: dict) -> dict:
         size = int(body.get("size") or 0)
     except (ValueError, TypeError):
         return error("size must be an integer")
-    file_type = body.get("type") or "application/octet-stream"
-
     if not name:
         return error("name is required")
 

@@ -1,14 +1,13 @@
 """Unit tests for lambda/layer/python/response.py."""
 
 import json
-import os
 import sys
 from decimal import Decimal
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "lambda" / "layer" / "python"))
 
-from response import ok, created, no_content, error, not_found, server_error, _json_default
+from response import ok, created, no_content, error, not_found, server_error
 
 
 class TestOk:

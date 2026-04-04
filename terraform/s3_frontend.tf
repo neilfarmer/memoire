@@ -232,6 +232,19 @@ resource "aws_s3_bucket_lifecycle_configuration" "frontend" {
       storage_class = "GLACIER_IR"
     }
   }
+
+  rule {
+    id     = "export-cleanup"
+    status = "Enabled"
+
+    filter {
+      prefix = "exports/"
+    }
+
+    expiration {
+      days = 1
+    }
+  }
 }
 
 # ── Upload frontend files ─────────────────────────────────────────────────────
