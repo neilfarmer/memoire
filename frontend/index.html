@@ -7412,6 +7412,7 @@
 <div id="pal-window" class="hidden">
   <div id="pal-header">
     <span>✨ AI Pal</span>
+    <button id="pal-clear" aria-label="Clear chat" title="Clear chat history">🗑</button>
     <button id="pal-close" aria-label="Close">✕</button>
   </div>
   <div id="pal-messages"></div>
@@ -7530,8 +7531,23 @@
       }
     }
 
+    const palClear = document.getElementById("pal-clear");
+
+    async function palClearHistory() {
+      if (!confirm("Clear chat history? Your memory and context will be kept.")) return;
+      try {
+        await api.call("DELETE", "/assistant/history");
+        palMsgs.innerHTML = "";
+        palHistoryLoaded = true;
+        palAddMsg("assistant", "Chat cleared. What would you like to do?");
+      } catch (e) {
+        palAddMsg("assistant", "Failed to clear history. Please try again.");
+      }
+    }
+
     palBtn.addEventListener("click", palToggle);
     palClose.addEventListener("click", palToggle);
+    palClear.addEventListener("click", palClearHistory);
 
     palForm.addEventListener("submit", e => { e.preventDefault(); palSendMsg(); });
 

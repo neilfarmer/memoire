@@ -111,6 +111,7 @@ locals {
   assistant_routes = [
     "POST /assistant/chat",
     "GET /assistant/history",
+    "DELETE /assistant/history",
   ]
 }
 

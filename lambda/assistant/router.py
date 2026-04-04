@@ -24,4 +24,8 @@ def route(route_key: str, user_id: str, body: dict) -> dict:
         ]
         return ok(messages)
 
+    if route_key == "DELETE /assistant/history":
+        mem.clear_history(user_id)
+        return ok({"cleared": True})
+
     return error("Not found", status=404)

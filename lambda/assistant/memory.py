@@ -89,3 +89,12 @@ def save_memory(user_id: str, key: str, value: str) -> None:
 def save_master_context(user_id: str, context: str) -> None:
     """Persist the master context paragraph."""
     save_memory(user_id, MASTER_CONTEXT_KEY, context)
+
+
+def clear_history(user_id: str) -> None:
+    """Delete all conversation history for the user."""
+    table = db.get_table(CONVERSATIONS_TABLE)
+    items = db.query_by_user(table, user_id)
+    with table.batch_writer() as batch:
+        for item in items:
+            batch.delete_item(Key={"user_id": user_id, "msg_id": item["msg_id"]})
