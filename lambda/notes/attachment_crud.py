@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from urllib.parse import quote
 
 import db
+from botocore.exceptions import ClientError
 from response import ok, error, no_content, not_found
 
 NOTES_TABLE     = os.environ["NOTES_TABLE"]
@@ -64,7 +65,10 @@ def create_attachment(user_id: str, note_id: str, body: dict) -> dict:
         return not_found("Note")
 
     name = (body.get("name") or "").strip()
-    size = int(body.get("size") or 0)
+    try:
+        size = int(body.get("size") or 0)
+    except (ValueError, TypeError):
+        return error("size must be an integer")
     file_type = body.get("type") or "application/octet-stream"
 
     if not name:
@@ -123,7 +127,12 @@ def download_attachment(user_id: str, note_id: str, att_id: str) -> dict:
     if not target:
         return not_found("Attachment")
 
-    obj = _s3.get_object(Bucket=FRONTEND_BUCKET, Key=target["key"])
+    try:
+        obj = _s3.get_object(Bucket=FRONTEND_BUCKET, Key=target["key"])
+    except ClientError as e:
+        if e.response["Error"]["Code"] in ("NoSuchKey", "404"):
+            return not_found("Attachment file")
+        raise
     content = obj["Body"].read()
     content_type = target.get("type", "application/octet-stream")
     filename_encoded = quote(target["name"])

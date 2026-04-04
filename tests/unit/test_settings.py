@@ -81,14 +81,15 @@ class TestUpdateSettings:
         body = json.loads(r["body"])
         assert "hacker_field" not in body
 
-    def test_display_name_not_persisted(self, tbl):
-        """
-        display_name is not in ALLOWED_KEYS and is silently dropped.
-        This test documents the known bug tracked in GitHub issue #11.
-        """
+    def test_display_name_persists(self, tbl):
         crud.update_settings(USER, {"display_name": "Alice"})
         body = json.loads(crud.get_settings(USER)["body"])
-        assert "display_name" not in body
+        assert body["display_name"] == "Alice"
+
+    def test_display_name_in_defaults(self, tbl):
+        body = json.loads(crud.get_settings(USER)["body"])
+        assert "display_name" in body
+        assert body["display_name"] == ""
 
     def test_empty_body_returns_defaults(self, tbl):
         r = crud.update_settings(USER, {})

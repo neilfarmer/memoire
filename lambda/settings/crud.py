@@ -16,6 +16,7 @@ DEFAULTS = {
     "ntfy_url":         "",
     "autosave_seconds": 300,
     "timezone":         "",
+    "display_name":     "",
 }
 
 ALLOWED_KEYS = set(DEFAULTS.keys())

@@ -16,25 +16,29 @@ logger.setLevel(logging.INFO)
 
 def lambda_handler(event: dict, context) -> dict:
     logger.info("Event: %s", json.dumps(event))
+    try:
+        authorizer  = event["requestContext"]["authorizer"]["lambda"]
+        user_id     = authorizer["user_id"]
+        auth_method = authorizer.get("auth_method", "jwt")
 
-    authorizer  = event["requestContext"]["authorizer"]["lambda"]
-    user_id     = authorizer["user_id"]
-    auth_method = authorizer.get("auth_method", "jwt")
-
-    if auth_method == "pat":
-        logger.warning("PAT-authenticated request rejected on /tokens (user_id=%s)", user_id)
-        from response import error
-        return error("PATs cannot be used to manage other PATs", status=403)
-
-    body = {}
-    if event.get("body"):
-        try:
-            body = json.loads(event["body"])
-        except (json.JSONDecodeError, TypeError):
+        if auth_method == "pat":
+            logger.warning("PAT-authenticated request rejected on /tokens (user_id=%s)", user_id)
             from response import error
-            return error("Invalid JSON body")
+            return error("PATs cannot be used to manage other PATs", status=403)
 
-    path_params = event.get("pathParameters") or {}
-    route_key   = event["routeKey"]
+        body = {}
+        if event.get("body"):
+            try:
+                body = json.loads(event["body"])
+            except (json.JSONDecodeError, TypeError):
+                from response import error
+                return error("Invalid JSON body")
 
-    return route(route_key, user_id, body, path_params)
+        path_params = event.get("pathParameters") or {}
+        route_key   = event["routeKey"]
+
+        return route(route_key, user_id, body, path_params)
+    except Exception:
+        logger.exception("Unhandled exception in lambda_handler")
+        from response import server_error
+        return server_error()

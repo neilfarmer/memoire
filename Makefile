@@ -3,20 +3,21 @@ SHELL := /bin/bash
 .PHONY: deploy deploy-auto invalidate destroy test test-unit
 
 deploy:
-	@bash -c 'source scripts/load-env.sh && cd terraform && terraform apply'
+	@source .env && cd terraform && terraform apply
 
 deploy-auto:
-	@bash -c 'source scripts/load-env.sh && cd terraform && terraform apply -auto-approve'
-	./scripts/invalidate-cache.sh
+	@source .env && cd terraform && terraform apply -auto-approve
+	@$(MAKE) invalidate
 
 invalidate:
-	./scripts/invalidate-cache.sh
+	@DIST_ID=$$(cd terraform && terraform output -raw cloudfront_distribution_id) && \
+	  aws cloudfront create-invalidation --distribution-id $$DIST_ID --paths "/*"
 
 destroy:
-	@bash -c 'source scripts/load-env.sh && cd terraform && terraform destroy'
+	@source .env && cd terraform && terraform destroy
 
 test-unit:
-	python -m pytest tests/test_auth_handler.py tests/test_authorizer.py tests/test_image_crud.py tests/test_habits_crud.py -v
+	python -m pytest tests/unit/ -v
 
 test:
 	TEST_PAT=$(TEST_PAT) python tests/test_api.py

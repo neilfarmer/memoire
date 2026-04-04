@@ -481,6 +481,12 @@ class TestCreateAttachment:
         r = attachment_crud.create_attachment(USER, note_id, {"name": "noextension", "size": 0})
         assert r["statusCode"] == 400
 
+    def test_invalid_size_returns_400(self, tbls):
+        fid = _make_folder()
+        note_id = json.loads(note_crud.create_note(USER, {"folder_id": fid, "title": "N"})["body"])["note_id"]
+        r = attachment_crud.create_attachment(USER, note_id, {"name": "file.pdf", "size": "not_a_number"})
+        assert r["statusCode"] == 400
+
 
 class TestDownloadAttachment:
     def test_note_not_found(self, tbls):
@@ -506,6 +512,15 @@ class TestDownloadAttachment:
         r = attachment_crud.download_attachment(USER, note_id, att["id"])
         assert r["statusCode"] == 200
         assert base64.b64decode(r["body"]) == b"hello"
+
+    def test_s3_object_missing_returns_404(self, tbls):
+        fid = _make_folder()
+        note_id = json.loads(note_crud.create_note(USER, {"folder_id": fid, "title": "N"})["body"])["note_id"]
+        # Create attachment record but don't upload to S3
+        cr = attachment_crud.create_attachment(USER, note_id, {"name": "doc.txt", "size": 5})
+        att_id = json.loads(cr["body"])["attachment"]["id"]
+        r = attachment_crud.download_attachment(USER, note_id, att_id)
+        assert r["statusCode"] == 404
 
 
 class TestDeleteAttachment:
