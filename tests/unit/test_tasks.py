@@ -139,6 +139,14 @@ class TestCreateTask:
         assert "due_date" not in body
         assert "notifications" not in body
 
+    def test_title_too_long_rejected(self, tbls):
+        r = crud.create_task(USER, {"title": "x" * 501})
+        assert r["statusCode"] == 400
+
+    def test_description_too_long_rejected(self, tbls):
+        r = crud.create_task(USER, {"title": "OK", "description": "x" * 10_001})
+        assert r["statusCode"] == 400
+
 
 # ── get_task ──────────────────────────────────────────────────────────────────
 

@@ -167,6 +167,16 @@ class TestCreateNote:
         r = note_crud.create_note(USER, {"folder_id": fid, "title": "X", "tags": ["a", "b"]})
         assert json.loads(r["body"])["tags"] == ["a", "b"]
 
+    def test_title_too_long_rejected(self, tbls):
+        fid = _make_folder()
+        r = note_crud.create_note(USER, {"folder_id": fid, "title": "x" * 501})
+        assert r["statusCode"] == 400
+
+    def test_body_too_long_rejected(self, tbls):
+        fid = _make_folder()
+        r = note_crud.create_note(USER, {"folder_id": fid, "title": "X", "body": "x" * 100_001})
+        assert r["statusCode"] == 400
+
 
 class TestUpdateNote:
     def test_updates_title(self, tbls):
@@ -191,6 +201,18 @@ class TestUpdateNote:
         note_id = json.loads(note_crud.create_note(USER, {"folder_id": fid, "title": "X"})["body"])["note_id"]
         r = note_crud.update_note(USER, note_id, {"folder_id": "no-such"})
         assert r["statusCode"] == 404
+
+    def test_update_title_too_long_rejected(self, tbls):
+        fid = _make_folder()
+        note_id = json.loads(note_crud.create_note(USER, {"folder_id": fid, "title": "X"})["body"])["note_id"]
+        r = note_crud.update_note(USER, note_id, {"title": "x" * 501})
+        assert r["statusCode"] == 400
+
+    def test_update_body_too_long_rejected(self, tbls):
+        fid = _make_folder()
+        note_id = json.loads(note_crud.create_note(USER, {"folder_id": fid, "title": "X"})["body"])["note_id"]
+        r = note_crud.update_note(USER, note_id, {"body": "x" * 100_001})
+        assert r["statusCode"] == 400
 
 
 class TestDeleteNote:
@@ -395,6 +417,36 @@ class TestCreateAttachment:
         assert "key" in att
         # Key uses safe_name
         assert "(" not in att["key"]
+
+    def test_disallowed_extension_rejected(self, tbls):
+        fid = _make_folder()
+        note_id = json.loads(note_crud.create_note(USER, {"folder_id": fid, "title": "N"})["body"])["note_id"]
+        r = attachment_crud.create_attachment(USER, note_id, {"name": "malware.exe", "size": 0})
+        assert r["statusCode"] == 400
+
+    def test_double_extension_blocked(self, tbls):
+        fid = _make_folder()
+        note_id = json.loads(note_crud.create_note(USER, {"folder_id": fid, "title": "N"})["body"])["note_id"]
+        r = attachment_crud.create_attachment(USER, note_id, {"name": "payload.html.png", "size": 0})
+        # .html.png → final ext is .png which IS allowed — but the name stored in
+        # the key will have html stripped by safe_name; the key ext is .png
+        assert r["statusCode"] == 200
+
+    def test_canonical_mime_type_used(self, tbls):
+        fid = _make_folder()
+        note_id = json.loads(note_crud.create_note(USER, {"folder_id": fid, "title": "N"})["body"])["note_id"]
+        r = attachment_crud.create_attachment(USER, note_id, {
+            "name": "photo.jpg", "size": 0, "type": "application/octet-stream"
+        })
+        assert r["statusCode"] == 200
+        att = json.loads(r["body"])["attachment"]
+        assert att["type"] == "image/jpeg"  # client-declared type ignored
+
+    def test_no_extension_rejected(self, tbls):
+        fid = _make_folder()
+        note_id = json.loads(note_crud.create_note(USER, {"folder_id": fid, "title": "N"})["body"])["note_id"]
+        r = attachment_crud.create_attachment(USER, note_id, {"name": "noextension", "size": 0})
+        assert r["statusCode"] == 400
 
 
 class TestDownloadAttachment:

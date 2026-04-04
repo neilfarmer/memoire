@@ -11,6 +11,9 @@ NOTES_TABLE   = os.environ["NOTES_TABLE"]
 FOLDERS_TABLE = os.environ["FOLDERS_TABLE"]
 PREVIEW_LEN   = 200
 
+MAX_TITLE_LEN = 500
+MAX_BODY_LEN  = 100_000
+
 
 def _table():
     return db.get_table(NOTES_TABLE)
@@ -83,13 +86,20 @@ def create_note(user_id: str, body: dict) -> dict:
     if not folder:
         return not_found("Folder")
 
+    title = (body.get("title") or "").strip()
+    if len(title) > MAX_TITLE_LEN:
+        return error(f"title exceeds maximum length of {MAX_TITLE_LEN}")
+    note_body = body.get("body", "")
+    if len(note_body) > MAX_BODY_LEN:
+        return error(f"body exceeds maximum length of {MAX_BODY_LEN}")
+
     now  = _now()
     note = {
         "user_id":    user_id,
         "note_id":    str(uuid.uuid4()),
         "folder_id":  folder_id,
-        "title":      (body.get("title") or "").strip(),
-        "body":       body.get("body", ""),
+        "title":      title,
+        "body":       note_body,
         "tags":       _parse_tags(body.get("tags")),
         "created_at": now,
         "updated_at": now,
@@ -112,6 +122,10 @@ def update_note(user_id: str, note_id: str, body: dict) -> dict:
         fields["tags"] = _parse_tags(fields["tags"])
     if "title" in fields:
         fields["title"] = (fields["title"] or "").strip()
+        if len(fields["title"]) > MAX_TITLE_LEN:
+            return error(f"title exceeds maximum length of {MAX_TITLE_LEN}")
+    if "body" in fields and len(fields["body"]) > MAX_BODY_LEN:
+        return error(f"body exceeds maximum length of {MAX_BODY_LEN}")
     if "folder_id" in fields:
         folder = db.get_item(db.get_table(FOLDERS_TABLE), user_id, "folder_id", fields["folder_id"])
         if not folder:

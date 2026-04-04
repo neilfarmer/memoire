@@ -81,6 +81,14 @@ class TestCreateGoal:
         body = json.loads(r["body"])
         assert "target_date" not in body
 
+    def test_title_too_long_rejected(self, tbl):
+        r = crud.create_goal(USER, {"title": "x" * 501})
+        assert r["statusCode"] == 400
+
+    def test_description_too_long_rejected(self, tbl):
+        r = crud.create_goal(USER, {"title": "OK", "description": "x" * 10_001})
+        assert r["statusCode"] == 400
+
 
 # ── get_goal ──────────────────────────────────────────────────────────────────
 
