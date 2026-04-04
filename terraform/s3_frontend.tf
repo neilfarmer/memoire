@@ -38,7 +38,7 @@ resource "aws_cloudfront_response_headers_policy" "security" {
       content_security_policy = join("; ", [
         "default-src 'self'",
         "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
-        "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'",
+        "style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net 'unsafe-inline'",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: blob:",
         # connect-src uses https: rather than local.api_url to avoid a dependency
