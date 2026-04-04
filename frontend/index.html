@@ -586,6 +586,7 @@
       text-transform: uppercase;
       cursor: pointer;
       appearance: auto;
+      width: fit-content;
     }
     .status-select:focus { outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
     .status-select.badge-todo        { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
@@ -767,7 +768,8 @@
 
     .habit-meta { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); }
 
-    .streak { font-weight: 700; color: var(--accent); }
+    .streak      { font-weight: 700; color: var(--accent); }
+    .streak-none { color: var(--muted); font-weight: 400; }
 
     .btn-done {
       flex-shrink: 0;
@@ -1418,6 +1420,14 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .notes-toolbar-sep {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+      margin: 0 4px;
+      flex-shrink: 0;
     }
 
     .notes-editor-body {
@@ -2466,8 +2476,9 @@
       Search
       <span class="search-btn-hint">/</span>
     </button>
-    <button class="btn btn-ghost btn-sm" id="logout-btn" title="Sign out" style="color:var(--muted);">
+    <button class="btn btn-ghost btn-sm" id="logout-btn" title="Sign out" style="color:var(--muted);gap:5px;">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign out
     </button>
   </header>
 
@@ -2645,6 +2656,7 @@
       <!-- Shown when no note is open -->
       <div class="notes-empty-state" id="notes-empty-state">
         <p>Select a note from the tree, or create a new one.</p>
+        <button class="btn btn-primary" onclick="notesApp.newNote()">+ New note</button>
       </div>
 
       <!-- Editor pane (hidden until a note is opened) -->
@@ -2653,11 +2665,12 @@
         <div class="notes-editor-header">
           <span class="notes-folder-crumb" id="notes-entry-label"></span>
           <button class="btn btn-secondary" id="notes-preview-btn">Preview</button>
-          <button class="btn btn-danger hidden" id="notes-delete-btn">Delete</button>
           <button class="btn btn-secondary hidden" id="notes-attach-btn">Attach</button>
           <input type="file" id="notes-attach-input" style="display:none" multiple>
           <button class="btn btn-primary" id="notes-save-btn">Save</button>
           <button class="btn btn-secondary" id="notes-close-btn">Close</button>
+          <span class="notes-toolbar-sep hidden" id="notes-delete-sep"></span>
+          <button class="btn btn-danger hidden" id="notes-delete-btn">Delete</button>
         </div>
         <div class="notes-editor-body">
           <input type="text" class="entry-title-input" id="notes-title-input" placeholder="Untitled" />
@@ -4395,6 +4408,7 @@
       $("notes-tags-input").value   = "";
       $("notes-save-status").textContent = "";
       $("notes-delete-btn").classList.add("hidden");
+      $("notes-delete-sep").classList.add("hidden");
       $("notes-attach-btn").classList.add("hidden");
       $("notes-preview-btn").textContent = "Preview";
       $("notes-body-input").classList.remove("hide");
@@ -4425,6 +4439,7 @@
         $("notes-tags-input").value   = (note.tags || []).join(", ");
         $("notes-save-status").textContent = "";
         $("notes-delete-btn").classList.remove("hidden");
+        $("notes-delete-sep").classList.remove("hidden");
         $("notes-attach-btn").classList.remove("hidden");
         $("notes-preview-btn").textContent = "Edit";
         $("notes-preview-pane").innerHTML  = renderNoteMarkdown(note.body || "");
@@ -4513,6 +4528,7 @@
           notesApp.isNew       = false;
           notesApp.notes.unshift({ ...saved, preview: saved.body.slice(0, 200) });
           $("notes-delete-btn").classList.remove("hidden");
+          $("notes-delete-sep").classList.remove("hidden");
         } else {
           saved = await api.call("PUT", `/notes/${notesApp.currentNote.note_id}`, payload);
           notesApp.currentNote = saved;
@@ -6087,7 +6103,7 @@
               <div class="habit-card-body">
                 <div class="habit-name">${escHtml(h.name)}</div>
                 <div class="habit-meta">
-                  <span class="streak">${streakText}</span>
+                  <span class="${streak > 0 ? 'streak' : 'streak-none'}">${streakText}</span>
                   <span>${bestText}</span>
                 </div>
               </div>
@@ -6260,8 +6276,11 @@
       list.innerHTML = filtered.map(g => {
         const statusLabel = { active: "Active", completed: "Completed", abandoned: "Abandoned" }[g.status] || g.status;
         const statusClass = { active: "badge-in_progress", completed: "badge-done", abandoned: "badge-todo" }[g.status] || "";
-        const dateHtml = g.target_date
-          ? `<span class="due-date ${g.target_date < todayStr() && g.status === "active" ? "overdue" : ""}">${g.target_date < todayStr() && g.status === "active" ? "Overdue &middot; " : ""}Target: ${g.target_date}</span>`
+        const targetFormatted = g.target_date
+          ? new Date(g.target_date + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+          : null;
+        const dateHtml = targetFormatted
+          ? `<span class="due-date ${g.target_date < todayStr() && g.status === "active" ? "overdue" : ""}">${g.target_date < todayStr() && g.status === "active" ? "Overdue &middot; " : ""}Target: ${targetFormatted}</span>`
           : "";
         const descHtml = g.description ? `<div class="task-desc">${escHtml(g.description)}</div>` : "";
         return `
@@ -6688,7 +6707,7 @@
     const email    = auth.getEmail();
     const hour     = new Date().getHours();
     const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-    const rawName  = state.settings?.display_name || (email ? email.split("@")[0].split(".")[0] : "");
+    const rawName  = state.settings?.display_name || (email ? email.split("@")[0].split(".")[0].replace(/\d+$/, "") : "");
     const name     = rawName.charAt(0).toUpperCase() + rawName.slice(1);
     const today    = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
     $("home-greeting").innerHTML = `
