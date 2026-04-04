@@ -1,5 +1,49 @@
 # Changelog
 
+## [0.7.0](https://github.com/neilfarmer/memoire/compare/v0.6.0...v0.7.0) (2026-04-04)
+
+
+### Features
+
+* add unit test suite for all Lambda functions ([8cc45db](https://github.com/neilfarmer/memoire/commit/8cc45db25f11f7d2957c88ad143a5c3f142878ed))
+* CI integration tests + content seeding script ([2fb8aaa](https://github.com/neilfarmer/memoire/commit/2fb8aaa5ac832e63a3b991dd50257e9bf743ec82))
+* **ui:** UI improvements across all sections ([#66](https://github.com/neilfarmer/memoire/issues/66)) ([dc6479b](https://github.com/neilfarmer/memoire/commit/dc6479be6d5cc6f2d28bc7f497cc4b436428a26e))
+
+
+### Bug Fixes
+
+* /tokens routes break after cookie auth migration ([#25](https://github.com/neilfarmer/memoire/issues/25)) ([b895e06](https://github.com/neilfarmer/memoire/commit/b895e068f63e38c9b2a9fe4c1abc3ea5f2269e4e))
+* /tokens routes break after cookie auth migration ([#25](https://github.com/neilfarmer/memoire/issues/25)) ([8d1ac8b](https://github.com/neilfarmer/memoire/commit/8d1ac8b33ac93feac254b610c2ac02b8b119fd31))
+* **#10,#11,#16:** Makefile scripts, display_name setting, handler error handling ([74186b3](https://github.com/neilfarmer/memoire/commit/74186b3327d5adecda407efd443ca2ce278db421))
+* **#10,#11,#16:** Makefile scripts, display_name setting, handler error handling ([05eb6fc](https://github.com/neilfarmer/memoire/commit/05eb6fca60427fcf5a3b67f46d7e36479f0a1c3a))
+* **#12,#13,#24:** SSRF validation, XSS sanitization, per-Lambda IAM roles ([417c97e](https://github.com/neilfarmer/memoire/commit/417c97e99731db774a5ecb648e03528af3220cbb))
+* **#17,#18,#21:** integration tests for health/nutrition/goals/export, cleanup on failure, parallel habit queries ([9f92a62](https://github.com/neilfarmer/memoire/commit/9f92a62263ebb4fce6ab644c6310f1625a59b532))
+* **#17,#18,#21:** integration tests for health/nutrition/goals/export, test cleanup, parallel habit queries ([0aff2a6](https://github.com/neilfarmer/memoire/commit/0aff2a648c545e30fd4c6f6da231adfb3de0abfc))
+* **#19,#22,#23:** CI linting, export OOM via S3 presigned URL, watcher query-per-user ([1b991c3](https://github.com/neilfarmer/memoire/commit/1b991c306788c71b03da3c1a48b3e08d9a8278fe))
+* **#19,#22,#23:** CI linting, export OOM, watcher table scan ([06616e9](https://github.com/neilfarmer/memoire/commit/06616e9f0091b5bca57847b4c62388cc1b087072))
+* **#26:** scope habit logs to user_id with habit_logs_v2 table ([247a5de](https://github.com/neilfarmer/memoire/commit/247a5defb1e022276b36c1f82e8e4f3873c08e77))
+* **#28,#29,#30:** CORS lockdown, rate limiting, admin stats access control ([4c107ce](https://github.com/neilfarmer/memoire/commit/4c107cef64cad2d90886247312b2bb2c38258e9d))
+* **#31,#32,#33:** attachment type validation, auth audit logging, input size limits ([c29d99b](https://github.com/neilfarmer/memoire/commit/c29d99bb01a2776be47aed186ac315bbd807e170))
+* **#9,#14,#15:** DynamoDB pagination, S3 note/folder cleanup, habit log orphaning ([62866c5](https://github.com/neilfarmer/memoire/commit/62866c5af6258b6f8326e69eb1560878370d8583))
+* **#9,#14,#15:** paginate DynamoDB queries, clean up S3 on note/folder delete, fix habit log orphaning ([b2a3a43](https://github.com/neilfarmer/memoire/commit/b2a3a4378f9e8c0ed21601208fae02551b75bdcc))
+* accept 403 for PAT-blocked token operations in integration tests ([44923da](https://github.com/neilfarmer/memoire/commit/44923da3a84b2f6557f3080c0e57fed62f564f0e))
+* attachment type validation, auth audit logging, input size limits ([#31](https://github.com/neilfarmer/memoire/issues/31), [#32](https://github.com/neilfarmer/memoire/issues/32), [#33](https://github.com/neilfarmer/memoire/issues/33)) ([f40c1db](https://github.com/neilfarmer/memoire/commit/f40c1db2884758aac55fe450a8a1e90d8a5e6292))
+* **auth:** strip trailing slash from logout_uri ([#49](https://github.com/neilfarmer/memoire/issues/49)) ([c5b8b44](https://github.com/neilfarmer/memoire/commit/c5b8b44171289c12cf08177dabcddf70c4f6a429))
+* **ci:** install requirements-test.txt before make test-unit in integration workflow ([d457125](https://github.com/neilfarmer/memoire/commit/d457125c63415a3441bca8c1a972c8defbda6fa7))
+* CORS lockdown, rate limiting, admin stats access control ([#28](https://github.com/neilfarmer/memoire/issues/28), [#29](https://github.com/neilfarmer/memoire/issues/29), [#30](https://github.com/neilfarmer/memoire/issues/30)) ([e764fce](https://github.com/neilfarmer/memoire/commit/e764fce83cea773305918eb2a324f32c194f772d))
+* **csp:** allow unsafe-inline scripts for SPA inline script block ([#48](https://github.com/neilfarmer/memoire/issues/48)) ([a11157b](https://github.com/neilfarmer/memoire/commit/a11157b137dadf8933d59c9fca3145d7452621ef))
+* declare TEST_PAT environment in CI job to access environment secret ([ddc1bdf](https://github.com/neilfarmer/memoire/commit/ddc1bdff79560545cd7d0caef42763dc1f6105bc))
+* handle identitySource as list in authorizer + migrate tests to PAT auth ([c1e3ac3](https://github.com/neilfarmer/memoire/commit/c1e3ac3c660fbed7f562a11e51466b88219daf37))
+* make content deploy idempotent + fix invalid mood value ([e72b01b](https://github.com/neilfarmer/memoire/commit/e72b01bb14e9793b370a071c3d119a90f26734bb))
+* pass TEST_PAT via env in CI workflow ([e9b681b](https://github.com/neilfarmer/memoire/commit/e9b681b046da020e5c99699cce188a65a34aae6d))
+* S3 path traversal ([#27](https://github.com/neilfarmer/memoire/issues/27)) + habit logs user isolation ([#26](https://github.com/neilfarmer/memoire/issues/26)) ([66feb76](https://github.com/neilfarmer/memoire/commit/66feb764c1af3e4ff62752a1d54fb26a19636cf3))
+* SSRF validation, XSS sanitization, per-Lambda IAM roles ([#12](https://github.com/neilfarmer/memoire/issues/12), [#13](https://github.com/neilfarmer/memoire/issues/13), [#24](https://github.com/neilfarmer/memoire/issues/24)) ([a77c3f7](https://github.com/neilfarmer/memoire/commit/a77c3f7703eafd249c5bd3353442b980c2236ac1))
+* **terraform:** break CloudFront ↔ API Gateway cycle in response headers policy ([68c0fd1](https://github.com/neilfarmer/memoire/commit/68c0fd12b2c79b9353e974509e77547c217a5abd))
+* **terraform:** properly break CloudFront ↔ API Gateway cycle in CSP ([300925f](https://github.com/neilfarmer/memoire/commit/300925f4deab48221d20efbe78bd08f0fbebabad))
+* **terraform:** properly break CloudFront CSP dependency cycle ([f647558](https://github.com/neilfarmer/memoire/commit/f647558586522ce714b7bc7b50c031ea3b890ecf))
+* update auth enforcement test to accept 403 ([efa13fc](https://github.com/neilfarmer/memoire/commit/efa13fc4f452bdcfac3a9c63dbf0f6af272f91d6))
+* update test_habits.py for habit_logs_v2 schema ([247d128](https://github.com/neilfarmer/memoire/commit/247d1283994bf63b8644b3e75741fae9677dec3e))
+
 ## [0.6.0](https://github.com/neilfarmer/memoire/compare/v0.5.0...v0.6.0) (2026-03-30)
 
 
