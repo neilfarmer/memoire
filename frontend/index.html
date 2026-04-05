@@ -50,13 +50,13 @@
       --hover:     rgba(255,255,255,.04);
     }
 
-    html[data-theme="dark"] .badge-todo        { background: #2a2318; color: #a09488; border: 1px solid #3d342a; }
-    html[data-theme="dark"] .badge-in_progress { background: #1e1b4b; color: #a5b4fc; }
-    html[data-theme="dark"] .badge-done        { background: #14532d; color: #86efac; }
-    html[data-theme="dark"] .badge-low         { background: #14532d; color: #86efac; }
-    html[data-theme="dark"] .badge-medium      { background: #451a03; color: #fde68a; }
-    html[data-theme="dark"] .badge-high        { background: #450a0a; color: #fca5a5; }
-    html[data-theme="dark"] .error-msg         { background: #450a0a; color: #fca5a5; }
+    html[data-theme="dark"] .badge-todo        { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
+    html[data-theme="dark"] .badge-in_progress { background: rgba(129,140,248,.15); color: #a5b4fc; }
+    html[data-theme="dark"] .badge-done        { background: rgba(34,197,94,.12);   color: #86efac; }
+    html[data-theme="dark"] .badge-low         { background: rgba(34,197,94,.12);   color: #86efac; }
+    html[data-theme="dark"] .badge-medium      { background: rgba(245,158,11,.12);  color: #fde68a; }
+    html[data-theme="dark"] .badge-high        { background: rgba(248,113,113,.15); color: #fca5a5; }
+    html[data-theme="dark"] .error-msg         { background: rgba(248,113,113,.15); color: #fca5a5; }
 
     /* ── Color themes ──────────────────────────────────────────────────────── */
 
@@ -788,9 +788,9 @@
     .status-select.badge-todo        { background: #f5f3ef; color: #6b5e52; border-color: #d9d3c9; }
     .status-select.badge-in_progress { background: #ede9fe; color: #4338ca; border-color: #a5b4fc; }
     .status-select.badge-done        { background: #dcfce7; color: #15803d; border-color: #86efac; }
-    html[data-theme="dark"] .status-select.badge-todo        { background: #2a2318; color: #a09488; border-color: #3d342a; }
-    html[data-theme="dark"] .status-select.badge-in_progress { background: #1e1b4b; color: #a5b4fc; border-color: #4338ca; }
-    html[data-theme="dark"] .status-select.badge-done        { background: #14532d; color: #86efac; border-color: #166534; }
+    html[data-theme="dark"] .status-select.badge-todo        { background: var(--surface); color: var(--muted); border-color: var(--border); }
+    html[data-theme="dark"] .status-select.badge-in_progress { background: rgba(129,140,248,.15); color: #a5b4fc; border-color: rgba(129,140,248,.3); }
+    html[data-theme="dark"] .status-select.badge-done        { background: rgba(34,197,94,.12);   color: #86efac; border-color: rgba(34,197,94,.3); }
 
     .badge-low    { background: #dcfce7; color: #15803d; }
     .badge-medium { background: #fef3c7; color: #b45309; }
