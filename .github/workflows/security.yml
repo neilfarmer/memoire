@@ -1,0 +1,88 @@
+name: Security
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  schedule:
+    # Run weekly on Monday at 08:00 UTC to catch newly published CVEs
+    - cron: "0 8 * * 1"
+
+jobs:
+  python-sast:
+    name: Python SAST (Bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Bandit
+        run: pip install bandit[toml]
+
+      - name: Run Bandit
+        run: |
+          bandit -r lambda/ \
+            --severity-level medium \
+            --confidence-level medium \
+            --format json \
+            --output bandit-report.json \
+            || true
+          bandit -r lambda/ \
+            --severity-level medium \
+            --confidence-level medium
+
+      - name: Upload Bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
+  dependency-audit:
+    name: Dependency CVE scan (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit test dependencies
+        run: pip-audit -r requirements-test.txt -f columns
+
+  terraform-scan:
+    name: Terraform IaC scan (Checkov)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/
+          framework: terraform
+          output_format: cli
+          # Suppress findings that don't apply to a personal single-tenant app:
+          # CKV_AWS_117 - Lambda VPC (not required; adds cost/complexity)
+          # CKV_AWS_116 - Lambda DLQ (watcher has no DLQ by design - tracked in infrastructure.md)
+          # CKV_AWS_272 - Lambda code signing (impractical for Terraform-managed Lambdas)
+          # CKV_AWS_50  - Lambda X-Ray tracing (not configured)
+          # CKV2_AWS_38 - Cognito advanced security (paid feature)
+          # CKV2_AWS_39 - Cognito device tracking (not needed)
+          # CKV_AWS_7   - KMS key rotation (using AWS-managed keys)
+          skip_check: >-
+            CKV_AWS_117,
+            CKV_AWS_116,
+            CKV_AWS_272,
+            CKV_AWS_50,
+            CKV2_AWS_38,
+            CKV2_AWS_39,
+            CKV_AWS_7

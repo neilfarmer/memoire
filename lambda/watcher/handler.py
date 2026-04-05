@@ -144,7 +144,7 @@ def _ntfy_post(url, title, body, priority="3"):
             headers={"Title": title, "Priority": priority},
             method="POST",
         )
-        with urlopen(req, timeout=10) as resp:
+        with urlopen(req, timeout=10) as resp:  # nosec B310 — ntfy_url validated as https + non-private on write
             logger.info("Sent notification '%s' (status %s)", title, resp.status)
         return True
     except Exception as e:

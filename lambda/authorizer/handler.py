@@ -71,7 +71,7 @@ def _get_jwks() -> dict:
     if _jwks_cache and (now - _jwks_cache_at) < JWKS_TTL:
         return _jwks_cache
     logger.info("Refreshing JWKS from %s", JWKS_URI)
-    with urllib.request.urlopen(JWKS_URI, timeout=5) as resp:
+    with urllib.request.urlopen(JWKS_URI, timeout=5) as resp:  # nosec B310 — JWKS_URI is a Terraform-injected Cognito URL
         _jwks_cache = json.loads(resp.read())
         _jwks_cache_at = now
     return _jwks_cache

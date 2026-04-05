@@ -17,3 +17,12 @@ exclude_lines = [
     "pragma: no cover",
     "if __name__ == .__main__.:",
 ]
+
+[tool.bandit]
+targets = ["lambda"]
+severity = "medium"
+confidence = "medium"
+skips = [
+    # B108: hardcoded /tmp path — Lambda ephemeral storage is /tmp by design
+    "B108",
+]

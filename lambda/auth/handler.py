@@ -136,7 +136,7 @@ def _cognito_token_request(params: dict) -> dict | None:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310 — URL from Cognito env var, scheme enforced by Cognito
             return json.loads(resp.read())
     except urllib.error.HTTPError as exc:
         logger.warning("Cognito token request failed: %s %s", exc.code, exc.reason)

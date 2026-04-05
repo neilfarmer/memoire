@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: deploy deploy-auto invalidate destroy test test-unit coverage
+.PHONY: deploy deploy-auto invalidate destroy test test-unit coverage security
 
 deploy:
 	@source .env && cd terraform && terraform apply
@@ -22,6 +22,12 @@ test-unit:
 coverage:
 	python -m pytest tests/unit/ -q --cov=lambda --cov-report=html --cov-report=term-missing
 	@echo "HTML report: htmlcov/index.html"
+
+security:
+	@echo "--- Python SAST (bandit) ---"
+	bandit -r lambda/ --severity-level medium --confidence-level medium
+	@echo "--- Dependency CVEs (pip-audit) ---"
+	pip-audit -r requirements-test.txt -f columns
 
 test:
 	TEST_PAT=$(TEST_PAT) python tests/test_api.py

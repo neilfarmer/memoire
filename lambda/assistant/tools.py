@@ -888,7 +888,7 @@ def _usda_search(food_name: str, data_types: str) -> list:
         "dataType": data_types,
     })
     url = f"https://api.nal.usda.gov/fdc/v1/foods/search?{params}"
-    with urllib.request.urlopen(url, timeout=6) as resp:
+    with urllib.request.urlopen(url, timeout=6) as resp:  # nosec B310 — scheme hardcoded as https
         return json.loads(resp.read()).get("foods", [])
 
 
