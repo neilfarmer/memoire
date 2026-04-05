@@ -182,7 +182,7 @@
     }
 
     .logo { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; letter-spacing: -0.2px; }
-    .logo img { width: 28px; height: 28px; display: block; filter: drop-shadow(0 0 8px rgba(249,115,22,.5)); }
+    .logo img { width: 28px; height: 28px; display: block; filter: drop-shadow(0 0 8px rgba(217,119,6,.5)); }
 
     /* ── Sidebar toggle ── */
     .sb-toggle {
@@ -350,7 +350,7 @@
     }
 
     /* ── Main content ── */
-    main { max-width: 760px; margin: 0 auto; padding: 32px 24px; }
+    main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
 
     .toolbar {
       display: flex;
@@ -379,6 +379,7 @@
       color: var(--muted);
       transition: all .15s;
     }
+    .filter-btn:hover:not(.active) { background: var(--hover); color: var(--text); border-color: var(--muted); }
     .filter-btn.active {
       background: var(--primary);
       border-color: var(--primary);
@@ -668,7 +669,7 @@
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(15,23,42,.4);
+      background: rgba(26,22,18,.45);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -768,7 +769,7 @@
     }
     .goal-progress-track {
       flex: 1;
-      height: 5px;
+      height: 6px;
       background: var(--border);
       border-radius: 99px;
       overflow: hidden;
@@ -920,9 +921,9 @@
       margin-top: 6px;
     }
     .hm-cell {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
+      width: 13px;
+      height: 13px;
+      border-radius: 3px;
       background: var(--border);
       cursor: default;
       position: relative;
@@ -982,15 +983,24 @@
     }
 
     /* Inline status messages */
-    .msg-ok  { color: #15803d; }
+    .msg-ok  { color: #16a34a; }
     .msg-err { color: var(--danger); }
 
     /* ── Home page ── */
     .home-greeting {
-      margin-bottom: 8px;
-      padding-bottom: 24px;
-      border-bottom: 1px solid var(--border);
+      padding-bottom: 28px;
       margin-bottom: 28px;
+      position: relative;
+    }
+    .home-greeting::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 40px;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 2px;
     }
 
     .home-greeting-name {
@@ -1010,7 +1020,7 @@
 
     .home-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
       gap: 16px;
       margin-top: 8px;
     }
@@ -1361,7 +1371,7 @@
       color: var(--text);
       line-height: 1;
     }
-    .streak-fire { font-size: 18px; }
+    .streak-fire { display: inline-flex; align-items: center; color: var(--accent); }
 
     /* ── Reference autocomplete dropdown ── */
     .ref-dropdown {
@@ -2531,15 +2541,22 @@
       color: var(--text);
     }
 
+    /* ── Sidebar dark mode depth ── */
+    html[data-theme="dark"] #sidebar { background: #161310; }
+
+    /* ── Pomodoro reveal animation ── */
+    @keyframes pomodoroReveal {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .pomodoro-widget:not(.hidden) { animation: pomodoroReveal .2s ease; }
+
     /* ── Journal streak numbers — amber ── */
     .streak-num { color: var(--accent); }
 
     /* ── Settings card lift ── */
     .settings-section {
       transition: box-shadow .15s;
-    }
-    .settings-section:hover {
-      box-shadow: var(--shadow-md);
     }
 
     /* ── Search result hover ── */
@@ -2576,7 +2593,7 @@
       bottom: 84px;
       right: 24px;
       width: 340px;
-      height: 480px;
+      height: min(560px, 65vh);
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 14px;
@@ -7574,7 +7591,7 @@
     const el = $("journal-streaks");
     el.innerHTML = `
       <div class="streak-card">
-        <span class="streak-fire">&#x1F525;</span>
+        <span class="streak-fire"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></span>
         <div><div class="streak-num">${current}</div><div>day streak</div></div>
       </div>
       <div class="streak-card">
@@ -7672,7 +7689,9 @@
 </script>
 
 <!-- ── AI Pal widget ── -->
-<button id="pal-btn" title="Chat with your AI pal" aria-label="AI assistant" class="hidden">🤖</button>
+<button id="pal-btn" title="Chat with your AI pal" aria-label="AI assistant" class="hidden">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+</button>
 <div id="pal-window" class="hidden">
   <div id="pal-header">
     <span id="pal-header-name">AI Pal</span>
