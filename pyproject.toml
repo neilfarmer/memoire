@@ -18,6 +18,9 @@ exclude_lines = [
     "if __name__ == .__main__.:",
 ]
 
+[tool.djlint]
+ignore = "H006,H021,H023,H030,H031"
+
 [tool.bandit]
 targets = ["lambda"]
 severity = "medium"

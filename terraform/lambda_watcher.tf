@@ -19,14 +19,14 @@ resource "aws_iam_role_policy_attachment" "watcher_basic" {
 }
 
 resource "aws_lambda_function" "watcher" {
-  function_name    = "${local.name_prefix}-watcher"
-  runtime          = var.lambda_runtime
-  handler          = "handler.lambda_handler"
-  role             = aws_iam_role.watcher.arn
-  filename         = data.archive_file.lambda_watcher.output_path
-  source_code_hash = data.archive_file.lambda_watcher.output_base64sha256
-  layers           = [aws_lambda_layer_version.shared.arn]
-  timeout          = 300
+  function_name                  = "${local.name_prefix}-watcher"
+  runtime                        = var.lambda_runtime
+  handler                        = "handler.lambda_handler"
+  role                           = aws_iam_role.watcher.arn
+  filename                       = data.archive_file.lambda_watcher.output_path
+  source_code_hash               = data.archive_file.lambda_watcher.output_base64sha256
+  layers                         = [aws_lambda_layer_version.shared.arn]
+  timeout                        = 300
   memory_size                    = var.lambda_memory_mb
   reserved_concurrent_executions = 1
 

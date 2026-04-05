@@ -329,8 +329,12 @@ resource "aws_dynamodb_table" "tokens" {
 
   global_secondary_index {
     name            = "token-hash-index"
-    hash_key        = "token_hash"
     projection_type = "KEYS_ONLY"
+
+    key_schema {
+      attribute_name = "token_hash"
+      key_type       = "HASH"
+    }
   }
 
   point_in_time_recovery {
@@ -405,7 +409,7 @@ resource "aws_dynamodb_table" "task_folders" {
   name         = "${local.name_prefix}-task-folders"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "user_id"
-  range_key     = "folder_id"
+  range_key    = "folder_id"
 
   attribute {
     name = "user_id"

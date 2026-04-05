@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: deploy deploy-auto invalidate destroy test test-unit test-terraform test-all coverage security
+.PHONY: deploy deploy-auto invalidate destroy test test-unit test-terraform test-all coverage security lint
 
 deploy:
 	@source .env && cd terraform && terraform apply
@@ -16,8 +16,15 @@ invalidate:
 destroy:
 	@source .env && cd terraform && terraform destroy
 
+lint:
+	ruff check lambda/ tests/
+	djlint frontend/ --lint
+	cd terraform && terraform fmt -check -recursive
+
+test: test-unit test-terraform
+
 test-unit:
-	python -m pytest tests/unit/ -v --cov=lambda --cov-report=term-missing --cov-report=xml
+	python -m pytest tests/unit/ -v --cov=lambda --cov-report=term-missing --cov-report=xml --cov-fail-under=80
 
 test-terraform:
 	cd terraform && terraform test
@@ -34,11 +41,3 @@ security:
 	@echo "--- Dependency CVEs (pip-audit) ---"
 	pip-audit -r requirements-test.txt -f columns
 
-test:
-	TEST_PAT=$(TEST_PAT) python tests/test_api.py
-
-test-deploy-content:
-	TEST_PAT=$(TEST_PAT) python tests/content.py deploy
-
-test-destroy-content:
-	TEST_PAT=$(TEST_PAT) python tests/content.py destroy

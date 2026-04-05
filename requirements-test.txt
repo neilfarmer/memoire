@@ -1,11 +1,15 @@
 # Direct dependencies
+bandit[toml]==1.9.4
 boto3==1.42.83
 freezegun==1.5.5
 moto[dynamodb,s3]==5.1.22
+pip-audit==2.10.0
 pytest==9.0.2
 pytest-cov==7.1.0
+ruff==0.15.9
 
 # Transitive dependencies (pinned for reproducibility)
+boolean.py==5.0
 botocore==1.42.83
 certifi==2026.2.25
 cffi==2.0.0
@@ -16,9 +20,14 @@ docker==7.1.0
 idna==3.11
 iniconfig==2.3.0
 Jinja2==3.1.6
+license-expression==30.4.4
 jmespath==1.1.0
 MarkupSafe==3.0.3
+msgpack==1.1.2
 packaging==26.0
+pbr==7.0.1
+pip-api==0.0.34
+pip-requirements-parser==32.0.1
 pluggy==1.6.0
 py-partiql-parser==0.6.3
 pycparser==3.0
@@ -26,9 +35,12 @@ Pygments==2.20.0
 python-dateutil==2.9.0.post0
 PyYAML==6.0.3
 requests==2.33.1
+rich==14.3.3
 responses==0.26.0
 s3transfer==0.16.0
 six==1.17.0
+stevedore==5.7.0
+tomli==2.4.1
 urllib3==2.6.3
 Werkzeug==3.1.8
 xmltodict==1.0.4

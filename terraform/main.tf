@@ -54,9 +54,9 @@ locals {
   # ── Auth ──────────────────────────────────────────────────────────────────────
   # When auth_provider = cognito, derive JWT config from managed Cognito resources.
   # When auth_provider = oidc, use the caller-supplied auth_oidc_* variables.
-  auth_jwt_issuer_url   = var.auth_provider == "cognito" ? "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.main[0].id}" : var.auth_oidc_issuer_url
-  auth_jwt_client_id    = var.auth_provider == "cognito" ? aws_cognito_user_pool_client.main[0].id : var.auth_oidc_client_id
-  auth_hosted_ui_url    = var.auth_provider == "cognito" ? "https://${aws_cognito_user_pool_domain.main[0].domain}.auth.${var.aws_region}.amazoncognito.com" : var.auth_oidc_hosted_ui_url
+  auth_jwt_issuer_url = var.auth_provider == "cognito" ? "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.main[0].id}" : var.auth_oidc_issuer_url
+  auth_jwt_client_id  = var.auth_provider == "cognito" ? aws_cognito_user_pool_client.main[0].id : var.auth_oidc_client_id
+  auth_hosted_ui_url  = var.auth_provider == "cognito" ? "https://${aws_cognito_user_pool_domain.main[0].domain}.auth.${var.aws_region}.amazoncognito.com" : var.auth_oidc_hosted_ui_url
 
 }
 
