@@ -1,6 +1,8 @@
-"""Unit tests for lambda/assistant — memory.py and tools.py."""
+"""Unit tests for lambda/assistant — memory.py, tools.py, and chat.py."""
 
+import json
 import os
+from unittest.mock import patch
 
 import boto3
 import pytest
@@ -20,9 +22,20 @@ os.environ["JOURNAL_TABLE"]       = "test-journal-asst"
 os.environ["NUTRITION_TABLE"]     = "test-nutrition-asst"
 os.environ["HEALTH_TABLE"]        = "test-health-asst"
 os.environ["AWS_REGION"]          = "us-east-1"
+os.environ["TOKENS_TABLE"]        = "test-tokens"
+os.environ["JWKS_URI"]            = "https://cognito.example.com/.well-known/jwks.json"
+os.environ["JWT_ISSUER"]          = "https://cognito.example.com"
+os.environ["JWT_AUDIENCE"]        = "test-client-id"
 
-memory = load_lambda("assistant", "memory.py")
-tools  = load_lambda("assistant", "tools.py")
+memory     = load_lambda("assistant", "memory.py")
+tools      = load_lambda("assistant", "tools.py")
+chat       = load_lambda("assistant", "chat.py")
+token_auth = load_lambda("assistant", "token_auth.py")
+# auth must be pre-registered so handler.py's `from auth import ...` resolves
+from conftest import LAYER_DIR, _register as _reg
+if "auth" not in __import__("sys").modules:
+    _reg(LAYER_DIR / "auth.py", "auth")
+handler    = load_lambda("assistant", "handler.py")
 
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
@@ -41,6 +54,25 @@ def tbls():
         make_table(ddb, "test-journal-asst",      "user_id", "entry_date")
         make_table(ddb, "test-nutrition-asst",    "user_id", "log_date")
         make_table(ddb, "test-health-asst",       "user_id", "log_date")
+        # Tokens table with token-hash GSI (used by token_auth PAT lookup)
+        ddb.create_table(
+            TableName="test-tokens",
+            KeySchema=[
+                {"AttributeName": "user_id",  "KeyType": "HASH"},
+                {"AttributeName": "token_id", "KeyType": "RANGE"},
+            ],
+            AttributeDefinitions=[
+                {"AttributeName": "user_id",    "AttributeType": "S"},
+                {"AttributeName": "token_id",   "AttributeType": "S"},
+                {"AttributeName": "token_hash", "AttributeType": "S"},
+            ],
+            GlobalSecondaryIndexes=[{
+                "IndexName": "token-hash-index",
+                "KeySchema": [{"AttributeName": "token_hash", "KeyType": "HASH"}],
+                "Projection": {"ProjectionType": "KEYS_ONLY"},
+            }],
+            BillingMode="PAY_PER_REQUEST",
+        )
         yield
 
 
@@ -596,3 +628,400 @@ class TestToolsUnknown:
     def test_unknown_tool_returns_error(self, tbls):
         result = tools.handle_tool(USER, "nonexistent_tool", {})
         assert "Unknown tool" in result
+
+
+# ── chat: chat_stream ─────────────────────────────────────────────────────────
+
+def _make_stream_events(text_chunks, stop_reason="end_turn", input_tokens=10, output_tokens=5):
+    """Build the list of converse_stream events for a simple text response."""
+    events = [
+        {"contentBlockStart": {"contentBlockIndex": 0, "start": {}}},
+    ]
+    for chunk in text_chunks:
+        events.append({"contentBlockDelta": {"contentBlockIndex": 0, "delta": {"text": chunk}}})
+    events += [
+        {"contentBlockStop": {"contentBlockIndex": 0}},
+        {"messageStop": {"stopReason": stop_reason}},
+        {"metadata": {"usage": {"inputTokens": input_tokens, "outputTokens": output_tokens}}},
+    ]
+    return events
+
+
+def _make_tool_use_events(tool_use_id, tool_name, tool_input_dict):
+    """Build converse_stream events for a single tool-use block."""
+    input_str = json.dumps(tool_input_dict)
+    return [
+        {"contentBlockStart": {"contentBlockIndex": 0, "start": {"toolUse": {"toolUseId": tool_use_id, "name": tool_name}}}},
+        {"contentBlockDelta": {"contentBlockIndex": 0, "delta": {"toolUse": {"input": input_str}}}},
+        {"contentBlockStop": {"contentBlockIndex": 0}},
+        {"messageStop": {"stopReason": "tool_use"}},
+        {"metadata": {"usage": {"inputTokens": 20, "outputTokens": 10}}},
+    ]
+
+
+class TestChatStream:
+    def test_simple_text_response(self, tbls):
+        """chat_stream emits token events and a done event for a plain text reply."""
+        mock_resp = {"stream": iter(_make_stream_events(["Hello ", "world"]))}
+
+        with patch.object(chat._bedrock, "converse_stream", return_value=mock_resp):
+            chunks = []
+            chat.chat_stream(USER, "hi", emit=lambda b: chunks.append(json.loads(b.rstrip(b"\n"))))
+
+        tokens   = [c for c in chunks if c["type"] == "token"]
+        done_evt = next(c for c in chunks if c["type"] == "done")
+
+        assert "".join(t["text"] for t in tokens) == "Hello world"
+        assert done_evt["reply"] == "Hello world"
+        assert done_evt["tools_used"] == []
+
+    def test_reply_saved_to_history(self, tbls):
+        """chat_stream persists the exchange to conversation history."""
+        mock_resp = {"stream": iter(_make_stream_events(["Done"]))}
+
+        with patch.object(chat._bedrock, "converse_stream", return_value=mock_resp):
+            chat.chat_stream(USER, "save this", emit=lambda b: None)
+
+        history = memory.load_history(USER)
+        assert any(m["role"] == "user"      and "save this" in m["content"][0]["text"] for m in history)
+        assert any(m["role"] == "assistant" and "Done"       in m["content"][0]["text"] for m in history)
+
+    def test_tool_use_then_text(self, tbls):
+        """chat_stream handles a tool-use loop followed by a final text response."""
+        tool_events  = _make_tool_use_events("tu-1", "list_tasks", {})
+        final_events = _make_stream_events(["Here are your tasks"])
+
+        call_count = [0]
+        def fake_converse_stream(**kwargs):
+            call_count[0] += 1
+            return {"stream": iter(tool_events if call_count[0] == 1 else final_events)}
+
+        with patch.object(chat._bedrock, "converse_stream", side_effect=fake_converse_stream):
+            chunks = []
+            chat.chat_stream(USER, "list tasks", emit=lambda b: chunks.append(json.loads(b.rstrip(b"\n"))))
+
+        statuses = [c for c in chunks if c["type"] == "status"]
+        done_evt = next(c for c in chunks if c["type"] == "done")
+
+        assert any(s["text"] == "list_tasks" for s in statuses)
+        assert "list_tasks" in done_evt["tools_used"]
+        assert "Here are your tasks" in done_evt["reply"]
+
+    def test_thinking_tags_stripped_from_reply(self, tbls):
+        """_clean_reply removes <thinking> blocks from the done event reply."""
+        raw = "<thinking>internal</thinking><response>Clean answer</response>"
+        mock_resp = {"stream": iter(_make_stream_events([raw]))}
+
+        with patch.object(chat._bedrock, "converse_stream", return_value=mock_resp):
+            chunks = []
+            chat.chat_stream(USER, "q", emit=lambda b: chunks.append(json.loads(b.rstrip(b"\n"))))
+
+        done_evt = next(c for c in chunks if c["type"] == "done")
+        assert done_evt["reply"] == "Clean answer"
+
+    def test_usage_recorded(self, tbls):
+        """Token usage from the stream metadata is persisted to memory."""
+        mock_resp = {"stream": iter(_make_stream_events(["ok"], input_tokens=7, output_tokens=3))}
+
+        with patch.object(chat._bedrock, "converse_stream", return_value=mock_resp):
+            chat.chat_stream(USER, "usage test", emit=lambda b: None)
+
+        usage = memory.load_model_usage(USER)
+        model_entry = next((u for u in usage if u["model_id"] == chat.MODEL_ID), None)
+        assert model_entry is not None
+        assert model_entry["input_tokens"] == 7
+        assert model_entry["output_tokens"] == 3
+
+    def test_error_event_on_bedrock_failure(self, tbls):
+        """chat_stream emits an error event when Bedrock raises."""
+        with patch.object(chat._bedrock, "converse_stream", side_effect=RuntimeError("boom")):
+            chunks = []
+            chat.chat_stream(USER, "fail", emit=lambda b: chunks.append(json.loads(b.rstrip(b"\n"))))
+
+        assert any(c["type"] == "error" for c in chunks)
+
+
+# ── token_auth ────────────────────────────────────────────────────────────────
+
+class TestTokenAuthExtract:
+    def test_bearer_header(self):
+        event = {"headers": {"authorization": "Bearer mytoken"}}
+        assert token_auth.extract_token(event) == "mytoken"
+
+    def test_authorization_no_bearer_prefix(self):
+        event = {"headers": {"Authorization": "rawtoken"}}
+        assert token_auth.extract_token(event) == "rawtoken"
+
+    def test_cookie_fallback(self):
+        event = {"headers": {"cookie": "other=x; memoire_token=cookietok; z=1"}}
+        assert token_auth.extract_token(event) == "cookietok"
+
+    def test_header_takes_priority_over_cookie(self):
+        event = {"headers": {"authorization": "Bearer hdrtoken", "cookie": "memoire_token=cookietok"}}
+        assert token_auth.extract_token(event) == "hdrtoken"
+
+    def test_empty_event_returns_empty(self):
+        assert token_auth.extract_token({}) == ""
+
+    def test_no_matching_cookie_returns_empty(self):
+        event = {"headers": {"cookie": "other=value"}}
+        assert token_auth.extract_token(event) == ""
+
+
+class TestTokenAuthGetUserId:
+    def test_no_token_returns_none(self, tbls):
+        assert token_auth.get_user_id({}) is None
+
+    def test_malformed_jwt_returns_none(self, tbls):
+        # Not three dot-separated parts → rejected immediately
+        event = {"headers": {"authorization": "notajwt"}}
+        assert token_auth.get_user_id(event) is None
+
+    def test_pat_not_in_db_returns_none(self, tbls):
+        event = {"headers": {"authorization": "pat_unknowntoken"}}
+        assert token_auth.get_user_id(event) is None
+
+    def test_expired_jwt_returns_none(self, tbls):
+        # Craft a JWT with a valid structure but expired exp claim.
+        # The signature will be wrong, but exp is checked first.
+        import base64
+        header  = base64.urlsafe_b64encode(b'{"alg":"RS256","kid":"k1"}').rstrip(b"=").decode()
+        payload = base64.urlsafe_b64encode(b'{"sub":"u1","exp":1,"iss":"https://cognito.example.com","aud":"test-client-id"}').rstrip(b"=").decode()
+        token   = f"{header}.{payload}.fakesig"
+        event   = {"headers": {"authorization": f"Bearer {token}"}}
+        assert token_auth.get_user_id(event) is None
+
+    def test_wrong_issuer_returns_none(self, tbls):
+        import base64
+        import time
+        header  = base64.urlsafe_b64encode(b'{"alg":"RS256","kid":"k1"}').rstrip(b"=").decode()
+        payload_bytes = json.dumps({"sub": "u1", "exp": int(time.time()) + 3600, "iss": "https://wrong.example.com", "aud": "test-client-id"}).encode()
+        payload = base64.urlsafe_b64encode(payload_bytes).rstrip(b"=").decode()
+        token   = f"{header}.{payload}.fakesig"
+        event   = {"headers": {"authorization": f"Bearer {token}"}}
+        assert token_auth.get_user_id(event) is None
+
+
+# ── streaming handler ───���─────────────────────────────────────────────────────
+
+class TestStreamHandler:
+    """Tests for _stream_handler called directly (no awslambdaric wrapper needed)."""
+
+    def _collect(self, stream_mock):
+        chunks = []
+        for call in stream_mock.write.call_args_list:
+            line = call.args[0].rstrip(b"\n")
+            if line:
+                chunks.append(json.loads(line))
+        return chunks
+
+    def test_unauthorized_when_no_token(self, tbls):
+        from unittest.mock import MagicMock
+        stream = MagicMock()
+        handler._stream_handler({"headers": {}}, None, stream)
+        chunks = self._collect(stream)
+        assert chunks[0] == {"type": "error", "message": "Unauthorized"}
+
+    def test_invalid_json_body_returns_error(self, tbls, monkeypatch):
+        from unittest.mock import MagicMock
+        monkeypatch.setattr(token_auth, "get_user_id", lambda e: USER)
+        stream = MagicMock()
+        handler._stream_handler({"headers": {}, "body": "not-json"}, None, stream)
+        chunks = self._collect(stream)
+        assert chunks[0]["type"] == "error"
+        assert "JSON" in chunks[0]["message"]
+
+    def test_missing_message_returns_error(self, tbls, monkeypatch):
+        from unittest.mock import MagicMock
+        monkeypatch.setattr(token_auth, "get_user_id", lambda e: USER)
+        stream = MagicMock()
+        handler._stream_handler({"headers": {}, "body": "{}"}, None, stream)
+        chunks = self._collect(stream)
+        assert chunks[0]["type"] == "error"
+        assert "message" in chunks[0]["message"].lower()
+
+    def test_delegates_to_chat_stream(self, tbls, monkeypatch):
+        from unittest.mock import MagicMock
+        monkeypatch.setattr(token_auth, "get_user_id", lambda e: USER)
+        called_with = {}
+
+        def fake_chat_stream(user_id, message, emit, model=None, local_date=None):
+            called_with["user_id"] = user_id
+            called_with["message"] = message
+            emit(json.dumps({"type": "done", "tools_used": [], "reply": "hi"}).encode() + b"\n")
+
+        monkeypatch.setattr(chat, "chat_stream", fake_chat_stream)
+        stream = MagicMock()
+        body   = json.dumps({"message": "hello world"})
+        handler._stream_handler({"headers": {}, "body": body}, None, stream)
+
+        assert called_with["user_id"] == USER
+        assert called_with["message"] == "hello world"
+
+    def test_exception_in_chat_stream_emits_error(self, tbls, monkeypatch):
+        """Unhandled exception inside chat_stream writes an error event."""
+        from unittest.mock import MagicMock
+        monkeypatch.setattr(token_auth, "get_user_id", lambda e: USER)
+        monkeypatch.setattr(chat, "chat_stream", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("kaboom")))
+        stream = MagicMock()
+        handler._stream_handler({"headers": {}, "body": json.dumps({"message": "hi"})}, None, stream)
+        chunks = self._collect(stream)
+        assert any(c["type"] == "error" for c in chunks)
+
+
+# ── handler.lambda_handler ────────────────────────────────────────────────────
+
+class TestLambdaHandler:
+    def _event(self, route_key="POST /assistant/chat", body=None):
+        return {
+            "requestContext": {"authorizer": {"lambda": {"user_id": USER}}},
+            "routeKey": route_key,
+            "headers": {},
+            "body": json.dumps(body) if body is not None else None,
+        }
+
+    def test_routes_chat_request(self, tbls, monkeypatch):
+        monkeypatch.setattr(handler, "route", lambda rk, uid, b: {"statusCode": 200, "body": json.dumps({"reply": "ok", "tools_used": []})})
+        result = handler.lambda_handler(self._event(body={"message": "hi"}), None)
+        assert result["statusCode"] == 200
+
+    def test_invalid_json_body_returns_400(self, tbls):
+        event = self._event()
+        event["body"] = "not-json"
+        result = handler.lambda_handler(event, None)
+        assert result["statusCode"] == 400
+
+    def test_exception_returns_500(self, tbls, monkeypatch):
+        monkeypatch.setattr(handler, "route", lambda *a: (_ for _ in ()).throw(RuntimeError("oops")))
+        result = handler.lambda_handler(self._event(body={"message": "hi"}), None)
+        assert result["statusCode"] == 500
+
+
+# ── token_auth: JWKS fetch and RSA paths ─────────────────────────────────────
+
+class TestTokenAuthJWKSAndRSA:
+    def _make_jwt(self, kid="test-kid", extra_payload=None):
+        import base64
+        import time
+        header  = base64.urlsafe_b64encode(json.dumps({"alg": "RS256", "kid": kid}).encode()).rstrip(b"=").decode()
+        payload = {"sub": "u-test", "exp": int(time.time()) + 3600, "iss": "https://cognito.example.com", "aud": "test-client-id"}
+        if extra_payload:
+            payload.update(extra_payload)
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
+        # 256 zero bytes = valid base64url signature of the right length for 2048-bit RSA
+        sig = base64.urlsafe_b64encode(b"\x00" * 256).rstrip(b"=").decode()
+        return f"{header}.{payload_b64}.{sig}"
+
+    def _urlopen_mock(self, jwks: dict):
+        from unittest.mock import MagicMock
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps(jwks).encode()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        return mock_resp
+
+    def _fake_jwks(self, kid="test-kid"):
+        import base64
+        # 2048-bit fake modulus (not a real key — signature check will fail, but all code runs)
+        n_bytes = (2 ** 2047).to_bytes(256, "big")
+        e_bytes = (65537).to_bytes(3, "big")
+        return {"keys": [{"kid": kid, "n": base64.urlsafe_b64encode(n_bytes).rstrip(b"=").decode(),
+                                       "e": base64.urlsafe_b64encode(e_bytes).rstrip(b"=").decode()}]}
+
+    def test_jwks_fetched_on_cache_miss(self, tbls):
+        token_auth._jwks_cache    = None  # force cache miss
+        token_auth._jwks_cache_at = 0.0
+        jwks = self._fake_jwks()
+        with patch("urllib.request.urlopen", return_value=self._urlopen_mock(jwks)):
+            result = token_auth._verify_jwt(self._make_jwt())
+        # Signature verification fails (fake key), so result is None — but JWKS was fetched
+        assert result is None
+        assert token_auth._jwks_cache == jwks
+
+    def test_jwks_cache_hit_skips_fetch(self, tbls):
+        token_auth._jwks_cache    = self._fake_jwks()
+        token_auth._jwks_cache_at = 9_999_999_999.0  # far future
+        with patch("urllib.request.urlopen", side_effect=AssertionError("should not fetch")):
+            token_auth._verify_jwt(self._make_jwt())  # uses cache, no network call
+
+    def test_no_matching_kid_returns_none(self, tbls):
+        token_auth._jwks_cache    = None
+        token_auth._jwks_cache_at = 0.0
+        jwks = self._fake_jwks(kid="other-kid")
+        with patch("urllib.request.urlopen", return_value=self._urlopen_mock(jwks)):
+            result = token_auth._verify_jwt(self._make_jwt(kid="test-kid"))
+        assert result is None
+
+    def test_rsa_wrong_signature_length_returns_false(self):
+        # Signature length != modulus length → immediate False (lines 55-57)
+        result = token_auth._verify_rsa_pkcs1v15_sha256(b"msg", b"\x00" * 10, n=2**2047, e=65537)
+        assert result is False
+
+    def test_rsa_correct_length_bad_sig_returns_false(self):
+        # Correct length but wrong signature value → runs full verification (lines 55-69)
+        sig = b"\x00" * 256  # 256 bytes = 2048-bit modulus, but sig = 0
+        result = token_auth._verify_rsa_pkcs1v15_sha256(b"msg", sig, n=2**2047, e=65537)
+        assert result is False
+
+    def test_get_user_id_exception_returns_none(self, tbls, monkeypatch):
+        # _verify_jwt raises → exception handler in get_user_id returns None (lines 158-160)
+        monkeypatch.setattr(token_auth, "_verify_jwt", lambda t: (_ for _ in ()).throw(RuntimeError("boom")))
+        event = {"headers": {"authorization": "Bearer valid.looking.jwt"}}
+        assert token_auth.get_user_id(event) is None
+
+
+# ── token_auth: PAT success path ──────────────────────────────────────────────
+
+class TestTokenAuthPATSuccess:
+    def test_valid_pat_returns_user_id(self, tbls):
+        import hashlib
+        pat   = "pat_testtoken123"
+        h     = hashlib.sha256(pat.encode()).hexdigest()
+        # Insert the PAT hash into the tokens table
+        import boto3
+        ddb   = boto3.resource("dynamodb", region_name="us-east-1")
+        table = ddb.Table("test-tokens")
+        table.put_item(Item={"user_id": USER, "token_id": "tok-1", "token_hash": h})
+
+        result = token_auth._verify_pat(pat)
+        assert result == USER
+
+
+# ── chat_stream: edge-case coverage ──────────────────────────────────────────
+
+class TestChatStreamEdgeCases:
+    def test_text_delta_without_prior_block_start(self, tbls):
+        """A contentBlockDelta with text but no prior contentBlockStart is handled (line 221)."""
+        events = [
+            # No contentBlockStart — delta arrives cold
+            {"contentBlockDelta": {"contentBlockIndex": 0, "delta": {"text": "Hello"}}},
+            {"contentBlockStop":  {"contentBlockIndex": 0}},
+            {"messageStop":       {"stopReason": "end_turn"}},
+            {"metadata":          {"usage": {"inputTokens": 1, "outputTokens": 1}}},
+        ]
+        mock_resp = {"stream": iter(events)}
+        with patch.object(chat._bedrock, "converse_stream", return_value=mock_resp):
+            chunks = []
+            chat.chat_stream(USER, "hi", emit=lambda b: chunks.append(json.loads(b.rstrip(b"\n"))))
+        tokens = [c for c in chunks if c["type"] == "token"]
+        assert any("Hello" in t["text"] for t in tokens)
+
+    def test_invalid_tool_json_does_not_crash(self, tbls):
+        """Invalid JSON in a tool input block is handled gracefully (lines 235-236)."""
+        tool_events = [
+            {"contentBlockStart": {"contentBlockIndex": 0, "start": {"toolUse": {"toolUseId": "tu-bad", "name": "list_tasks"}}}},
+            {"contentBlockDelta": {"contentBlockIndex": 0, "delta": {"toolUse": {"input": "{{invalid json"}}}},
+            {"contentBlockStop":  {"contentBlockIndex": 0}},
+            {"messageStop":       {"stopReason": "tool_use"}},
+            {"metadata":          {"usage": {"inputTokens": 5, "outputTokens": 2}}},
+        ]
+        final_events = _make_stream_events(["Done"])
+        call_count = [0]
+        def fake_stream(**kwargs):
+            call_count[0] += 1
+            return {"stream": iter(tool_events if call_count[0] == 1 else final_events)}
+
+        with patch.object(chat._bedrock, "converse_stream", side_effect=fake_stream):
+            chunks = []
+            chat.chat_stream(USER, "list tasks", emit=lambda b: chunks.append(json.loads(b.rstrip(b"\n"))))
+        assert any(c["type"] == "done" for c in chunks)

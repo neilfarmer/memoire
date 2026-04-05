@@ -1,5 +1,6 @@
 """Main Bedrock chat logic for the AI assistant."""
 
+import json
 import logging
 import os
 import re
@@ -149,6 +150,185 @@ def _update_master_context(user_id: str, existing_context: str, facts: dict, use
         mem.save_master_context(user_id, context)
     except Exception:
         logger.warning("Failed to update master context", exc_info=True)
+
+
+def chat_stream(
+    user_id: str,
+    user_message: str,
+    emit,
+    model: str | None = None,
+    local_date: str | None = None,
+) -> None:
+    """Run the chat loop, streaming text tokens via emit(bytes) as they arrive.
+
+    Tool-use iterations call emit() with {"type":"status","text":"<tool_name>"}
+    so the frontend can show a progress indicator.  Final text tokens arrive as
+    {"type":"token","text":"<chunk>"}.  A single {"type":"done","tools_used":[...]}
+    event closes the stream.  On error, {"type":"error","message":"..."} is emitted.
+
+    Memory persistence and master-context updates happen after the loop, before
+    the "done" event, so they do not delay the visible response.
+    """
+    model_id = model if model in _ALLOWED_MODELS else MODEL_ID
+    try:
+        history       = mem.load_history(user_id)
+        facts, master = mem.load_memory(user_id)
+        system        = _system_prompt(facts, master, local_date=local_date)
+        messages      = history + [{"role": "user", "content": [{"text": user_message}]}]
+
+        reply      = ""
+        link_tags  = []
+        tools_used = []
+        total_in   = 0
+        total_out  = 0
+
+        for _ in range(MAX_LOOPS):
+            stream_resp = _bedrock.converse_stream(
+                modelId=model_id,
+                system=system,
+                messages=messages,
+                toolConfig={"tools": TOOL_SPECS},
+                inferenceConfig={"maxTokens": MAX_TOKENS},
+            )
+
+            stop_reason    = None
+            blocks: dict   = {}   # block_idx -> block state dict
+            current_idx    = None
+
+            for event in stream_resp["stream"]:
+                if "contentBlockStart" in event:
+                    cbs         = event["contentBlockStart"]
+                    current_idx = cbs["contentBlockIndex"]
+                    start       = cbs.get("start", {})
+                    if "toolUse" in start:
+                        blocks[current_idx] = {
+                            "type":      "toolUse",
+                            "toolUseId": start["toolUse"]["toolUseId"],
+                            "name":      start["toolUse"]["name"],
+                            "input_str": "",
+                        }
+                    else:
+                        blocks[current_idx] = {"type": "text", "text": ""}
+
+                elif "contentBlockDelta" in event:
+                    cbd   = event["contentBlockDelta"]
+                    idx   = cbd.get("contentBlockIndex", current_idx)
+                    delta = cbd.get("delta", {})
+
+                    if "text" in delta:
+                        chunk = delta["text"]
+                        if idx not in blocks:
+                            blocks[idx] = {"type": "text", "text": ""}
+                        blocks[idx]["text"] = blocks[idx].get("text", "") + chunk
+                        emit(json.dumps({"type": "token", "text": chunk}).encode() + b"\n")
+
+                    elif "toolUse" in delta and idx in blocks:
+                        blocks[idx]["input_str"] = (
+                            blocks[idx].get("input_str", "") + delta["toolUse"].get("input", "")
+                        )
+
+                elif "contentBlockStop" in event:
+                    idx = event["contentBlockStop"]["contentBlockIndex"]
+                    if idx in blocks and blocks[idx]["type"] == "toolUse":
+                        try:
+                            blocks[idx]["input"] = json.loads(blocks[idx].get("input_str") or "{}")
+                        except json.JSONDecodeError:
+                            blocks[idx]["input"] = {}
+
+                elif "messageStop" in event:
+                    stop_reason = event["messageStop"].get("stopReason")
+
+                elif "metadata" in event:
+                    usage      = event["metadata"].get("usage", {})
+                    total_in  += usage.get("inputTokens",  0)
+                    total_out += usage.get("outputTokens", 0)
+
+            # Reconstruct message content in block-index order
+            content = []
+            for idx in sorted(blocks.keys()):
+                b = blocks[idx]
+                if b["type"] == "text" and b.get("text"):
+                    content.append({"text": b["text"]})
+                elif b["type"] == "toolUse":
+                    content.append({
+                        "toolUse": {
+                            "toolUseId": b["toolUseId"],
+                            "name":      b["name"],
+                            "input":     b.get("input", {}),
+                        }
+                    })
+
+            messages.append({"role": "assistant", "content": content})
+
+            if stop_reason == "tool_use":
+                tool_results = []
+                for block in content:
+                    if "toolUse" in block:
+                        tu = block["toolUse"]
+                        emit(json.dumps({"type": "status", "text": tu["name"]}).encode() + b"\n")
+                        result = handle_tool(user_id, tu["name"], tu["input"], local_date=local_date)
+                        logger.info("Tool %s → %s", tu["name"], result)
+                        tools_used.append(tu["name"])
+                        for tag in re.findall(r"\[pal-link:[^\]]+\]", result):
+                            link_tags.append(tag)
+                        tool_results.append({
+                            "toolResult": {
+                                "toolUseId": tu["toolUseId"],
+                                "content":   [{"text": result}],
+                            }
+                        })
+                messages.append({"role": "user", "content": tool_results})
+            else:
+                for block in content:
+                    if "text" in block:
+                        reply = block["text"]
+                        break
+                break
+
+        reply = _clean_reply(reply)
+
+        if not reply:
+            logger.warning("No reply after %d streaming loops, forcing final call", MAX_LOOPS)
+            try:
+                forced = _bedrock.converse(
+                    modelId=model_id,
+                    system=system,
+                    messages=messages,
+                    inferenceConfig={"maxTokens": MAX_TOKENS},
+                )
+                for block in forced["output"]["message"]["content"]:
+                    if "text" in block:
+                        reply = _clean_reply(block["text"])
+                        emit(json.dumps({"type": "token", "text": reply}).encode() + b"\n")
+                        break
+                usage2     = forced.get("usage", {})
+                total_in  += usage2.get("inputTokens",  0)
+                total_out += usage2.get("outputTokens", 0)
+            except Exception:
+                logger.warning("Forced final streaming call also failed", exc_info=True)
+
+        if not reply:
+            reply = "I'm here, but something went wrong with my response. Could you try again?"
+            emit(json.dumps({"type": "token", "text": reply}).encode() + b"\n")
+
+        if link_tags:
+            links_text = "\n" + " ".join(link_tags)
+            emit(json.dumps({"type": "token", "text": links_text}).encode() + b"\n")
+            reply = reply.rstrip() + links_text
+
+        mem.save_message(user_id, "user",      user_message)
+        mem.save_message(user_id, "assistant", reply)
+        mem.update_model_usage(user_id, model_id, total_in, total_out)
+        _update_master_context(user_id, master, facts, user_message, reply, model_id)
+
+        emit(json.dumps({"type": "done", "tools_used": tools_used, "reply": reply}).encode() + b"\n")
+
+    except Exception:
+        logger.exception("Error in chat_stream")
+        try:
+            emit(json.dumps({"type": "error", "message": "Assistant error — please try again"}).encode() + b"\n")
+        except Exception:
+            pass
 
 
 def chat(user_id: str, user_message: str, model: str | None = None, local_date: str | None = None) -> dict:

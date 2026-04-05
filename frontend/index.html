@@ -8204,6 +8204,25 @@
       return div;
     }
 
+    function _palRefreshSections(toolsUsed) {
+      if (!toolsUsed || !toolsUsed.length) return;
+      const used = new Set(toolsUsed);
+      const TASK_TOOLS      = ["create_task","complete_task","delete_task"];
+      const NOTE_TOOLS      = ["create_note","delete_note","create_note_folder"];
+      const HABIT_TOOLS     = ["create_habit","toggle_habit","delete_habit"];
+      const GOAL_TOOLS      = ["create_goal","update_goal_progress","delete_goal"];
+      const JOURNAL_TOOLS   = ["create_journal_entry"];
+      const NUTRITION_TOOLS = ["log_meal"];
+      const HEALTH_TOOLS    = ["log_exercise"];
+      if (TASK_TOOLS.some(t => used.has(t)))      app.loadTasks();
+      if (NOTE_TOOLS.some(t => used.has(t)))      notesApp.load();
+      if (HABIT_TOOLS.some(t => used.has(t)))     habits.load();
+      if (GOAL_TOOLS.some(t => used.has(t)))      goals.load();
+      if (JOURNAL_TOOLS.some(t => used.has(t)))   journal.load();
+      if (NUTRITION_TOOLS.some(t => used.has(t))) nutrition.load();
+      if (HEALTH_TOOLS.some(t => used.has(t)))    health.load();
+    }
+
     async function palSendMsg() {
       const msg = palInput.value.trim();
       if (!msg) return;
@@ -8213,41 +8232,85 @@
       palInput.style.height = "";
       palSend.disabled = true;
 
-      const typing = palAddMsg("typing", "Thinking…");
+      const localDate    = new Date().toLocaleDateString("en-CA");
+      const streamUrl    = cfg.assistantStreamUrl;
 
-      try {
-        const localDate = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local timezone
-        const res  = await api.call("POST", "/assistant/chat", { message: msg, model: palModel, local_date: localDate });
-        typing.remove();
-        if (res && res.reply) {
-          palAddMsg("assistant", res.reply);
-        } else {
-          palAddMsg("assistant", "Sorry, something went wrong. Try again.");
+      if (streamUrl) {
+        // Streaming path via Lambda Function URL
+        const bubble = palAddMsg("assistant", "");
+        try {
+          const resp = await fetch(streamUrl, {
+            method:      "POST",
+            credentials: "include",
+            headers:     { "Content-Type": "application/json" },
+            body:        JSON.stringify({ message: msg, model: palModel, local_date: localDate }),
+          });
+
+          if (!resp.ok || !resp.body) {
+            bubble.remove();
+            palAddMsg("assistant", "Network error. Please try again.");
+            return;
+          }
+
+          const reader  = resp.body.getReader();
+          const decoder = new TextDecoder();
+          let buf        = "";
+          let accText    = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            const lines = buf.split("\n");
+            buf = lines.pop();
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              let evt;
+              try { evt = JSON.parse(line); } catch { continue; }
+              if (evt.type === "token") {
+                accText += evt.text;
+                bubble.innerHTML = palRenderText(escHtml(accText));
+                palMsgs.scrollTop = palMsgs.scrollHeight;
+              } else if (evt.type === "done") {
+                // Replace accumulated raw tokens with the cleaned final reply
+                if (evt.reply) {
+                  bubble.innerHTML = palRenderText(escHtml(evt.reply));
+                  palMsgs.scrollTop = palMsgs.scrollHeight;
+                }
+                _palRefreshSections(evt.tools_used);
+              } else if (evt.type === "error") {
+                bubble.remove();
+                palAddMsg("assistant", evt.message || "Sorry, something went wrong. Try again.");
+                return;
+              }
+            }
+          }
+        } catch (e) {
+          bubble.remove();
+          palAddMsg("assistant", "Network error. Please try again.");
+        } finally {
+          palSend.disabled = false;
+          palInput.focus();
         }
-        // Refresh whichever sections were mutated by tool calls
-        if (res && res.tools_used && res.tools_used.length) {
-          const used = new Set(res.tools_used);
-          const TASK_TOOLS    = ["create_task","complete_task","delete_task"];
-          const NOTE_TOOLS    = ["create_note","delete_note","create_note_folder"];
-          const HABIT_TOOLS   = ["create_habit","toggle_habit","delete_habit"];
-          const GOAL_TOOLS    = ["create_goal","update_goal_progress","delete_goal"];
-          const JOURNAL_TOOLS = ["create_journal_entry"];
-          const NUTRITION_TOOLS = ["log_meal"];
-          const HEALTH_TOOLS  = ["log_exercise"];
-          if (TASK_TOOLS.some(t => used.has(t)))     app.loadTasks();
-          if (NOTE_TOOLS.some(t => used.has(t)))     notesApp.load();
-          if (HABIT_TOOLS.some(t => used.has(t)))    habits.load();
-          if (GOAL_TOOLS.some(t => used.has(t)))     goals.load();
-          if (JOURNAL_TOOLS.some(t => used.has(t)))  journal.load();
-          if (NUTRITION_TOOLS.some(t => used.has(t))) nutrition.load();
-          if (HEALTH_TOOLS.some(t => used.has(t)))   health.load();
+      } else {
+        // Fallback: non-streaming path via API Gateway
+        const typing = palAddMsg("typing", "Thinking\u2026");
+        try {
+          const res = await api.call("POST", "/assistant/chat", { message: msg, model: palModel, local_date: localDate });
+          typing.remove();
+          if (res && res.reply) {
+            palAddMsg("assistant", res.reply);
+          } else {
+            palAddMsg("assistant", "Sorry, something went wrong. Try again.");
+          }
+          if (res) _palRefreshSections(res.tools_used);
+        } catch (e) {
+          typing.remove();
+          palAddMsg("assistant", "Network error. Please try again.");
+        } finally {
+          palSend.disabled = false;
+          palInput.focus();
         }
-      } catch (e) {
-        typing.remove();
-        palAddMsg("assistant", "Network error. Please try again.");
-      } finally {
-        palSend.disabled = false;
-        palInput.focus();
       }
     }
 

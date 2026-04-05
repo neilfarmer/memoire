@@ -18,7 +18,7 @@ resource "aws_lambda_function" "assistant" {
   filename                       = data.archive_file.lambda_assistant.output_path
   source_code_hash               = data.archive_file.lambda_assistant.output_base64sha256
   layers                         = [aws_lambda_layer_version.shared.arn]
-  timeout                        = 30
+  timeout                        = 60
   memory_size                    = 256
   reserved_concurrent_executions = var.lambda_max_concurrency
 
@@ -37,6 +37,12 @@ resource "aws_lambda_function" "assistant" {
       ASSISTANT_MODEL_ID      = var.assistant_model_id
       ASSISTANT_SYSTEM_PROMPT = var.assistant_system_prompt
       USDA_API_KEY            = var.usda_api_key
+      # Auth env vars for the streaming handler (validates tokens directly,
+      # no API Gateway authorizer context available via Function URL).
+      TOKENS_TABLE = aws_dynamodb_table.tokens.name
+      JWKS_URI     = "${local.auth_jwt_issuer_url}/.well-known/jwks.json"
+      JWT_ISSUER   = local.auth_jwt_issuer_url
+      JWT_AUDIENCE = local.auth_jwt_client_id
     }
   }
 }
@@ -86,7 +92,10 @@ resource "aws_iam_role_policy" "assistant_bedrock" {
     Version = "2012-10-17"
     Statement = [{
       Effect = "Allow"
-      Action = ["bedrock:InvokeModel"]
+      Action = [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream",
+      ]
       Resource = [
         "arn:aws:bedrock:*::foundation-model/amazon.nova-lite-v1:0",
         "arn:aws:bedrock:*::foundation-model/amazon.nova-pro-v1:0",
@@ -98,6 +107,48 @@ resource "aws_iam_role_policy" "assistant_bedrock" {
       ]
     }]
   })
+}
+
+# Allow the streaming handler to look up PATs in the tokens GSI
+resource "aws_iam_role_policy" "assistant_tokens_read" {
+  name = "${local.name_prefix}-assistant-tokens-read"
+  role = aws_iam_role.assistant.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["dynamodb:Query"]
+      Resource = ["${aws_dynamodb_table.tokens.arn}/index/token-hash-index"]
+    }]
+  })
+}
+
+# ── Lambda Function URL (response streaming) ──────────────────────────────────
+#
+# A separate invocation endpoint for POST /assistant/chat that streams NDJSON
+# tokens back to the browser as Bedrock generates them.  Auth is handled inside
+# the Lambda (token_auth.py) because Function URLs do not support Lambda
+# authorizers.  CORS is restricted to the frontend origin.
+
+resource "aws_lambda_function_url" "assistant_stream" {
+  function_name = aws_lambda_function.assistant.function_name
+  qualifier     = null
+  invoke_mode   = "RESPONSE_STREAM"
+
+  # checkov:skip=CKV_AWS_258: AuthType NONE is intentional — the Lambda validates
+  # Cognito JWTs and PATs directly in token_auth.py (same RS256 + PAT logic as
+  # the authorizer Lambda).  AWS_IAM would require SigV4 request signing in the
+  # browser, which is incompatible with the existing cookie-based auth session.
+  authorization_type = "NONE"
+
+  cors {
+    allow_credentials = true
+    allow_headers     = ["content-type", "authorization"]
+    allow_methods     = ["POST"]
+    allow_origins     = [local.frontend_origin]
+    max_age           = 86400
+  }
 }
 
 resource "aws_lambda_permission" "assistant_api" {
