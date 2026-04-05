@@ -58,6 +58,178 @@
     html[data-theme="dark"] .badge-high        { background: #450a0a; color: #fca5a5; }
     html[data-theme="dark"] .error-msg         { background: #450a0a; color: #fca5a5; }
 
+    /* ── Color themes ──────────────────────────────────────────────────────── */
+
+    html[data-color-theme="parchment"] {
+      --bg:        #f4ede0;
+      --surface:   #faf5ec;
+      --border:    #ddd0bc;
+      --text:      #2c1f14;
+      --muted:     #8c7660;
+      --primary:   #7c4b1e;
+      --primary-h: #5e3615;
+      --accent:    #b84a2b;
+      --accent-h:  #963c22;
+      --danger:    #b91c1c;
+      --danger-h:  #991b1b;
+      --hover:     rgba(44,31,20,.04);
+      --shadow:    0 1px 3px rgba(44,31,20,.07), 0 1px 2px rgba(44,31,20,.05);
+      --shadow-md: 0 4px 12px rgba(44,31,20,.1), 0 2px 4px rgba(44,31,20,.06);
+    }
+
+    html[data-color-theme="ocean"] {
+      --bg:        #f0f7ff;
+      --surface:   #ffffff;
+      --border:    #c8dff5;
+      --text:      #0c2340;
+      --muted:     #4f7096;
+      --primary:   #0369a1;
+      --primary-h: #025584;
+      --accent:    #0891b2;
+      --accent-h:  #0e7490;
+      --danger:    #dc2626;
+      --danger-h:  #b91c1c;
+      --hover:     rgba(3,105,161,.04);
+      --shadow:    0 1px 3px rgba(12,35,64,.07), 0 1px 2px rgba(12,35,64,.05);
+      --shadow-md: 0 4px 12px rgba(12,35,64,.1), 0 2px 4px rgba(12,35,64,.06);
+    }
+
+    html[data-color-theme="midnight"] {
+      --bg:        #100e0c;
+      --surface:   #1a1714;
+      --border:    #2e2924;
+      --text:      #e8e3dc;
+      --muted:     #8a8278;
+      --primary:   #818cf8;
+      --primary-h: #6366f1;
+      --accent:    #fbbf24;
+      --accent-h:  #f59e0b;
+      --danger:    #f87171;
+      --danger-h:  #ef4444;
+      --shadow:    0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
+      --shadow-md: 0 4px 16px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.3);
+      --hover:     rgba(255,255,255,.04);
+    }
+
+    html[data-color-theme="obsidian"] {
+      --bg:        #0a0a0b;
+      --surface:   #141415;
+      --border:    #2a2a2d;
+      --text:      #e8e6e3;
+      --muted:     #6b6b72;
+      --primary:   #dc2626;
+      --primary-h: #b91c1c;
+      --accent:    #ca8a04;
+      --accent-h:  #a16207;
+      --danger:    #ef4444;
+      --danger-h:  #dc2626;
+      --shadow:    0 1px 3px rgba(0,0,0,.6), 0 1px 2px rgba(0,0,0,.5);
+      --shadow-md: 0 4px 20px rgba(0,0,0,.8), 0 2px 6px rgba(0,0,0,.6);
+      --hover:     rgba(255,255,255,.04);
+    }
+
+    html[data-color-theme="void"] {
+      --bg:        #030305;
+      --surface:   #0d0d12;
+      --border:    #1e1e2e;
+      --text:      #f0edff;
+      --muted:     #6b6880;
+      --primary:   #9333ea;
+      --primary-h: #7c22c5;
+      --accent:    #ec4899;
+      --accent-h:  #db2777;
+      --danger:    #f43f5e;
+      --danger-h:  #e11d48;
+      --shadow:    0 1px 3px rgba(0,0,0,.8), 0 1px 2px rgba(0,0,0,.7);
+      --shadow-md: 0 4px 24px rgba(147,51,234,.25), 0 2px 8px rgba(0,0,0,.6);
+      --hover:     rgba(147,51,234,.07);
+    }
+
+    html[data-color-theme="bloodmoon"] {
+      --bg:        #0d0505;
+      --surface:   #160a0a;
+      --border:    #2d1515;
+      --text:      #f5e6e6;
+      --muted:     #8a6060;
+      --primary:   #cc1515;
+      --primary-h: #aa0f0f;
+      --accent:    #ff6b35;
+      --accent-h:  #e85520;
+      --danger:    #ff4040;
+      --danger-h:  #e03030;
+      --shadow:    0 1px 3px rgba(0,0,0,.7), 0 1px 2px rgba(0,0,0,.6);
+      --shadow-md: 0 4px 24px rgba(180,0,0,.3), 0 2px 8px rgba(0,0,0,.6);
+      --hover:     rgba(204,21,21,.07);
+    }
+
+    html[data-color-theme="terminal"] {
+      --bg:        #000000;
+      --surface:   #060a06;
+      --border:    #0d1f0d;
+      --text:      #33ff33;
+      --muted:     #1c7a1c;
+      --primary:   #00ff41;
+      --primary-h: #00dd38;
+      --accent:    #7fff00;
+      --accent-h:  #6de000;
+      --danger:    #ff3333;
+      --danger-h:  #cc0000;
+      --shadow:    0 1px 3px rgba(0,0,0,.95);
+      --shadow-md: 0 4px 20px rgba(0,255,65,.1), 0 2px 8px rgba(0,0,0,.8);
+      --hover:     rgba(0,255,65,.06);
+    }
+
+    html[data-color-theme="abyss"] {
+      --bg:        #020c1b;
+      --surface:   #0a1628;
+      --border:    #172a45;
+      --text:      #ccd6f6;
+      --muted:     #4a6fa5;
+      --primary:   #64ffda;
+      --primary-h: #4ae8c0;
+      --accent:    #00b4d8;
+      --accent-h:  #0096c7;
+      --danger:    #ff6b6b;
+      --danger-h:  #ee5253;
+      --shadow:    0 1px 3px rgba(0,0,0,.7), 0 1px 2px rgba(0,0,0,.6);
+      --shadow-md: 0 4px 24px rgba(0,0,0,.6), 0 2px 8px rgba(100,255,218,.05);
+      --hover:     rgba(100,255,218,.05);
+    }
+
+    html[data-color-theme="inferno"] {
+      --bg:        #0d0604;
+      --surface:   #160c06;
+      --border:    #2d1a0a;
+      --text:      #f5e6d3;
+      --muted:     #8a6040;
+      --primary:   #f97316;
+      --primary-h: #ea6a0c;
+      --accent:    #dc2626;
+      --accent-h:  #b91c1c;
+      --danger:    #ff4444;
+      --danger-h:  #ee3333;
+      --shadow:    0 1px 3px rgba(0,0,0,.7), 0 1px 2px rgba(0,0,0,.6);
+      --shadow-md: 0 4px 24px rgba(200,60,0,.25), 0 2px 8px rgba(0,0,0,.6);
+      --hover:     rgba(249,115,22,.07);
+    }
+
+    html[data-color-theme="noir"] {
+      --bg:        #080808;
+      --surface:   #111111;
+      --border:    #222222;
+      --text:      #e8e8e8;
+      --muted:     #606060;
+      --primary:   #eeeeee;
+      --primary-h: #cccccc;
+      --accent:    #888888;
+      --accent-h:  #aaaaaa;
+      --danger:    #cc3333;
+      --danger-h:  #aa2222;
+      --shadow:    0 1px 3px rgba(0,0,0,.8), 0 1px 2px rgba(0,0,0,.7);
+      --shadow-md: 0 4px 20px rgba(0,0,0,.9), 0 2px 6px rgba(0,0,0,.8);
+      --hover:     rgba(255,255,255,.04);
+    }
+
     body {
       font-family: 'Sora', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: var(--bg);
@@ -3212,8 +3384,15 @@
       <div class="settings-section-title">Appearance</div>
       <div class="settings-row">
         <div>
+          <div class="settings-label">Color theme</div>
+          <div class="settings-desc">Choose a color palette for the interface</div>
+        </div>
+        <select id="color-theme-select" style="min-width:160px;"></select>
+      </div>
+      <div class="settings-row" id="dark-mode-row">
+        <div>
           <div class="settings-label">Dark mode</div>
-          <div class="settings-desc">Switch to a darker color scheme</div>
+          <div class="settings-desc" id="dark-mode-desc">Switch to a darker color scheme</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="dark-mode-toggle" />
@@ -4566,8 +4745,11 @@
     get() { return localStorage.getItem("memoire_theme") || "light"; },
     set(t) {
       localStorage.setItem("memoire_theme", t);
-      document.documentElement.dataset.theme = t;
-      $("dark-mode-toggle").checked = (t === "dark");
+      const ct = localStorage.getItem("memoire_color_theme") || "default";
+      if (ct === "default") {
+        document.documentElement.dataset.theme = t;
+      }
+      $("dark-mode-toggle").checked = (document.documentElement.dataset.theme === "dark");
     },
     async toggle() {
       const next = theme.get() === "dark" ? "light" : "dark";
@@ -4581,6 +4763,80 @@
   };
 
   $("dark-mode-toggle").addEventListener("change", () => theme.toggle());
+
+  // ── Color themes ─────────────────────────────────────────────────────────────
+
+  const colorTheme = {
+    THEMES: [
+      { id: "default",   label: "Default",    base: "auto",  desc: "Warm cream, indigo and amber" },
+      { id: "parchment", label: "Parchment",  base: "light", desc: "Antiquarian warmth" },
+      { id: "ocean",     label: "Ocean",      base: "light", desc: "Cool coastal blues" },
+      { id: "midnight",  label: "Midnight",   base: "dark",  desc: "Deep warm charcoal" },
+      { id: "obsidian",  label: "Obsidian",   base: "dark",  desc: "Black glass, crimson edge" },
+      { id: "void",      label: "Void",       base: "dark",  desc: "Electric violet abyss" },
+      { id: "bloodmoon", label: "Blood Moon", base: "dark",  desc: "Crimson dark ritual" },
+      { id: "terminal",  label: "Terminal",   base: "dark",  desc: "Phosphor green on black" },
+      { id: "abyss",     label: "Abyss",      base: "dark",  desc: "Deep ocean midnight" },
+      { id: "inferno",   label: "Inferno",    base: "dark",  desc: "Molten orange, ember dark" },
+      { id: "noir",      label: "Noir",       base: "dark",  desc: "Zero color, pure shadow" },
+    ],
+
+    get() {
+      return localStorage.getItem("memoire_color_theme") || "default";
+    },
+
+    set(id) {
+      const t = colorTheme.THEMES.find(th => th.id === id) || colorTheme.THEMES[0];
+      localStorage.setItem("memoire_color_theme", id);
+      const html = document.documentElement;
+      html.dataset.colorTheme = id;
+      if (t.base !== "auto") {
+        html.dataset.theme = t.base;
+      } else {
+        html.dataset.theme = localStorage.getItem("memoire_theme") || "light";
+      }
+      $("dark-mode-toggle").checked = (html.dataset.theme === "dark");
+      const row = $("dark-mode-row");
+      if (row) {
+        const isAuto = t.base === "auto";
+        row.style.opacity = isAuto ? "1" : "0.45";
+        row.querySelector("label").style.pointerEvents = isAuto ? "" : "none";
+        const desc = $("dark-mode-desc");
+        if (desc) desc.textContent = isAuto ? "Switch to a darker color scheme" : "Controlled by the selected color theme";
+      }
+      const select = $("color-theme-select");
+      if (select && select.value !== id) select.value = id;
+    },
+
+    init() {
+      colorTheme.populateSelect();
+      colorTheme.set(colorTheme.get());
+    },
+
+    populateSelect() {
+      const select = $("color-theme-select");
+      if (!select) return;
+      select.innerHTML = "";
+      const defOpt = document.createElement("option");
+      defOpt.value = "default";
+      defOpt.textContent = "Default";
+      select.appendChild(defOpt);
+      const lightGroup = document.createElement("optgroup");
+      lightGroup.label = "Light";
+      const darkGroup = document.createElement("optgroup");
+      darkGroup.label = "Dark";
+      colorTheme.THEMES.filter(t => t.id !== "default").forEach(t => {
+        const opt = document.createElement("option");
+        opt.value = t.id;
+        opt.textContent = t.label;
+        (t.base === "light" ? lightGroup : darkGroup).appendChild(opt);
+      });
+      select.appendChild(lightGroup);
+      select.appendChild(darkGroup);
+    },
+  };
+
+  $("color-theme-select").addEventListener("change", e => colorTheme.set(e.target.value));
 
   // ── Notes ─────────────────────────────────────────────────────────────────────
 
@@ -7683,6 +7939,7 @@
   $("admin-refresh-btn").addEventListener("click", () => { admin.loaded = false; admin.load(); });
 
   // ── Boot ──────────────────────────────────────────────────────────────────────
+  colorTheme.init();
   theme.set(theme.get());
   pomodoro.init();
   app.init();
