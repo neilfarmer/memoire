@@ -162,3 +162,10 @@ variable "assistant_system_prompt" {
   default     = ""
 }
 
+variable "usda_api_key" {
+  description = "USDA FoodData Central API key for nutrition lookups."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+

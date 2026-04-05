@@ -34,8 +34,9 @@ resource "aws_lambda_function" "assistant" {
       JOURNAL_TABLE        = aws_dynamodb_table.journal.name
       NUTRITION_TABLE      = aws_dynamodb_table.nutrition.name
       HEALTH_TABLE         = aws_dynamodb_table.health.name
-      ASSISTANT_MODEL_ID     = var.assistant_model_id
+      ASSISTANT_MODEL_ID      = var.assistant_model_id
       ASSISTANT_SYSTEM_PROMPT = var.assistant_system_prompt
+      USDA_API_KEY            = var.usda_api_key
     }
   }
 }

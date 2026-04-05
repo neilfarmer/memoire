@@ -1,11 +1,17 @@
 """Bedrock tool definitions and handlers for the AI assistant."""
 
+import json
+import logging
 import os
+import urllib.parse
+import urllib.request
 import uuid
 from datetime import date, datetime, timezone
 
 import db
 import memory as mem
+
+logger = logging.getLogger(__name__)
 
 # ── Table env vars ────────────────────────────────────────────────────────────
 
@@ -383,6 +389,24 @@ TOOL_SPECS = [
     },
     {
         "toolSpec": {
+            "name": "lookup_nutrition",
+            "description": (
+                "Look up accurate nutrition facts for a food item from the USDA database. "
+                "Call this before log_meal whenever the user has not explicitly provided calorie/macro values."
+            ),
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "food_name": {"type": "string", "description": "Food name to search, e.g. 'pizza rolls' or 'banana'"},
+                    },
+                    "required": ["food_name"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
             "name": "remember_fact",
             "description": "Remember a fact about the user for future conversations.",
             "inputSchema": {
@@ -427,6 +451,7 @@ def handle_tool(user_id: str, name: str, inputs: dict, local_date: str | None = 
         "get_nutrition_log":    _get_nutrition_log,
         "log_exercise":         _log_exercise,
         "get_exercise_log":     _get_exercise_log,
+        "lookup_nutrition":     _lookup_nutrition,
         "remember_fact":        _remember_fact,
     }
     handler = handlers.get(name)
@@ -848,6 +873,82 @@ def _get_exercise_log(user_id: str, inputs: dict) -> str:
             set_strs = [f"{s.get('reps', '?')} reps" + (f" @ {s['weight']} lbs" if s.get("weight") else "") for s in ex["sets"]]
             parts.append(", ".join(set_strs))
         lines.append(f"- {ex.get('name', 'Unnamed')}" + (f" ({'; '.join(parts)})" if parts else ""))
+    return "\n".join(lines)
+
+
+def _usda_search(food_name: str, data_types: str) -> list:
+    params = urllib.parse.urlencode({
+        "query":    food_name,
+        "api_key":  os.environ.get("USDA_API_KEY", ""),
+        "pageSize": 5,
+        "dataType": data_types,
+    })
+    url = f"https://api.nal.usda.gov/fdc/v1/foods/search?{params}"
+    with urllib.request.urlopen(url, timeout=6) as resp:
+        return json.loads(resp.read()).get("foods", [])
+
+
+def _pick_usda_result(foods: list):
+    """Return (food, nutrients_dict) for the first result with sane kcal (0–900/100g)."""
+    for f in foods:
+        nutrients = {}
+        for item in f.get("foodNutrients", []):
+            name = item["nutrientName"]
+            val  = item.get("value", 0)
+            unit = item.get("unitName", "")
+            if name == "Energy":
+                if unit == "KCAL":
+                    nutrients["Energy"] = val
+            else:
+                nutrients[name] = val
+        if 0 < nutrients.get("Energy", 0) <= 900:
+            return f, nutrients
+    return None, {}
+
+
+def _lookup_nutrition(user_id: str, inputs: dict) -> str:
+    food_name = inputs.get("food_name", "").strip()
+    if not food_name:
+        return "No food name provided."
+    try:
+        # Branded first (has real serving sizes from product labels)
+        foods = _usda_search(food_name, "Branded")
+        chosen, nutrients = _pick_usda_result(foods)
+        # Fall back to Foundation/SR Legacy for generic foods
+        if chosen is None:
+            foods = _usda_search(food_name, "Foundation,SR Legacy")
+            chosen, nutrients = _pick_usda_result(foods)
+    except Exception as e:
+        logger.warning("USDA lookup failed for '%s': %s", food_name, e)
+        return f"Nutrition lookup unavailable. Use your general knowledge to estimate values for '{food_name}'."
+
+    if chosen is None:
+        return f"No reliable nutrition data found for '{food_name}'. Use your general knowledge to estimate."
+
+    cal  = nutrients.get("Energy", 0)
+    prot = nutrients.get("Protein", 0)
+    carb = nutrients.get("Carbohydrate, by difference", 0)
+    fat  = nutrients.get("Total lipid (fat)", 0)
+    srv_g    = chosen.get("servingSize")
+    srv_unit = chosen.get("servingSizeUnit", "g")
+    name     = chosen.get("description", food_name)
+    brand    = chosen.get("brandOwner", "")
+
+    lines = [
+        f"USDA data for: {name}" + (f" ({brand})" if brand else ""),
+        f"Per 100g: {cal:.0f} cal | {prot:.1f}g protein | {carb:.1f}g carbs | {fat:.1f}g fat",
+    ]
+    if srv_g and str(srv_unit).upper() == "G":
+        try:
+            sq = float(srv_g)
+            lines.append(
+                f"Per labeled serving ({sq:.0f}g): "
+                f"{cal*sq/100:.0f} cal | {prot*sq/100:.1f}g protein | "
+                f"{carb*sq/100:.1f}g carbs | {fat*sq/100:.1f}g fat"
+            )
+        except (ValueError, TypeError):
+            pass
+    lines.append("Scale these values to the user's actual serving size, then call log_meal.")
     return "\n".join(lines)
 
 
