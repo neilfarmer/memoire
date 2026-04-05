@@ -1,7 +1,6 @@
 """Unit tests for lambda/assistant — memory.py and tools.py."""
 
 import os
-import sys
 
 import boto3
 import pytest
@@ -320,7 +319,7 @@ class TestToolsHabits:
 
     def test_toggle_habit_completes(self, tbls):
         tools.handle_tool(USER, "create_habit", {"name": "Meditate"})
-        listing = tools.handle_tool(USER, "list_habits", {})
+        tools.handle_tool(USER, "list_habits", {})
         # Extract habit_id via list_tasks pattern doesn't work for habits
         # Use the db directly — toggle by finding the habit through create→list→parse
         # Habits list doesn't expose IDs; test toggle via handle_tool with known ID

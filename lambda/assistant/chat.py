@@ -1,6 +1,5 @@
 """Main Bedrock chat logic for the AI assistant."""
 
-import json
 import logging
 import os
 import re

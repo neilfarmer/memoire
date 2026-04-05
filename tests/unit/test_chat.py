@@ -1,9 +1,6 @@
 """Unit tests for lambda/assistant/chat.py — _clean_reply and _system_prompt."""
 
 import os
-import sys
-
-import pytest
 
 from conftest import load_lambda
 
