@@ -9,6 +9,9 @@ resource "aws_s3_bucket" "frontend" {
   force_destroy = true
 }
 
+# SSE-S3 (AES256) is free and requires no KMS key management.
+# The bucket holds only public static assets (HTML/JS/CSS) — encryption
+# satisfies compliance requirements without adding cost.
 resource "aws_s3_bucket_server_side_encryption_configuration" "frontend" {
   bucket = aws_s3_bucket.frontend.id
 
@@ -94,6 +97,11 @@ resource "aws_cloudfront_origin_access_control" "frontend" {
 }
 
 # ── CloudFront distribution ───────────────────────────────────────────────────
+#
+# Security controls intentionally omitted (personal single-tenant app):
+#   WAF — adds $5-10/month minimum; attack surface does not justify the cost
+#   Access logging — adds variable S3 storage cost; CloudFront metrics suffice
+#   Failover origin — single S3 bucket is the only origin; no failover target exists
 
 resource "aws_cloudfront_distribution" "frontend" {
   enabled             = true

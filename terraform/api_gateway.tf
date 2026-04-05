@@ -43,6 +43,10 @@ resource "aws_apigatewayv2_authorizer" "lambda" {
   authorizer_result_ttl_in_seconds  = 0  # No caching — revoked PATs must be rejected immediately
 }
 
+# Access logging is intentionally not configured: each Lambda logs its own
+# requests via CloudWatch, and Lambda authorizer logs capture auth events
+# with enough detail for incident response. API Gateway access logs would
+# duplicate this at additional CloudWatch ingestion cost.
 resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.main.id
   name        = "$default"
