@@ -8103,7 +8103,8 @@
       const typing = palAddMsg("typing", "Thinking…");
 
       try {
-        const res  = await api.call("POST", "/assistant/chat", { message: msg, model: palModel });
+        const localDate = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local timezone
+        const res  = await api.call("POST", "/assistant/chat", { message: msg, model: palModel, local_date: localDate });
         typing.remove();
         if (res && res.reply) {
           palAddMsg("assistant", res.reply);

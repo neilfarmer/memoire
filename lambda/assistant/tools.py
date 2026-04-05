@@ -402,7 +402,8 @@ TOOL_SPECS = [
 
 # ── Tool handlers ─────────────────────────────────────────────────────────────
 
-def handle_tool(user_id: str, name: str, inputs: dict) -> str:
+def handle_tool(user_id: str, name: str, inputs: dict, local_date: str | None = None) -> str:
+    _today = local_date or date.today().isoformat()
     handlers = {
         "create_task":          _create_task,
         "list_tasks":           _list_tasks,
@@ -431,6 +432,11 @@ def handle_tool(user_id: str, name: str, inputs: dict) -> str:
     handler = handlers.get(name)
     if not handler:
         return f"Unknown tool: {name}"
+    # Inject local today for tools that default to "today"
+    _date_aware = {"log_meal", "get_nutrition_log", "log_exercise", "get_exercise_log",
+                   "create_journal_entry", "toggle_habit"}
+    if name in _date_aware:
+        inputs = {**inputs, "_today": _today}
     return handler(user_id, inputs)
 
 
@@ -662,7 +668,7 @@ def _toggle_habit(user_id: str, inputs: dict) -> str:
     existing = db.get_item(table, user_id, "habit_id", habit_id)
     if not existing:
         return f"Habit {habit_id} not found."
-    today = date.today().isoformat()
+    today = inputs.get("_today") or date.today().isoformat()
     history: list = existing.get("completion_history", [])
     if today in history:
         history.remove(today)
@@ -728,7 +734,7 @@ def _delete_goal(user_id: str, inputs: dict) -> str:
 
 def _create_journal_entry(user_id: str, inputs: dict) -> str:
     table      = db.get_table(JOURNAL_TABLE)
-    entry_date = date.today().isoformat()
+    entry_date = inputs.get("_today") or date.today().isoformat()
     now        = _now()
 
     existing   = db.get_item(table, user_id, "entry_date", entry_date)
@@ -751,7 +757,7 @@ def _create_journal_entry(user_id: str, inputs: dict) -> str:
 
 def _log_meal(user_id: str, inputs: dict) -> str:
     table    = db.get_table(NUTRITION_TABLE)
-    log_date = inputs.get("date") or date.today().isoformat()
+    log_date = inputs.get("date") or inputs.get("_today") or date.today().isoformat()
     existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
     meals    = list(existing.get("meals", [])) if existing else []
 
@@ -775,7 +781,7 @@ def _log_meal(user_id: str, inputs: dict) -> str:
 
 def _get_nutrition_log(user_id: str, inputs: dict) -> str:
     table    = db.get_table(NUTRITION_TABLE)
-    log_date = inputs.get("date") or date.today().isoformat()
+    log_date = inputs.get("date") or inputs.get("_today") or date.today().isoformat()
     existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
     if not existing or not existing.get("meals"):
         return f"No nutrition log for {log_date}."
@@ -796,7 +802,7 @@ def _get_nutrition_log(user_id: str, inputs: dict) -> str:
 
 def _log_exercise(user_id: str, inputs: dict) -> str:
     table    = db.get_table(HEALTH_TABLE)
-    log_date = inputs.get("date") or date.today().isoformat()
+    log_date = inputs.get("date") or inputs.get("_today") or date.today().isoformat()
     existing  = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
     exercises = list(existing.get("exercises", [])) if existing else []
 
@@ -822,7 +828,7 @@ def _log_exercise(user_id: str, inputs: dict) -> str:
 
 def _get_exercise_log(user_id: str, inputs: dict) -> str:
     table    = db.get_table(HEALTH_TABLE)
-    log_date = inputs.get("date") or date.today().isoformat()
+    log_date = inputs.get("date") or inputs.get("_today") or date.today().isoformat()
     existing  = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
     if not existing or not existing.get("exercises"):
         return f"No exercise log for {log_date}."

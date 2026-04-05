@@ -104,8 +104,14 @@ Memory:
 _SYSTEM_PROMPT_TEMPLATE = os.environ.get("ASSISTANT_SYSTEM_PROMPT") or _DEFAULT_SYSTEM_PROMPT
 
 
-def _system_prompt(memories: dict, master_context: str) -> list[dict]:
-    today = date.today()
+def _system_prompt(memories: dict, master_context: str, local_date: str | None = None) -> list[dict]:
+    if local_date:
+        try:
+            today = date.fromisoformat(local_date)
+        except ValueError:
+            today = date.today()
+    else:
+        today = date.today()
     memory_text = (
         "\n".join(f"- {k}: {v}" for k, v in memories.items())
         if memories else "Nothing remembered yet."
@@ -145,12 +151,12 @@ def _update_master_context(user_id: str, existing_context: str, facts: dict, use
         logger.warning("Failed to update master context", exc_info=True)
 
 
-def chat(user_id: str, user_message: str, model: str | None = None) -> dict:
+def chat(user_id: str, user_message: str, model: str | None = None, local_date: str | None = None) -> dict:
     model_id = model if model in _ALLOWED_MODELS else MODEL_ID
     try:
         history         = mem.load_history(user_id)
         facts, master   = mem.load_memory(user_id)
-        system          = _system_prompt(facts, master)
+        system          = _system_prompt(facts, master, local_date=local_date)
         messages        = history + [{"role": "user", "content": [{"text": user_message}]}]
 
         reply        = ""
@@ -180,7 +186,7 @@ def chat(user_id: str, user_message: str, model: str | None = None) -> dict:
                 for block in output_msg["content"]:
                     if "toolUse" in block:
                         tu     = block["toolUse"]
-                        result = handle_tool(user_id, tu["name"], tu["input"])
+                        result = handle_tool(user_id, tu["name"], tu["input"], local_date=local_date)
                         logger.info("Tool %s → %s", tu["name"], result)
                         # Extract any pal-link tags from the tool result
                         for tag in re.findall(r"\[pal-link:[^\]]+\]", result):
