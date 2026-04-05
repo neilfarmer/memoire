@@ -77,15 +77,18 @@ def api(method: str, path: str, token: str, body: dict = None, params: dict = No
 # ── Tasks ─────────────────────────────────────────────────────────────────────
 
 def test_tasks(token: str) -> None:
-    created_ids: list[str] = []
+    created_ids:        list[str] = []
+    created_folder_ids: list[str] = []
     try:
-        _test_tasks_body(token, created_ids)
+        _test_tasks_body(token, created_ids, created_folder_ids)
     finally:
         for tid in created_ids:
             api("DELETE", f"/tasks/{tid}", token)
+        for fid in created_folder_ids:
+            api("DELETE", f"/tasks/folders/{fid}", token)
 
 
-def _test_tasks_body(token: str, created_ids: list) -> None:
+def _test_tasks_body(token: str, created_ids: list, created_folder_ids: list) -> None:
     section("Tasks — auth enforcement")
     r = requests.get(f"{API_URL}/tasks", timeout=10)
     check("No token returns 401/403", r.status_code in (401, 403), f"Got {r.status_code}")
@@ -177,10 +180,10 @@ def _test_tasks_body(token: str, created_ids: list) -> None:
     rf = api("POST", "/tasks/folders", token, {"name": "Temp move-target folder"})
     move_folder_id = rf.json().get("folder_id") if rf.status_code == 201 else None
     if move_folder_id:
+        created_folder_ids.append(move_folder_id)
         r = api("PUT", f"/tasks/{task_id}", token, {"folder_id": move_folder_id})
         check("Move task to folder returns 200", r.status_code == 200, f"Got {r.status_code}: {r.text}")
         check("folder_id updated",               r.json().get("folder_id") == move_folder_id)
-        api("DELETE", f"/tasks/folders/{move_folder_id}", token)
     else:
         print(f"  [{SKIP}] Skipping move-folder test — folder creation failed")
 
@@ -498,9 +501,10 @@ def _test_notes_body(token: str, folder_ids: list, note_ids: list) -> None:
           api("PUT", f"/notes/{note_id}", token, {"folder_id": "no-such-id"}).status_code == 404)
 
     section("Notes — delete")
-    check("Delete note returns 204",
-          api("DELETE", f"/notes/{note_id}", token).status_code == 204)
-    note_ids.remove(note_id)  # already deleted
+    r_del = api("DELETE", f"/notes/{note_id}", token)
+    check("Delete note returns 204", r_del.status_code == 204)
+    if r_del.status_code == 204 and note_id in note_ids:
+        note_ids.remove(note_id)
     check("Deleted note returns 404",
           api("GET", f"/notes/{note_id}", token).status_code == 404)
     check("Delete non-existent → 404",
@@ -511,13 +515,13 @@ def _test_notes_body(token: str, folder_ids: list, note_ids: list) -> None:
     rn = api("POST", "/notes", token, {"folder_id": sub_folder_id, "title": "Nested note"})
     nested_note_id = rn.json().get("note_id") if rn.status_code == 201 else None
 
-    check("Delete folder returns 204",
-          api("DELETE", f"/notes/folders/{folder_id}", token).status_code == 204)
-    # folder_id and sub_folder_id are now gone; remove from tracking so finally doesn't re-attempt
-    if folder_id in folder_ids:
-        folder_ids.remove(folder_id)
-    if sub_folder_id and sub_folder_id in folder_ids:
-        folder_ids.remove(sub_folder_id)
+    r_del_folder = api("DELETE", f"/notes/folders/{folder_id}", token)
+    check("Delete folder returns 204", r_del_folder.status_code == 204)
+    if r_del_folder.status_code == 204:
+        if folder_id in folder_ids:
+            folder_ids.remove(folder_id)
+        if sub_folder_id and sub_folder_id in folder_ids:
+            folder_ids.remove(sub_folder_id)
     check("Deleted folder gone from list",
           folder_id not in [f["folder_id"] for f in api("GET", "/notes/folders", token).json()])
     if nested_note_id:
@@ -528,6 +532,11 @@ def _test_notes_body(token: str, folder_ids: list, note_ids: list) -> None:
 # ── Settings ──────────────────────────────────────────────────────────────────
 
 def test_settings(token: str) -> None:
+    _SETTING_DEFAULTS = {
+        "dark_mode": False, "ntfy_url": "", "autosave_seconds": 300,
+        "timezone": "", "display_name": "", "pal_name": "",
+    }
+
     section("Settings — get")
     r = api("GET", "/settings", token)
     check("Get returns 200",              r.status_code == 200, f"Got {r.status_code}: {r.text}")
@@ -541,55 +550,55 @@ def test_settings(token: str) -> None:
     check("dark_mode is bool",            isinstance(s.get("dark_mode"), bool))
     check("autosave_seconds is int",      isinstance(s.get("autosave_seconds"), int))
 
-    # Capture originals to restore later
-    original = {k: s[k] for k in ("dark_mode", "ntfy_url", "autosave_seconds", "timezone", "display_name", "pal_name")}
+    # Capture originals with safe fallback to defaults (avoids KeyError if a key is missing)
+    original = {k: s.get(k, v) for k, v in _SETTING_DEFAULTS.items()}
 
-    section("Settings — update")
-    r = api("PUT", "/settings", token, {"dark_mode": True})
-    check("Update dark_mode returns 200", r.status_code == 200)
-    check("dark_mode updated to True",    r.json().get("dark_mode") is True)
+    try:
+        section("Settings — update")
+        r = api("PUT", "/settings", token, {"dark_mode": True})
+        check("Update dark_mode returns 200", r.status_code == 200)
+        check("dark_mode updated to True",    r.json().get("dark_mode") is True)
 
-    r = api("PUT", "/settings", token, {"ntfy_url": "https://ntfy.sh/memoire-test-placeholder"})
-    check("Update ntfy_url returns 200",  r.status_code == 200, f"Got {r.status_code}: {r.text}")
-    check("ntfy_url updated",             r.json().get("ntfy_url") == "https://ntfy.sh/memoire-test-placeholder")
+        r = api("PUT", "/settings", token, {"ntfy_url": "https://ntfy.sh/memoire-test-placeholder"})
+        check("Update ntfy_url returns 200",  r.status_code == 200, f"Got {r.status_code}: {r.text}")
+        check("ntfy_url updated",             r.json().get("ntfy_url") == "https://ntfy.sh/memoire-test-placeholder")
 
-    r = api("PUT", "/settings", token, {"autosave_seconds": 60})
-    check("Update autosave_seconds returns 200", r.status_code == 200)
-    check("autosave_seconds updated",            r.json().get("autosave_seconds") == 60)
+        r = api("PUT", "/settings", token, {"autosave_seconds": 60})
+        check("Update autosave_seconds returns 200", r.status_code == 200)
+        check("autosave_seconds updated",            r.json().get("autosave_seconds") == 60)
 
-    r = api("PUT", "/settings", token, {"timezone": "America/New_York"})
-    check("Update timezone returns 200",  r.status_code == 200)
-    check("timezone updated",             r.json().get("timezone") == "America/New_York")
+        r = api("PUT", "/settings", token, {"timezone": "America/New_York"})
+        check("Update timezone returns 200",  r.status_code == 200)
+        check("timezone updated",             r.json().get("timezone") == "America/New_York")
 
-    r = api("PUT", "/settings", token, {"display_name": "Test User", "pal_name": "Pal"})
-    check("Update display_name returns 200", r.status_code == 200)
-    check("display_name updated",            r.json().get("display_name") == "Test User")
-    check("pal_name updated",                r.json().get("pal_name") == "Pal")
+        r = api("PUT", "/settings", token, {"display_name": "Test User", "pal_name": "Pal"})
+        check("Update display_name returns 200", r.status_code == 200)
+        check("display_name updated",            r.json().get("display_name") == "Test User")
+        check("pal_name updated",                r.json().get("pal_name") == "Pal")
 
-    r = api("PUT", "/settings", token, {"unknown_field": "ignored", "dark_mode": False})
-    check("Unknown fields ignored",          r.status_code == 200)
-    check("Known field still updated",       r.json().get("dark_mode") is False)
-    check("Unknown field not in response",   "unknown_field" not in r.json())
+        r = api("PUT", "/settings", token, {"unknown_field": "ignored", "dark_mode": False})
+        check("Unknown fields ignored",          r.status_code == 200)
+        check("Known field still updated",       r.json().get("dark_mode") is False)
+        check("Unknown field not in response",   "unknown_field" not in r.json())
 
-    # Verify persistence
-    r = api("GET", "/settings", token)
-    check("Changes persisted on GET",     r.json().get("autosave_seconds") == 60)
+        # Verify persistence
+        r = api("GET", "/settings", token)
+        check("Changes persisted on GET",     r.json().get("autosave_seconds") == 60)
 
-    section("Settings — ntfy_url validation")
-    check("HTTP URL rejected → 400",
-          api("PUT", "/settings", token,
-              {"ntfy_url": "http://ntfy.sh/test"}).status_code == 400)
-    check("Private IP URL rejected → 400",
-          api("PUT", "/settings", token,
-              {"ntfy_url": "https://192.168.1.1/test"}).status_code == 400)
+        section("Settings — ntfy_url validation")
+        check("HTTP URL rejected → 400",
+              api("PUT", "/settings", token,
+                  {"ntfy_url": "http://ntfy.sh/test"}).status_code == 400)
+        check("Private IP URL rejected → 400",
+              api("PUT", "/settings", token,
+                  {"ntfy_url": "https://192.168.1.1/test"}).status_code == 400)
 
-    section("Settings — test notification (no URL configured)")
-    api("PUT", "/settings", token, {"ntfy_url": ""})
-    r = api("POST", "/settings/test-notification", token, {})
-    check("No ntfy URL returns error",    r.status_code in (400, 500), f"Got {r.status_code}: {r.text}")
-
-    # Restore original settings
-    api("PUT", "/settings", token, original)
+        section("Settings — test notification (no URL configured)")
+        api("PUT", "/settings", token, {"ntfy_url": ""})
+        r = api("POST", "/settings/test-notification", token, {})
+        check("No ntfy URL returns error",    r.status_code in (400, 500), f"Got {r.status_code}: {r.text}")
+    finally:
+        api("PUT", "/settings", token, original)
 
 
 # ── Tokens ────────────────────────────────────────────────────────────────────

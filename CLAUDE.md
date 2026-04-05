@@ -24,13 +24,13 @@ make invalidate        # invalidate CloudFront cache only
 make destroy           # terraform destroy
 ```
 
-**Run a single unit test:**
+**Run a single unit test** (exception to the make-only rule — `make test-unit` does not support targeting individual tests):
 ```bash
 python -m pytest tests/unit/test_tasks.py -v
 python -m pytest tests/unit/test_tasks.py::TestValidateFields::test_valid_status -v
 ```
 
-**Lint:**
+**Lint** (exception to the make-only rule — no `make lint` target exists):
 ```bash
 ruff check lambda/ tests/
 ```
