@@ -159,6 +159,31 @@ def _test_tasks_body(token: str, created_ids: list) -> None:
     check("Update non-existent → 404",
           api("PUT", "/tasks/no-such-id", token, {"title": "Ghost"}).status_code == 404)
 
+    section("Tasks — notifications field")
+    r = api("PUT", f"/tasks/{task_id}", token, {
+        "notifications": {"before_due": ["1h", "1d"], "recurring": "1w"},
+    })
+    check("Set notifications returns 200",  r.status_code == 200, f"Got {r.status_code}: {r.text}")
+    check("notifications persisted",        r.json().get("notifications") is not None)
+
+    check("Invalid before_due value → 400",
+          api("PUT", f"/tasks/{task_id}", token,
+              {"notifications": {"before_due": ["now"]}}).status_code == 400)
+    check("Invalid recurring value → 400",
+          api("PUT", f"/tasks/{task_id}", token,
+              {"notifications": {"recurring": "monthly"}}).status_code == 400)
+
+    section("Tasks — move between folders")
+    rf = api("POST", "/tasks/folders", token, {"name": "Temp move-target folder"})
+    move_folder_id = rf.json().get("folder_id") if rf.status_code == 201 else None
+    if move_folder_id:
+        r = api("PUT", f"/tasks/{task_id}", token, {"folder_id": move_folder_id})
+        check("Move task to folder returns 200", r.status_code == 200, f"Got {r.status_code}: {r.text}")
+        check("folder_id updated",               r.json().get("folder_id") == move_folder_id)
+        api("DELETE", f"/tasks/folders/{move_folder_id}", token)
+    else:
+        print(f"  [{SKIP}] Skipping move-folder test — folder creation failed")
+
     section("Tasks — delete")
     check("Delete returns 204",
           api("DELETE", f"/tasks/{task_id}", token).status_code == 204)
@@ -342,6 +367,19 @@ def test_journal(token: str) -> None:
 # ── Notes ─────────────────────────────────────────────────────────────────────
 
 def test_notes(token: str) -> None:
+    folder_ids: list[str] = []
+    note_ids:   list[str] = []
+    try:
+        _test_notes_body(token, folder_ids, note_ids)
+    finally:
+        for nid in note_ids:
+            api("DELETE", f"/notes/{nid}", token)
+        # Delete folders largest-scope first; recursive delete handles nested notes
+        for fid in folder_ids:
+            api("DELETE", f"/notes/folders/{fid}", token)
+
+
+def _test_notes_body(token: str, folder_ids: list, note_ids: list) -> None:
     section("Notes — folders: list (auto-creates Inbox)")
     r = api("GET", "/notes/folders", token)
     check("List returns 200",         r.status_code == 200, f"Got {r.status_code}: {r.text}")
@@ -360,6 +398,9 @@ def test_notes(token: str) -> None:
     check("parent_id null",  folder.get("parent_id") is None)
     check("Has created_at",  "created_at" in folder)
 
+    if folder_id:
+        folder_ids.append(folder_id)
+
     check("Missing name → 400",
           api("POST", "/notes/folders", token, {}).status_code == 400)
     check("Non-existent parent → 404",
@@ -370,6 +411,8 @@ def test_notes(token: str) -> None:
     check("Subfolder create returns 201", r2.status_code == 201, f"Got {r2.status_code}")
     check("parent_id set",                r2.json().get("parent_id") == folder_id)
     sub_folder_id = r2.json().get("folder_id")
+    if sub_folder_id:
+        folder_ids.append(sub_folder_id)
 
     section("Notes — folders: rename")
     r = api("PUT", f"/notes/folders/{folder_id}", token, {"name": "Renamed folder"})
@@ -402,6 +445,9 @@ def test_notes(token: str) -> None:
     check("Has created_at",      "created_at" in note)
     check("Has updated_at",      "updated_at" in note)
 
+    if note_id:
+        note_ids.append(note_id)
+
     check("Missing folder_id → 400",
           api("POST", "/notes", token, {"title": "No folder"}).status_code == 400)
     check("Non-existent folder_id → 404",
@@ -409,8 +455,6 @@ def test_notes(token: str) -> None:
 
     if not note_id:
         print(f"  [{SKIP}] Skipping note get/update/delete — creation failed")
-        api("DELETE", f"/notes/folders/{sub_folder_id}", token)
-        api("DELETE", f"/notes/folders/{folder_id}", token)
         return
 
     section("Notes — get")
@@ -456,6 +500,7 @@ def test_notes(token: str) -> None:
     section("Notes — delete")
     check("Delete note returns 204",
           api("DELETE", f"/notes/{note_id}", token).status_code == 204)
+    note_ids.remove(note_id)  # already deleted
     check("Deleted note returns 404",
           api("GET", f"/notes/{note_id}", token).status_code == 404)
     check("Delete non-existent → 404",
@@ -468,6 +513,11 @@ def test_notes(token: str) -> None:
 
     check("Delete folder returns 204",
           api("DELETE", f"/notes/folders/{folder_id}", token).status_code == 204)
+    # folder_id and sub_folder_id are now gone; remove from tracking so finally doesn't re-attempt
+    if folder_id in folder_ids:
+        folder_ids.remove(folder_id)
+    if sub_folder_id and sub_folder_id in folder_ids:
+        folder_ids.remove(sub_folder_id)
     check("Deleted folder gone from list",
           folder_id not in [f["folder_id"] for f in api("GET", "/notes/folders", token).json()])
     if nested_note_id:
@@ -485,33 +535,53 @@ def test_settings(token: str) -> None:
     check("Has dark_mode key",            "dark_mode" in s)
     check("Has ntfy_url key",             "ntfy_url" in s)
     check("Has autosave_seconds key",     "autosave_seconds" in s)
+    check("Has timezone key",             "timezone" in s)
+    check("Has display_name key",         "display_name" in s)
+    check("Has pal_name key",             "pal_name" in s)
     check("dark_mode is bool",            isinstance(s.get("dark_mode"), bool))
     check("autosave_seconds is int",      isinstance(s.get("autosave_seconds"), int))
 
     # Capture originals to restore later
-    original = {k: s[k] for k in ("dark_mode", "ntfy_url", "autosave_seconds")}
+    original = {k: s[k] for k in ("dark_mode", "ntfy_url", "autosave_seconds", "timezone", "display_name", "pal_name")}
 
     section("Settings — update")
     r = api("PUT", "/settings", token, {"dark_mode": True})
     check("Update dark_mode returns 200", r.status_code == 200)
     check("dark_mode updated to True",    r.json().get("dark_mode") is True)
 
-    r = api("PUT", "/settings", token, {"ntfy_url": "https://ntfy.example.com/test"})
-    check("Update ntfy_url returns 200",  r.status_code == 200)
-    check("ntfy_url updated",             r.json().get("ntfy_url") == "https://ntfy.example.com/test")
+    r = api("PUT", "/settings", token, {"ntfy_url": "https://ntfy.sh/memoire-test-placeholder"})
+    check("Update ntfy_url returns 200",  r.status_code == 200, f"Got {r.status_code}: {r.text}")
+    check("ntfy_url updated",             r.json().get("ntfy_url") == "https://ntfy.sh/memoire-test-placeholder")
 
     r = api("PUT", "/settings", token, {"autosave_seconds": 60})
     check("Update autosave_seconds returns 200", r.status_code == 200)
     check("autosave_seconds updated",            r.json().get("autosave_seconds") == 60)
 
+    r = api("PUT", "/settings", token, {"timezone": "America/New_York"})
+    check("Update timezone returns 200",  r.status_code == 200)
+    check("timezone updated",             r.json().get("timezone") == "America/New_York")
+
+    r = api("PUT", "/settings", token, {"display_name": "Test User", "pal_name": "Pal"})
+    check("Update display_name returns 200", r.status_code == 200)
+    check("display_name updated",            r.json().get("display_name") == "Test User")
+    check("pal_name updated",                r.json().get("pal_name") == "Pal")
+
     r = api("PUT", "/settings", token, {"unknown_field": "ignored", "dark_mode": False})
-    check("Unknown fields ignored",       r.status_code == 200)
-    check("Known field still updated",    r.json().get("dark_mode") is False)
-    check("Unknown field not in response", "unknown_field" not in r.json())
+    check("Unknown fields ignored",          r.status_code == 200)
+    check("Known field still updated",       r.json().get("dark_mode") is False)
+    check("Unknown field not in response",   "unknown_field" not in r.json())
 
     # Verify persistence
     r = api("GET", "/settings", token)
     check("Changes persisted on GET",     r.json().get("autosave_seconds") == 60)
+
+    section("Settings — ntfy_url validation")
+    check("HTTP URL rejected → 400",
+          api("PUT", "/settings", token,
+              {"ntfy_url": "http://ntfy.sh/test"}).status_code == 400)
+    check("Private IP URL rejected → 400",
+          api("PUT", "/settings", token,
+              {"ntfy_url": "https://192.168.1.1/test"}).status_code == 400)
 
     section("Settings — test notification (no URL configured)")
     api("PUT", "/settings", token, {"ntfy_url": ""})
@@ -661,13 +731,17 @@ def test_goals(token: str) -> None:
             "title":       "Integration test goal",
             "description": "Created by test_api.py",
             "status":      "active",
+            "progress":    25,
+            "target_date": "2099-12-31",
         })
         check("Valid create returns 201", r.status_code == 201, f"Got {r.status_code}: {r.text}")
         goal = r.json()
         goal_id = goal.get("goal_id")
         check("Has goal_id",        bool(goal_id))
-        check("Title matches",      goal.get("title")  == "Integration test goal")
-        check("Status is active",   goal.get("status") == "active")
+        check("Title matches",      goal.get("title")    == "Integration test goal")
+        check("Status is active",   goal.get("status")   == "active")
+        check("progress set",       goal.get("progress") == 25)
+        check("target_date set",    goal.get("target_date") == "2099-12-31")
         check("Has created_at",     "created_at" in goal)
         check("Has updated_at",     "updated_at" in goal)
 
@@ -698,13 +772,21 @@ def test_goals(token: str) -> None:
 
         section("Goals — update")
         r = api("PUT", f"/goals/{goal_id}", token, {
-            "title":  "Updated goal title",
-            "status": "completed",
+            "title":    "Updated goal title",
+            "status":   "completed",
+            "progress": 100,
         })
         check("Update returns 200",   r.status_code == 200)
-        check("Title updated",        r.json().get("title")  == "Updated goal title")
-        check("Status updated",       r.json().get("status") == "completed")
+        check("Title updated",        r.json().get("title")    == "Updated goal title")
+        check("Status updated",       r.json().get("status")   == "completed")
+        check("progress updated",     r.json().get("progress") == 100)
 
+        check("progress > 100 → 400",
+              api("PUT", f"/goals/{goal_id}", token, {"progress": 101}).status_code == 400)
+        check("progress < 0 → 400",
+              api("PUT", f"/goals/{goal_id}", token, {"progress": -1}).status_code == 400)
+        check("progress non-integer → 400",
+              api("PUT", f"/goals/{goal_id}", token, {"progress": "lots"}).status_code == 400)
         check("Invalid status → 400",
               api("PUT", f"/goals/{goal_id}", token, {"status": "invalid"}).status_code == 400)
         check("Update non-existent → 404",
@@ -738,19 +820,176 @@ def test_export(token: str) -> None:
     check("Response is valid ZIP",      r.content[:2] == b"PK", f"First bytes: {r.content[:4]!r}")
 
 
+# ── Task Folders ──────────────────────────────────────────────────────────────
+
+def test_task_folders(token: str) -> None:
+    created_folder_ids: list[str] = []
+    created_task_ids:   list[str] = []
+    try:
+        _test_task_folders_body(token, created_folder_ids, created_task_ids)
+    finally:
+        for tid in created_task_ids:
+            api("DELETE", f"/tasks/{tid}", token)
+        for fid in created_folder_ids:
+            api("DELETE", f"/tasks/folders/{fid}", token)
+
+
+def _test_task_folders_body(token: str, created_folder_ids: list, created_task_ids: list) -> None:
+    section("Task folders — list (auto-creates Inbox)")
+    r = api("GET", "/tasks/folders", token)
+    check("List returns 200",     r.status_code == 200, f"Got {r.status_code}: {r.text}")
+    check("Returns list",         isinstance(r.json(), list))
+    check("Inbox folder exists",  any(f["name"] == "Inbox" for f in r.json()),
+          f"Folders: {[f['name'] for f in r.json()]}")
+
+    section("Task folders — create")
+    r = api("POST", "/tasks/folders", token, {"name": "Integration test folder"})
+    check("Create returns 201",   r.status_code == 201, f"Got {r.status_code}: {r.text}")
+    folder    = r.json()
+    folder_id = folder.get("folder_id")
+    check("Has folder_id",        bool(folder_id))
+    check("Name matches",         folder.get("name") == "Integration test folder")
+    check("Has created_at",       "created_at" in folder)
+
+    if folder_id:
+        created_folder_ids.append(folder_id)
+
+    check("Missing name → 400",
+          api("POST", "/tasks/folders", token, {}).status_code == 400)
+
+    if not folder_id:
+        print(f"  [{SKIP}] Skipping remaining folder tests — creation failed")
+        return
+
+    section("Task folders — rename")
+    r = api("PUT", f"/tasks/folders/{folder_id}", token, {"name": "Renamed folder"})
+    check("Rename returns 200",       r.status_code == 200)
+    check("Name updated",             r.json().get("name") == "Renamed folder")
+    check("Missing name → 400",
+          api("PUT", f"/tasks/folders/{folder_id}", token, {}).status_code == 400)
+    check("Rename non-existent → 404",
+          api("PUT", "/tasks/folders/no-such-id", token, {"name": "X"}).status_code == 404)
+
+    section("Task folders — assign task to folder")
+    rt = api("POST", "/tasks", token, {"title": "Folder task", "folder_id": folder_id})
+    check("Create task with folder_id returns 201", rt.status_code == 201, f"Got {rt.status_code}: {rt.text}")
+    task_id = rt.json().get("task_id")
+    check("Task has folder_id set",   rt.json().get("folder_id") == folder_id)
+    if task_id:
+        created_task_ids.append(task_id)
+
+    section("Task folders — delete (cascade)")
+    check("Delete folder returns 204",
+          api("DELETE", f"/tasks/folders/{folder_id}", token).status_code == 204)
+    created_folder_ids.remove(folder_id)
+
+    check("Deleted folder gone from list",
+          folder_id not in [f["folder_id"] for f in api("GET", "/tasks/folders", token).json()])
+
+    if task_id and task_id in created_task_ids:
+        check("Task inside deleted folder also deleted",
+              api("GET", f"/tasks/{task_id}", token).status_code == 404)
+        created_task_ids.remove(task_id)
+
+    check("Delete non-existent folder → 404",
+          api("DELETE", "/tasks/folders/no-such-id", token).status_code == 404)
+
+
+# ── Assistant ─────────────────────────────────────────────────────────────────
+
+def test_assistant(token: str) -> None:
+    try:
+        _test_assistant_body(token)
+    finally:
+        api("DELETE", "/assistant/history", token)
+
+
+def _test_assistant_body(token: str) -> None:
+    section("Assistant — auth enforcement")
+    r = requests.get(f"{API_URL}/assistant/history", timeout=10)
+    check("No token returns 401/403", r.status_code in (401, 403), f"Got {r.status_code}")
+
+    section("Assistant — history (clean state)")
+    api("DELETE", "/assistant/history", token)
+    r = api("GET", "/assistant/history", token)
+    check("History returns 200",      r.status_code == 200, f"Got {r.status_code}: {r.text}")
+    check("History is list",          isinstance(r.json(), list))
+    check("History starts empty",     r.json() == [], f"Got: {r.json()}")
+
+    section("Assistant — chat")
+    r = api("POST", "/assistant/chat", token, {"message": "Reply with exactly the words: integration test ok"})
+    check("Chat returns 200",         r.status_code == 200, f"Got {r.status_code}: {r.text}")
+    body = r.json()
+    check("Response has reply",       "reply" in body, f"Keys: {list(body)}")
+    check("reply is non-empty",       isinstance(body.get("reply"), str) and len(body.get("reply", "")) > 0)
+    check("Response has tools_used",  "tools_used" in body)
+    check("tools_used is list",       isinstance(body.get("tools_used"), list))
+
+    check("Empty message → 400",
+          api("POST", "/assistant/chat", token, {"message": ""}).status_code == 400)
+    check("Missing message → 400",
+          api("POST", "/assistant/chat", token, {}).status_code == 400)
+
+    section("Assistant — history (after chat)")
+    r = api("GET", "/assistant/history", token)
+    check("History returns 200",      r.status_code == 200)
+    check("History has messages",     len(r.json()) > 0, f"Got: {r.json()}")
+    roles = [m.get("role") for m in r.json()]
+    check("Has user message",         "user"      in roles)
+    check("Has assistant reply",      "assistant" in roles)
+    check("Each message has role",    all("role"    in m for m in r.json()))
+    check("Each message has content", all("content" in m for m in r.json()))
+
+    section("Assistant — usage")
+    r = api("GET", "/assistant/usage", token)
+    check("Usage returns 200",        r.status_code == 200, f"Got {r.status_code}: {r.text}")
+    check("Usage is dict",            isinstance(r.json(), dict))
+
+    section("Assistant — clear history")
+    r = api("DELETE", "/assistant/history", token)
+    check("Delete returns 200",       r.status_code == 200, f"Got {r.status_code}: {r.text}")
+    check("cleared is True",          r.json().get("cleared") is True)
+    r = api("GET", "/assistant/history", token)
+    check("History empty after clear", r.json() == [], f"Got: {r.json()}")
+
+
+# ── Home ──────────────────────────────────────────────────────────────────────
+
+def test_home(token: str) -> None:
+    section("Home — costs")
+    r = api("GET", "/home/costs", token)
+    check("Costs returns 200",        r.status_code == 200, f"Got {r.status_code}: {r.text}")
+    data = r.json()
+    check("Has last_day",             "last_day"   in data)
+    check("Has last_week",            "last_week"  in data)
+    check("Has last_month",           "last_month" in data)
+    check("Has daily list",           isinstance(data.get("daily"), list))
+    check("currency is USD",          data.get("currency") == "USD")
+    check("last_day is numeric",      isinstance(data.get("last_day"),   (int, float)))
+    check("last_week is numeric",     isinstance(data.get("last_week"),  (int, float)))
+    check("last_month is numeric",    isinstance(data.get("last_month"), (int, float)))
+
+    section("Home — admin stats (non-admin blocked)")
+    r = api("GET", "/admin/stats", token)
+    check("Non-admin returns 403",    r.status_code == 403, f"Got {r.status_code}: {r.text}")
+
+
 # ── Suites + entry point ──────────────────────────────────────────────────────
 
 SUITES = {
-    "tasks":     test_tasks,
-    "habits":    test_habits,
-    "journal":   test_journal,
-    "notes":     test_notes,
-    "settings":  test_settings,
-    "tokens":    test_tokens,
-    "health":    test_health,
-    "nutrition": test_nutrition,
-    "goals":     test_goals,
-    "export":    test_export,
+    "tasks":        test_tasks,
+    "task_folders": test_task_folders,
+    "habits":       test_habits,
+    "journal":      test_journal,
+    "notes":        test_notes,
+    "settings":     test_settings,
+    "tokens":       test_tokens,
+    "health":       test_health,
+    "nutrition":    test_nutrition,
+    "goals":        test_goals,
+    "export":       test_export,
+    "assistant":    test_assistant,
+    "home":         test_home,
 }
 
 
