@@ -1,0 +1,45 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "schedule": ["before 9am on Monday"],
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Group all GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
+    },
+    {
+      "description": "Group Terraform provider minor/patch updates — low risk, batch together",
+      "matchManagers": ["terraform"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Terraform providers (minor/patch)"
+    },
+    {
+      "description": "Separate PRs for Terraform provider major updates — review individually",
+      "matchManagers": ["terraform"],
+      "matchUpdateTypes": ["major"]
+    },
+    {
+      "description": "Group Python test dependency updates",
+      "matchManagers": ["pip_requirements"],
+      "groupName": "Python test dependencies"
+    },
+    {
+      "description": "Group Python runtime version bumps across workflows and Terraform variable",
+      "matchDepNames": ["python"],
+      "groupName": "Python runtime"
+    }
+  ],
+  "customManagers": [
+    {
+      "description": "Update Lambda Python runtime version in terraform/variables.tf (e.g. python3.13 -> python3.14)",
+      "customType": "regex",
+      "fileMatch": ["^terraform/variables\\.tf$"],
+      "matchStrings": ["default\\s*=\\s*\"python(?<currentValue>[\\d.]+)\""],
+      "depNameTemplate": "python",
+      "datasourceTemplate": "python-version",
+      "extractVersionTemplate": "^(?<version>\\d+\\.\\d+)"
+    }
+  ]
+}
