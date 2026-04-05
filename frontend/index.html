@@ -8176,15 +8176,19 @@
     };
 
     function palRenderText(text) {
+      const rendered = new Set();
       // Replace markdown-style [link text](pal-link:type:id:label) with clickable buttons
       text = text.replace(/\[([^\]]+)\]\(pal-link:(\w+):([^:)]+):([^)]+)\)/g, (_, _linkText, type, id, label) => {
+        rendered.add(`${type}:${id}`);
         return `<button class="pal-link-btn" onclick="palNavigate('${type}','${escHtml(id)}')">${escHtml(label.trim())}</button>`;
       });
-      // Replace standalone [pal-link:type:id:label] with clickable buttons
+      // Replace standalone [pal-link:type:id:label] with clickable buttons, skipping duplicates
       text = text.replace(/\[pal-link:(\w+):([^:]+):([^\]]+)\]/g, (_, type, id, label) => {
+        if (rendered.has(`${type}:${id}`)) return "";
+        rendered.add(`${type}:${id}`);
         return `<button class="pal-link-btn" onclick="palNavigate('${type}','${escHtml(id)}')">${escHtml(label)}</button>`;
       });
-      return text;
+      return text.trim();
     }
 
     function palAddMsg(role, text) {
