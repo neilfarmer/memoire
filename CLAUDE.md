@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Style
+
+- No emojis in any code, UI, or output.
+
 ## Commands
 
 Use `make` targets for all operations. Do not run raw shell commands directly — propose a new make target and get approval before adding one.
