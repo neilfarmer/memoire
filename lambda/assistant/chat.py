@@ -161,6 +161,7 @@ def chat(user_id: str, user_message: str, model: str | None = None, local_date: 
 
         reply        = ""
         link_tags    = []  # [pal-link:...] tags collected from tool results
+        tools_used   = []  # tool names called, in order
         total_in     = 0
         total_out    = 0
 
@@ -188,6 +189,7 @@ def chat(user_id: str, user_message: str, model: str | None = None, local_date: 
                         tu     = block["toolUse"]
                         result = handle_tool(user_id, tu["name"], tu["input"], local_date=local_date)
                         logger.info("Tool %s → %s", tu["name"], result)
+                        tools_used.append(tu["name"])
                         # Extract any pal-link tags from the tool result
                         for tag in re.findall(r"\[pal-link:[^\]]+\]", result):
                             link_tags.append(tag)
@@ -214,7 +216,7 @@ def chat(user_id: str, user_message: str, model: str | None = None, local_date: 
         mem.update_model_usage(user_id, model_id, total_in, total_out)
         _update_master_context(user_id, master, facts, user_message, reply, model_id)
 
-        return ok({"reply": reply})
+        return ok({"reply": reply, "tools_used": tools_used})
 
     except Exception:
         logger.exception("Error in chat")

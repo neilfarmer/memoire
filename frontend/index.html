@@ -8210,6 +8210,24 @@
         } else {
           palAddMsg("assistant", "Sorry, something went wrong. Try again.");
         }
+        // Refresh whichever sections were mutated by tool calls
+        if (res && res.tools_used && res.tools_used.length) {
+          const used = new Set(res.tools_used);
+          const TASK_TOOLS    = ["create_task","complete_task","delete_task"];
+          const NOTE_TOOLS    = ["create_note","delete_note","create_note_folder"];
+          const HABIT_TOOLS   = ["create_habit","toggle_habit","delete_habit"];
+          const GOAL_TOOLS    = ["create_goal","update_goal_progress","delete_goal"];
+          const JOURNAL_TOOLS = ["create_journal_entry"];
+          const NUTRITION_TOOLS = ["log_meal"];
+          const HEALTH_TOOLS  = ["log_exercise"];
+          if (TASK_TOOLS.some(t => used.has(t)))     app.loadTasks();
+          if (NOTE_TOOLS.some(t => used.has(t)))     notesApp.load();
+          if (HABIT_TOOLS.some(t => used.has(t)))    habits.load();
+          if (GOAL_TOOLS.some(t => used.has(t)))     goals.load();
+          if (JOURNAL_TOOLS.some(t => used.has(t)))  journal.load();
+          if (NUTRITION_TOOLS.some(t => used.has(t))) nutrition.load();
+          if (HEALTH_TOOLS.some(t => used.has(t)))   health.load();
+        }
       } catch (e) {
         typing.remove();
         palAddMsg("assistant", "Network error. Please try again.");
