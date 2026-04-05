@@ -90,6 +90,8 @@ Journal (personal reflections only — NOT for food or exercise):
 Nutrition (food, meals, calories, macros):
   log_meal(name, calories?, protein_g?, carbs_g?, fat_g?, date?)  → log a food item (call once per item)
   get_nutrition_log(date?)                                          → view what was eaten and totals
+  When the user says "fill in the nutrition info" or asks you to estimate macros for common foods,
+  use your general knowledge to provide reasonable values — do NOT ask the user to provide them.
 
 Exercise (workouts, physical activity):
   log_exercise(name, duration_min?, sets?, date?)   → log an exercise (sets: [{{reps, weight}}])
