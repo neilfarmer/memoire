@@ -31,6 +31,10 @@ memory     = load_lambda("assistant", "memory.py")
 tools      = load_lambda("assistant", "tools.py")
 chat       = load_lambda("assistant", "chat.py")
 token_auth = load_lambda("assistant", "token_auth.py")
+# auth must be pre-registered so handler.py's `from auth import ...` resolves
+from conftest import LAYER_DIR, _register as _reg
+if "auth" not in __import__("sys").modules:
+    _reg(LAYER_DIR / "auth.py", "auth")
 handler    = load_lambda("assistant", "handler.py")
 
 
@@ -853,3 +857,171 @@ class TestStreamHandler:
 
         assert called_with["user_id"] == USER
         assert called_with["message"] == "hello world"
+
+    def test_exception_in_chat_stream_emits_error(self, tbls, monkeypatch):
+        """Unhandled exception inside chat_stream writes an error event."""
+        from unittest.mock import MagicMock
+        monkeypatch.setattr(token_auth, "get_user_id", lambda e: USER)
+        monkeypatch.setattr(chat, "chat_stream", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("kaboom")))
+        stream = MagicMock()
+        handler._stream_handler({"headers": {}, "body": json.dumps({"message": "hi"})}, None, stream)
+        chunks = self._collect(stream)
+        assert any(c["type"] == "error" for c in chunks)
+
+
+# ── handler.lambda_handler ────────────────────────────────────────────────────
+
+class TestLambdaHandler:
+    def _event(self, route_key="POST /assistant/chat", body=None):
+        return {
+            "requestContext": {"authorizer": {"lambda": {"user_id": USER}}},
+            "routeKey": route_key,
+            "headers": {},
+            "body": json.dumps(body) if body is not None else None,
+        }
+
+    def test_routes_chat_request(self, tbls, monkeypatch):
+        monkeypatch.setattr(handler, "route", lambda rk, uid, b: {"statusCode": 200, "body": json.dumps({"reply": "ok", "tools_used": []})})
+        result = handler.lambda_handler(self._event(body={"message": "hi"}), None)
+        assert result["statusCode"] == 200
+
+    def test_invalid_json_body_returns_400(self, tbls):
+        event = self._event()
+        event["body"] = "not-json"
+        result = handler.lambda_handler(event, None)
+        assert result["statusCode"] == 400
+
+    def test_exception_returns_500(self, tbls, monkeypatch):
+        monkeypatch.setattr(handler, "route", lambda *a: (_ for _ in ()).throw(RuntimeError("oops")))
+        result = handler.lambda_handler(self._event(body={"message": "hi"}), None)
+        assert result["statusCode"] == 500
+
+
+# ── token_auth: JWKS fetch and RSA paths ─────────────────────────────────────
+
+class TestTokenAuthJWKSAndRSA:
+    def _make_jwt(self, kid="test-kid", extra_payload=None):
+        import base64
+        import time
+        header  = base64.urlsafe_b64encode(json.dumps({"alg": "RS256", "kid": kid}).encode()).rstrip(b"=").decode()
+        payload = {"sub": "u-test", "exp": int(time.time()) + 3600, "iss": "https://cognito.example.com", "aud": "test-client-id"}
+        if extra_payload:
+            payload.update(extra_payload)
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
+        # 256 zero bytes = valid base64url signature of the right length for 2048-bit RSA
+        sig = base64.urlsafe_b64encode(b"\x00" * 256).rstrip(b"=").decode()
+        return f"{header}.{payload_b64}.{sig}"
+
+    def _urlopen_mock(self, jwks: dict):
+        from unittest.mock import MagicMock
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps(jwks).encode()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        return mock_resp
+
+    def _fake_jwks(self, kid="test-kid"):
+        import base64
+        # 2048-bit fake modulus (not a real key — signature check will fail, but all code runs)
+        n_bytes = (2 ** 2047).to_bytes(256, "big")
+        e_bytes = (65537).to_bytes(3, "big")
+        return {"keys": [{"kid": kid, "n": base64.urlsafe_b64encode(n_bytes).rstrip(b"=").decode(),
+                                       "e": base64.urlsafe_b64encode(e_bytes).rstrip(b"=").decode()}]}
+
+    def test_jwks_fetched_on_cache_miss(self, tbls):
+        token_auth._jwks_cache    = None  # force cache miss
+        token_auth._jwks_cache_at = 0.0
+        jwks = self._fake_jwks()
+        with patch("urllib.request.urlopen", return_value=self._urlopen_mock(jwks)):
+            result = token_auth._verify_jwt(self._make_jwt())
+        # Signature verification fails (fake key), so result is None — but JWKS was fetched
+        assert result is None
+        assert token_auth._jwks_cache == jwks
+
+    def test_jwks_cache_hit_skips_fetch(self, tbls):
+        token_auth._jwks_cache    = self._fake_jwks()
+        token_auth._jwks_cache_at = 9_999_999_999.0  # far future
+        with patch("urllib.request.urlopen", side_effect=AssertionError("should not fetch")):
+            token_auth._verify_jwt(self._make_jwt())  # uses cache, no network call
+
+    def test_no_matching_kid_returns_none(self, tbls):
+        token_auth._jwks_cache    = None
+        token_auth._jwks_cache_at = 0.0
+        jwks = self._fake_jwks(kid="other-kid")
+        with patch("urllib.request.urlopen", return_value=self._urlopen_mock(jwks)):
+            result = token_auth._verify_jwt(self._make_jwt(kid="test-kid"))
+        assert result is None
+
+    def test_rsa_wrong_signature_length_returns_false(self):
+        # Signature length != modulus length → immediate False (lines 55-57)
+        result = token_auth._verify_rsa_pkcs1v15_sha256(b"msg", b"\x00" * 10, n=2**2047, e=65537)
+        assert result is False
+
+    def test_rsa_correct_length_bad_sig_returns_false(self):
+        # Correct length but wrong signature value → runs full verification (lines 55-69)
+        sig = b"\x00" * 256  # 256 bytes = 2048-bit modulus, but sig = 0
+        result = token_auth._verify_rsa_pkcs1v15_sha256(b"msg", sig, n=2**2047, e=65537)
+        assert result is False
+
+    def test_get_user_id_exception_returns_none(self, tbls, monkeypatch):
+        # _verify_jwt raises → exception handler in get_user_id returns None (lines 158-160)
+        monkeypatch.setattr(token_auth, "_verify_jwt", lambda t: (_ for _ in ()).throw(RuntimeError("boom")))
+        event = {"headers": {"authorization": "Bearer valid.looking.jwt"}}
+        assert token_auth.get_user_id(event) is None
+
+
+# ── token_auth: PAT success path ──────────────────────────────────────────────
+
+class TestTokenAuthPATSuccess:
+    def test_valid_pat_returns_user_id(self, tbls):
+        import hashlib
+        pat   = "pat_testtoken123"
+        h     = hashlib.sha256(pat.encode()).hexdigest()
+        # Insert the PAT hash into the tokens table
+        import boto3
+        ddb   = boto3.resource("dynamodb", region_name="us-east-1")
+        table = ddb.Table("test-tokens")
+        table.put_item(Item={"user_id": USER, "token_id": "tok-1", "token_hash": h})
+
+        result = token_auth._verify_pat(pat)
+        assert result == USER
+
+
+# ── chat_stream: edge-case coverage ──────────────────────────────────────────
+
+class TestChatStreamEdgeCases:
+    def test_text_delta_without_prior_block_start(self, tbls):
+        """A contentBlockDelta with text but no prior contentBlockStart is handled (line 221)."""
+        events = [
+            # No contentBlockStart — delta arrives cold
+            {"contentBlockDelta": {"contentBlockIndex": 0, "delta": {"text": "Hello"}}},
+            {"contentBlockStop":  {"contentBlockIndex": 0}},
+            {"messageStop":       {"stopReason": "end_turn"}},
+            {"metadata":          {"usage": {"inputTokens": 1, "outputTokens": 1}}},
+        ]
+        mock_resp = {"stream": iter(events)}
+        with patch.object(chat._bedrock, "converse_stream", return_value=mock_resp):
+            chunks = []
+            chat.chat_stream(USER, "hi", emit=lambda b: chunks.append(json.loads(b.rstrip(b"\n"))))
+        tokens = [c for c in chunks if c["type"] == "token"]
+        assert any("Hello" in t["text"] for t in tokens)
+
+    def test_invalid_tool_json_does_not_crash(self, tbls):
+        """Invalid JSON in a tool input block is handled gracefully (lines 235-236)."""
+        tool_events = [
+            {"contentBlockStart": {"contentBlockIndex": 0, "start": {"toolUse": {"toolUseId": "tu-bad", "name": "list_tasks"}}}},
+            {"contentBlockDelta": {"contentBlockIndex": 0, "delta": {"toolUse": {"input": "{{invalid json"}}}},
+            {"contentBlockStop":  {"contentBlockIndex": 0}},
+            {"messageStop":       {"stopReason": "tool_use"}},
+            {"metadata":          {"usage": {"inputTokens": 5, "outputTokens": 2}}},
+        ]
+        final_events = _make_stream_events(["Done"])
+        call_count = [0]
+        def fake_stream(**kwargs):
+            call_count[0] += 1
+            return {"stream": iter(tool_events if call_count[0] == 1 else final_events)}
+
+        with patch.object(chat._bedrock, "converse_stream", side_effect=fake_stream):
+            chunks = []
+            chat.chat_stream(USER, "list tasks", emit=lambda b: chunks.append(json.loads(b.rstrip(b"\n"))))
+        assert any(c["type"] == "done" for c in chunks)
