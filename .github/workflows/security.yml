@@ -78,11 +78,4 @@ jobs:
           # CKV2_AWS_38 - Cognito advanced security (paid feature)
           # CKV2_AWS_39 - Cognito device tracking (not needed)
           # CKV_AWS_7   - KMS key rotation (using AWS-managed keys)
-          skip_check: >-
-            CKV_AWS_117,
-            CKV_AWS_116,
-            CKV_AWS_272,
-            CKV_AWS_50,
-            CKV2_AWS_38,
-            CKV2_AWS_39,
-            CKV_AWS_7
+          skip_check: "CKV_AWS_117,CKV_AWS_116,CKV_AWS_272,CKV_AWS_50,CKV2_AWS_38,CKV2_AWS_39,CKV_AWS_7"
