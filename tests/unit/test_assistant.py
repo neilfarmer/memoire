@@ -1,6 +1,8 @@
-"""Unit tests for lambda/assistant — memory.py and tools.py."""
+"""Unit tests for lambda/assistant — memory.py, tools.py, and chat.py."""
 
+import json
 import os
+from unittest.mock import MagicMock, patch
 
 import boto3
 import pytest
@@ -23,6 +25,7 @@ os.environ["AWS_REGION"]          = "us-east-1"
 
 memory = load_lambda("assistant", "memory.py")
 tools  = load_lambda("assistant", "tools.py")
+chat   = load_lambda("assistant", "chat.py")
 
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
@@ -596,3 +599,114 @@ class TestToolsUnknown:
     def test_unknown_tool_returns_error(self, tbls):
         result = tools.handle_tool(USER, "nonexistent_tool", {})
         assert "Unknown tool" in result
+
+
+# ── chat: chat_stream ─────────────────────────────────────────────────────────
+
+def _make_stream_events(text_chunks, stop_reason="end_turn", input_tokens=10, output_tokens=5):
+    """Build the list of converse_stream events for a simple text response."""
+    events = [
+        {"contentBlockStart": {"contentBlockIndex": 0, "start": {}}},
+    ]
+    for chunk in text_chunks:
+        events.append({"contentBlockDelta": {"contentBlockIndex": 0, "delta": {"text": chunk}}})
+    events += [
+        {"contentBlockStop": {"contentBlockIndex": 0}},
+        {"messageStop": {"stopReason": stop_reason}},
+        {"metadata": {"usage": {"inputTokens": input_tokens, "outputTokens": output_tokens}}},
+    ]
+    return events
+
+
+def _make_tool_use_events(tool_use_id, tool_name, tool_input_dict):
+    """Build converse_stream events for a single tool-use block."""
+    input_str = json.dumps(tool_input_dict)
+    return [
+        {"contentBlockStart": {"contentBlockIndex": 0, "start": {"toolUse": {"toolUseId": tool_use_id, "name": tool_name}}}},
+        {"contentBlockDelta": {"contentBlockIndex": 0, "delta": {"toolUse": {"input": input_str}}}},
+        {"contentBlockStop": {"contentBlockIndex": 0}},
+        {"messageStop": {"stopReason": "tool_use"}},
+        {"metadata": {"usage": {"inputTokens": 20, "outputTokens": 10}}},
+    ]
+
+
+class TestChatStream:
+    def test_simple_text_response(self, tbls):
+        """chat_stream emits token events and a done event for a plain text reply."""
+        mock_resp = {"stream": iter(_make_stream_events(["Hello ", "world"]))}
+
+        with patch.object(chat._bedrock, "converse_stream", return_value=mock_resp):
+            chunks = []
+            chat.chat_stream(USER, "hi", emit=lambda b: chunks.append(json.loads(b.rstrip(b"\n"))))
+
+        tokens   = [c for c in chunks if c["type"] == "token"]
+        done_evt = next(c for c in chunks if c["type"] == "done")
+
+        assert "".join(t["text"] for t in tokens) == "Hello world"
+        assert done_evt["reply"] == "Hello world"
+        assert done_evt["tools_used"] == []
+
+    def test_reply_saved_to_history(self, tbls):
+        """chat_stream persists the exchange to conversation history."""
+        mock_resp = {"stream": iter(_make_stream_events(["Done"]))}
+
+        with patch.object(chat._bedrock, "converse_stream", return_value=mock_resp):
+            chat.chat_stream(USER, "save this", emit=lambda b: None)
+
+        history = memory.load_history(USER)
+        assert any(m["role"] == "user"      and "save this" in m["content"][0]["text"] for m in history)
+        assert any(m["role"] == "assistant" and "Done"       in m["content"][0]["text"] for m in history)
+
+    def test_tool_use_then_text(self, tbls):
+        """chat_stream handles a tool-use loop followed by a final text response."""
+        tool_events  = _make_tool_use_events("tu-1", "list_tasks", {})
+        final_events = _make_stream_events(["Here are your tasks"])
+
+        call_count = [0]
+        def fake_converse_stream(**kwargs):
+            call_count[0] += 1
+            return {"stream": iter(tool_events if call_count[0] == 1 else final_events)}
+
+        with patch.object(chat._bedrock, "converse_stream", side_effect=fake_converse_stream):
+            chunks = []
+            chat.chat_stream(USER, "list tasks", emit=lambda b: chunks.append(json.loads(b.rstrip(b"\n"))))
+
+        statuses = [c for c in chunks if c["type"] == "status"]
+        done_evt = next(c for c in chunks if c["type"] == "done")
+
+        assert any(s["text"] == "list_tasks" for s in statuses)
+        assert "list_tasks" in done_evt["tools_used"]
+        assert "Here are your tasks" in done_evt["reply"]
+
+    def test_thinking_tags_stripped_from_reply(self, tbls):
+        """_clean_reply removes <thinking> blocks from the done event reply."""
+        raw = "<thinking>internal</thinking><response>Clean answer</response>"
+        mock_resp = {"stream": iter(_make_stream_events([raw]))}
+
+        with patch.object(chat._bedrock, "converse_stream", return_value=mock_resp):
+            chunks = []
+            chat.chat_stream(USER, "q", emit=lambda b: chunks.append(json.loads(b.rstrip(b"\n"))))
+
+        done_evt = next(c for c in chunks if c["type"] == "done")
+        assert done_evt["reply"] == "Clean answer"
+
+    def test_usage_recorded(self, tbls):
+        """Token usage from the stream metadata is persisted to memory."""
+        mock_resp = {"stream": iter(_make_stream_events(["ok"], input_tokens=7, output_tokens=3))}
+
+        with patch.object(chat._bedrock, "converse_stream", return_value=mock_resp):
+            chat.chat_stream(USER, "usage test", emit=lambda b: None)
+
+        usage = memory.load_model_usage(USER)
+        model_entry = next((u for u in usage if u["model_id"] == chat.MODEL_ID), None)
+        assert model_entry is not None
+        assert model_entry["input_tokens"] == 7
+        assert model_entry["output_tokens"] == 3
+
+    def test_error_event_on_bedrock_failure(self, tbls):
+        """chat_stream emits an error event when Bedrock raises."""
+        with patch.object(chat._bedrock, "converse_stream", side_effect=RuntimeError("boom")):
+            chunks = []
+            chat.chat_stream(USER, "fail", emit=lambda b: chunks.append(json.loads(b.rstrip(b"\n"))))
+
+        assert any(c["type"] == "error" for c in chunks)

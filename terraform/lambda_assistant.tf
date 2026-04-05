@@ -132,10 +132,15 @@ resource "aws_iam_role_policy" "assistant_tokens_read" {
 # authorizers.  CORS is restricted to the frontend origin.
 
 resource "aws_lambda_function_url" "assistant_stream" {
-  function_name      = aws_lambda_function.assistant.function_name
-  qualifier          = null
+  function_name = aws_lambda_function.assistant.function_name
+  qualifier     = null
+  invoke_mode   = "RESPONSE_STREAM"
+
+  # checkov:skip=CKV_AWS_258: AuthType NONE is intentional — the Lambda validates
+  # Cognito JWTs and PATs directly in token_auth.py (same RS256 + PAT logic as
+  # the authorizer Lambda).  AWS_IAM would require SigV4 request signing in the
+  # browser, which is incompatible with the existing cookie-based auth session.
   authorization_type = "NONE"
-  invoke_mode        = "RESPONSE_STREAM"
 
   cors {
     allow_credentials = true
