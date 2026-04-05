@@ -10,7 +10,8 @@ def route(route_key: str, user_id: str, body: dict) -> dict:
         message = (body.get("message") or "").strip()
         if not message:
             return error("message is required")
-        return chat.chat(user_id, message)
+        model = body.get("model") or None
+        return chat.chat(user_id, message, model=model)
 
     if route_key == "GET /assistant/history":
         history = mem.load_history(user_id)

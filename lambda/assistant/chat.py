@@ -18,6 +18,12 @@ MODEL_ID   = os.environ.get("ASSISTANT_MODEL_ID", "amazon.nova-lite-v1:0")
 MAX_TOKENS = 1024
 MAX_LOOPS  = 6
 
+_ALLOWED_MODELS = {
+    "amazon.nova-lite-v1:0",
+    "amazon.nova-pro-v1:0",
+    "amazon.nova-premier-v1:0",
+}
+
 _bedrock = boto3.client("bedrock-runtime", region_name=os.environ.get("AWS_REGION", "us-east-1"))
 
 
@@ -99,7 +105,7 @@ def _system_prompt(memories: dict, master_context: str) -> list[dict]:
     return [{"text": text}]
 
 
-def _update_master_context(user_id: str, existing_context: str, facts: dict, user_message: str, reply: str) -> None:
+def _update_master_context(user_id: str, existing_context: str, facts: dict, user_message: str, reply: str, model_id: str = MODEL_ID) -> None:
     """Summarize what we know about the user and persist it."""
     facts_text = "\n".join(f"- {k}: {v}" for k, v in facts.items()) if facts else "None"
     existing   = f"\n\nExisting summary:\n{existing_context}" if existing_context else ""
@@ -116,7 +122,7 @@ def _update_master_context(user_id: str, existing_context: str, facts: dict, use
     )
     try:
         resp = _bedrock.converse(
-            modelId=MODEL_ID,
+            modelId=model_id,
             messages=[{"role": "user", "content": [{"text": prompt}]}],
             inferenceConfig={"maxTokens": 300},
         )
@@ -126,7 +132,8 @@ def _update_master_context(user_id: str, existing_context: str, facts: dict, use
         logger.warning("Failed to update master context", exc_info=True)
 
 
-def chat(user_id: str, user_message: str) -> dict:
+def chat(user_id: str, user_message: str, model: str | None = None) -> dict:
+    model_id = model if model in _ALLOWED_MODELS else MODEL_ID
     try:
         history         = mem.load_history(user_id)
         facts, master   = mem.load_memory(user_id)
@@ -138,7 +145,7 @@ def chat(user_id: str, user_message: str) -> dict:
 
         for _ in range(MAX_LOOPS):
             resp   = _bedrock.converse(
-                modelId=MODEL_ID,
+                modelId=model_id,
                 system=system,
                 messages=messages,
                 toolConfig={"tools": TOOL_SPECS},
@@ -179,7 +186,7 @@ def chat(user_id: str, user_message: str) -> dict:
             reply = reply.rstrip() + "\n" + " ".join(link_tags)
         mem.save_message(user_id, "user",      user_message)
         mem.save_message(user_id, "assistant", reply)
-        _update_master_context(user_id, master, facts, user_message, reply)
+        _update_master_context(user_id, master, facts, user_message, reply, model_id)
 
         return ok({"reply": reply})
 
