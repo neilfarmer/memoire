@@ -1,6 +1,9 @@
-# Infrastructure & Automation Reference
+# Infrastructure Reference
 
-This document describes the infrastructure layout, deployment automation, and operational configuration for Memoire. For architecture decisions and their rationale, see `docs/decisions/`.
+This document describes the Terraform layout, DynamoDB schema, S3 structure, and operational configuration for Memoire.
+
+For the development workflow and how to add a new feature, see [Development](development.md).
+For architecture decisions and their rationale, see `docs/decisions/`.
 
 ---
 
