@@ -67,10 +67,13 @@ def load_memory(user_id: str) -> tuple[dict, str]:
     facts  = {}
     master = ""
     for item in items:
-        if item["memory_key"] == MASTER_CONTEXT_KEY:
+        key = item["memory_key"]
+        if key == MASTER_CONTEXT_KEY:
             master = item.get("value", "")
+        elif key.startswith("__"):
+            continue  # skip internal keys (usage counters, etc.)
         else:
-            facts[item["memory_key"]] = item["value"]
+            facts[key] = item.get("value", "")
     return facts, master
 
 
