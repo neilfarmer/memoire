@@ -7100,74 +7100,57 @@
           </div>`;
       }
 
-      // Bedrock / AI usage card
+      // Bedrock / AI usage card — per-model breakdown
       if (stats?.bedrock) {
-        const b = stats.bedrock;
-        const fmtTokens = n => n == null ? "—" : n >= 1000000 ? `${(n/1000000).toFixed(2)}M` : n >= 1000 ? `${(n/1000).toFixed(1)}K` : n;
-        const fmtCost   = n => n == null ? "—" : n < 0.001 ? "<$0.001" : `$${n.toFixed(4)}`;
-        const fmtMs     = n => n == null ? "—" : `${n.toLocaleString()} ms`;
-        const fmtSec    = n => n == null ? "—" : `${n}s`;
-        const fmtPct    = n => n == null ? "—" : `${n}%`;
+        const b        = stats.bedrock;
+        const lam      = b.lambda || {};
+        const models   = b.models || [];
+        const fmtTok   = n => n == null ? "—" : n >= 1000000 ? `${(n/1000000).toFixed(2)}M` : n >= 1000 ? `${(n/1000).toFixed(1)}K` : String(n);
+        const fmtCost  = n => n == null ? "—" : n < 0.001 ? "<$0.001" : `$${n.toFixed(4)}`;
+        const fmtMs    = n => n == null ? "—" : `${n.toLocaleString()} ms`;
+        const fmtSec   = n => n == null ? "—" : `${n}s`;
+        const fmtPct   = n => n == null ? "—" : `${n}%`;
 
-        const model = b.model_id || "—";
-
-        // Sparkline for daily input tokens
-        const daily = b.daily_input_tokens || [];
-        let spark = "";
-        if (daily.length >= 2) {
-          const W = 300, H = 36, pad = 2;
-          const vals = daily.map(d => d.value);
-          const max  = Math.max(...vals, 1);
-          const pts  = vals.map((v, i) => {
-            const x = pad + (i / (vals.length - 1)) * (W - pad * 2);
-            const y = pad + (1 - v / max) * (H - pad * 2);
-            return `${x.toFixed(1)},${y.toFixed(1)}`;
-          }).join(" ");
-          spark = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:36px;margin-top:8px;" preserveAspectRatio="none">
-            <polyline points="${pts}" fill="none" stroke="var(--primary)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-          </svg>
-          <div style="font-size:10px;color:var(--muted);margin-top:2px;">Daily input tokens (7d)</div>`;
-        }
+        const modelRows = models.map(m => `
+          <tr>
+            <td style="padding:8px 0;font-weight:600;">${escHtml(m.label || m.model_id)}</td>
+            <td style="padding:8px 12px;text-align:right;">${fmtTok(m.input_tokens_7d)}</td>
+            <td style="padding:8px 12px;text-align:right;">${fmtTok(m.output_tokens_7d)}</td>
+            <td style="padding:8px 0;text-align:right;color:var(--primary);font-weight:600;">${fmtCost(m.estimated_cost_7d)}</td>
+            <td style="padding:8px 12px 8px 24px;text-align:right;color:var(--muted);">${fmtTok(m.input_tokens_30d)}</td>
+            <td style="padding:8px 12px;text-align:right;color:var(--muted);">${fmtTok(m.output_tokens_30d)}</td>
+            <td style="padding:8px 0;text-align:right;color:var(--muted);">${fmtCost(m.estimated_cost_30d)}</td>
+          </tr>`).join("");
 
         html += `
           <div class="admin-card" style="grid-column: span 2;">
             <div class="admin-card-title">AI Pal — Bedrock Usage</div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:12px;font-family:monospace;">${escHtml(model)}</div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead>
+                <tr style="font-size:11px;color:var(--muted);">
+                  <th style="text-align:left;padding-bottom:8px;border-bottom:1px solid var(--border);">Model</th>
+                  <th style="text-align:right;padding-bottom:8px;border-bottom:1px solid var(--border);padding-right:12px;">In (7d)</th>
+                  <th style="text-align:right;padding-bottom:8px;border-bottom:1px solid var(--border);padding-right:12px;">Out (7d)</th>
+                  <th style="text-align:right;padding-bottom:8px;border-bottom:1px solid var(--border);">Cost (7d)</th>
+                  <th style="text-align:right;padding-bottom:8px;border-bottom:1px solid var(--border);padding-left:24px;padding-right:12px;">In (30d)</th>
+                  <th style="text-align:right;padding-bottom:8px;border-bottom:1px solid var(--border);padding-right:12px;">Out (30d)</th>
+                  <th style="text-align:right;padding-bottom:8px;border-bottom:1px solid var(--border);">Cost (30d)</th>
+                </tr>
+              </thead>
+              <tbody>${modelRows}</tbody>
+            </table>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
               <div>
-                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Input tokens (7d)</div>
-                <div style="font-size:16px;font-weight:700;">${fmtTokens(b.input_tokens_7d)}</div>
-              </div>
-              <div>
-                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Output tokens (7d)</div>
-                <div style="font-size:16px;font-weight:700;">${fmtTokens(b.output_tokens_7d)}</div>
-              </div>
-              <div>
-                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Est. cost (7d)</div>
-                <div style="font-size:16px;font-weight:700;">${fmtCost(b.estimated_cost_7d)}</div>
-              </div>
-              <div>
-                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Est. cost (30d)</div>
-                <div style="font-size:16px;font-weight:700;">${fmtCost(b.estimated_cost_30d)}</div>
-              </div>
-            </div>
-            ${spark}
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
-              <div>
-                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Invocations (7d)</div>
-                <div style="font-weight:600;">${b.invocations_7d?.toLocaleString() ?? "—"}</div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Lambda invocations (7d)</div>
+                <div style="font-weight:600;">${lam.invocations_7d?.toLocaleString() ?? "—"}</div>
               </div>
               <div>
                 <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Avg duration</div>
-                <div style="font-weight:600;">${fmtSec(b.avg_duration_sec)}</div>
-              </div>
-              <div>
-                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Avg latency</div>
-                <div style="font-weight:600;">${fmtMs(b.avg_latency_ms)}</div>
+                <div style="font-weight:600;">${fmtSec(lam.avg_duration_sec)}</div>
               </div>
               <div>
                 <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Error rate</div>
-                <div style="font-weight:600;${b.error_rate_pct > 5 ? 'color:var(--danger)' : ''}">${fmtPct(b.error_rate_pct)}</div>
+                <div style="font-weight:600;${lam.error_rate_pct > 5 ? 'color:var(--danger)' : ''}">${fmtPct(lam.error_rate_pct)}</div>
               </div>
             </div>
           </div>`;
@@ -7178,14 +7161,12 @@
         const fmtT = n => n >= 1000000 ? `${(n/1000000).toFixed(2)}M` : n >= 1000 ? `${(n/1000).toFixed(1)}K` : String(n);
         const fmtC = n => n < 0.0001 ? "<$0.01" : n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(3)}`;
         const PRICING = {
-          "us.amazon.nova-lite-v1:0":    { input: 0.00006,  output: 0.00024 },
-          "us.amazon.nova-pro-v1:0":     { input: 0.0008,   output: 0.0032  },
-          "us.amazon.nova-premier-v1:0": { input: 0.0025,   output: 0.0125  },
+          "us.amazon.nova-lite-v1:0": { input: 0.00006, output: 0.00024 },
+          "us.amazon.nova-pro-v1:0":  { input: 0.0008,  output: 0.0032  },
         };
         const LABELS = {
-          "us.amazon.nova-lite-v1:0":    "Nova Lite",
-          "us.amazon.nova-pro-v1:0":     "Nova Pro",
-          "us.amazon.nova-premier-v1:0": "Nova Premier",
+          "us.amazon.nova-lite-v1:0": "Nova Lite",
+          "us.amazon.nova-pro-v1:0":  "Nova Pro",
         };
         const totalCost = usage.reduce((sum, r) => {
           const p = PRICING[r.model_id] || { input: 0, output: 0 };
@@ -7653,11 +7634,7 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.5-1.5 4 0 4s2.5-2.5 4-4l4-4-4-4z"/><path d="M12 12l6-6a2 2 0 0 1 3 3l-6 6"/><path d="M15 9l-6 6"/></svg>
       <span class="pal-tooltip">Nova Pro — smarter, better tool use</span>
     </button>
-    <!-- Premier: crown / best -->
-    <button class="pal-model-btn" data-model="us.amazon.nova-premier-v1:0" aria-label="Nova Premier">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M5 20V8l7-4 7 4v12"/><path d="M9 20v-6h6v6"/></svg>
-      <span class="pal-tooltip">Nova Premier — most capable</span>
-    </button>
+    <!-- Premier removed (Legacy/inactive in Bedrock) -->
   </div>
   <div id="pal-usage-panel" class="hidden"></div>
   <div id="pal-messages"></div>
@@ -7680,7 +7657,6 @@
     const PAL_MODELS = [
       "us.amazon.nova-lite-v1:0",
       "us.amazon.nova-pro-v1:0",
-      "us.amazon.nova-premier-v1:0",
     ];
     const DEFAULT_MODEL = "us.amazon.nova-lite-v1:0";
 
@@ -7810,15 +7786,13 @@
     const palUsagePanel = document.getElementById("pal-usage-panel");
 
     const BEDROCK_PRICING = {
-      "us.amazon.nova-lite-v1:0":    { input: 0.00006,  output: 0.00024  },
-      "us.amazon.nova-pro-v1:0":     { input: 0.0008,   output: 0.0032   },
-      "us.amazon.nova-premier-v1:0": { input: 0.0025,   output: 0.0125   },
+      "us.amazon.nova-lite-v1:0": { input: 0.00006, output: 0.00024 },
+      "us.amazon.nova-pro-v1:0":  { input: 0.0008,  output: 0.0032  },
     };
 
     const MODEL_LABELS = {
-      "us.amazon.nova-lite-v1:0":    "Nova Lite",
-      "us.amazon.nova-pro-v1:0":     "Nova Pro",
-      "us.amazon.nova-premier-v1:0": "Nova Premier",
+      "us.amazon.nova-lite-v1:0": "Nova Lite",
+      "us.amazon.nova-pro-v1:0":  "Nova Pro",
     };
 
     let palShowingUsage = false;
@@ -7832,7 +7806,7 @@
       const fmtCost   = n => n < 0.0001 ? "<$0.01" : n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(3)}`;
 
       // Sort: pro → premier → lite, then by invocations desc
-      const order = ["us.amazon.nova-pro-v1:0", "us.amazon.nova-premier-v1:0", "us.amazon.nova-lite-v1:0"];
+      const order = ["us.amazon.nova-pro-v1:0", "us.amazon.nova-lite-v1:0"];
       records = [...records].sort((a, b) => {
         const ai = order.indexOf(a.model_id), bi = order.indexOf(b.model_id);
         if (ai !== bi) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);

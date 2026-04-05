@@ -89,7 +89,6 @@ resource "aws_iam_role_policy" "assistant_bedrock" {
         "arn:aws:bedrock:*::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
         "arn:aws:bedrock:${var.aws_region}:*:inference-profile/us.amazon.nova-lite-v1:0",
         "arn:aws:bedrock:${var.aws_region}:*:inference-profile/us.amazon.nova-pro-v1:0",
-        "arn:aws:bedrock:${var.aws_region}:*:inference-profile/us.amazon.nova-premier-v1:0",
         "arn:aws:bedrock:${var.aws_region}:*:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0",
       ]
     }]

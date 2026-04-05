@@ -21,7 +21,6 @@ MAX_LOOPS  = 6
 _ALLOWED_MODELS = {
     "us.amazon.nova-lite-v1:0",
     "us.amazon.nova-pro-v1:0",
-    "us.amazon.nova-premier-v1:0",
 }
 
 _bedrock = boto3.client("bedrock-runtime", region_name=os.environ.get("AWS_REGION", "us-east-1"))

@@ -18,15 +18,15 @@ TABLES = {
 FRONTEND_BUCKET       = os.environ.get("FRONTEND_BUCKET", "")
 FUNCTION_PREFIX       = os.environ.get("FUNCTION_PREFIX", "")
 ASSISTANT_FUNCTION    = os.environ.get("ASSISTANT_FUNCTION_NAME", "")
-ASSISTANT_MODEL_ID    = os.environ.get("ASSISTANT_MODEL_ID", "amazon.nova-lite-v1:0")
+ASSISTANT_MODEL_ID    = os.environ.get("ASSISTANT_MODEL_ID", "us.amazon.nova-lite-v1:0")
 
-# USD per 1K tokens
+# USD per 1K tokens (base model IDs as used in CloudWatch dimensions)
 _BEDROCK_PRICING = {
-    "amazon.nova-lite-v1:0":                        {"input": 0.00006, "output": 0.00024},
-    "amazon.nova-pro-v1:0":                         {"input": 0.0008,  "output": 0.0032},
-    "us.anthropic.claude-haiku-4-5-20251001-v1:0":  {"input": 0.0008,  "output": 0.004},
-    "anthropic.claude-haiku-4-5-20251001-v1:0":     {"input": 0.0008,  "output": 0.004},
+    "amazon.nova-lite-v1:0":  {"input": 0.00006, "output": 0.00024, "label": "Nova Lite"},
+    "amazon.nova-pro-v1:0":   {"input": 0.0008,  "output": 0.0032,  "label": "Nova Pro"},
 }
+
+_NOVA_MODELS = list(_BEDROCK_PRICING.keys())
 
 _ddb = boto3.client("dynamodb")
 _s3  = boto3.client("s3")
@@ -125,58 +125,60 @@ def _cw_daily(namespace, metric, dims, start, end):
 
 
 def _bedrock_stats():
-    end      = datetime.now(tz=timezone.utc)
-    start_7d = end - timedelta(days=7)
+    end       = datetime.now(tz=timezone.utc)
+    start_7d  = end - timedelta(days=7)
     start_30d = end - timedelta(days=30)
 
-    model_id  = ASSISTANT_MODEL_ID
-    # Bedrock metrics use the base model ID, not cross-region inference profiles
-    base_model = model_id.split("/")[-1].replace("us.", "").replace("eu.", "")
-    bdims = [{"Name": "ModelId", "Value": base_model}]
+    def _model_stats(base_model_id):
+        pricing = _BEDROCK_PRICING[base_model_id]
+        dims    = [{"Name": "ModelId", "Value": base_model_id}]
+        def _cost(inp, out):
+            if inp is None or out is None:
+                return None
+            return round((inp / 1000 * pricing["input"]) + (out / 1000 * pricing["output"]), 6)
 
-    input_7d  = _cw_sum("AWS/Bedrock", "InputTokenCount",  bdims, start_7d,  end)
-    output_7d = _cw_sum("AWS/Bedrock", "OutputTokenCount", bdims, start_7d,  end)
-    input_30d = _cw_sum("AWS/Bedrock", "InputTokenCount",  bdims, start_30d, end)
-    output_30d= _cw_sum("AWS/Bedrock", "OutputTokenCount", bdims, start_30d, end)
-    latency   = _cw_avg("AWS/Bedrock", "InvocationLatency",bdims, start_7d,  end)
-    errors_7d = _cw_sum("AWS/Bedrock", "InvocationClientErrors", bdims, start_7d, end)
+        inp_7d  = _cw_sum("AWS/Bedrock", "InputTokenCount",  dims, start_7d,  end)
+        out_7d  = _cw_sum("AWS/Bedrock", "OutputTokenCount", dims, start_7d,  end)
+        inp_30d = _cw_sum("AWS/Bedrock", "InputTokenCount",  dims, start_30d, end)
+        out_30d = _cw_sum("AWS/Bedrock", "OutputTokenCount", dims, start_30d, end)
+        lat     = _cw_avg("AWS/Bedrock", "InvocationLatency", dims, start_7d, end)
+        daily   = _cw_daily("AWS/Bedrock", "InputTokenCount", dims, start_7d, end)
 
-    pricing = _BEDROCK_PRICING.get(model_id) or _BEDROCK_PRICING.get(base_model, {"input": 0, "output": 0})
-    def est_cost(inp, out):
-        if inp is None or out is None:
-            return None
-        return round((inp / 1000 * pricing["input"]) + (out / 1000 * pricing["output"]), 6)
+        return {
+            "model_id":           base_model_id,
+            "label":              pricing["label"],
+            "input_tokens_7d":    int(inp_7d)  if inp_7d  is not None else None,
+            "output_tokens_7d":   int(out_7d)  if out_7d  is not None else None,
+            "estimated_cost_7d":  _cost(inp_7d, out_7d),
+            "input_tokens_30d":   int(inp_30d) if inp_30d is not None else None,
+            "output_tokens_30d":  int(out_30d) if out_30d is not None else None,
+            "estimated_cost_30d": _cost(inp_30d, out_30d),
+            "avg_latency_ms":     int(lat)     if lat     is not None else None,
+            "daily_input_tokens": daily,
+        }
 
-    # Per-day token usage for sparkline
-    daily_tokens = _cw_daily("AWS/Bedrock", "InputTokenCount", bdims, start_7d, end)
+    models = [_model_stats(m) for m in _NOVA_MODELS]
 
-    # Assistant Lambda-specific metrics
+    # Lambda-level stats (whole assistant function, not per-model)
     fn_inv_7d = fn_err_7d = fn_dur_avg = None
     if ASSISTANT_FUNCTION:
         fdims = [{"Name": "FunctionName", "Value": ASSISTANT_FUNCTION}]
-        fn_inv_7d = _cw_sum("AWS/Lambda", "Invocations", fdims, start_7d, end)
-        fn_err_7d = _cw_sum("AWS/Lambda", "Errors",      fdims, start_7d, end)
-        fn_dur_avg = _cw_avg("AWS/Lambda", "Duration",   fdims, start_7d, end)
+        fn_inv_7d  = _cw_sum("AWS/Lambda", "Invocations", fdims, start_7d, end)
+        fn_err_7d  = _cw_sum("AWS/Lambda", "Errors",      fdims, start_7d, end)
+        fn_dur_avg = _cw_avg("AWS/Lambda", "Duration",    fdims, start_7d, end)
 
     error_rate = None
     if fn_inv_7d and fn_err_7d is not None and fn_inv_7d > 0:
         error_rate = round(fn_err_7d / fn_inv_7d * 100, 1)
 
     return {
-        "model_id":           model_id,
-        "input_tokens_7d":    int(input_7d)   if input_7d   is not None else None,
-        "output_tokens_7d":   int(output_7d)  if output_7d  is not None else None,
-        "input_tokens_30d":   int(input_30d)  if input_30d  is not None else None,
-        "output_tokens_30d":  int(output_30d) if output_30d is not None else None,
-        "estimated_cost_7d":  est_cost(input_7d, output_7d),
-        "estimated_cost_30d": est_cost(input_30d, output_30d),
-        "avg_latency_ms":     int(latency)    if latency     is not None else None,
-        "errors_7d":          int(errors_7d)  if errors_7d   is not None else None,
-        "invocations_7d":     int(fn_inv_7d)  if fn_inv_7d   is not None else None,
-        "fn_errors_7d":       int(fn_err_7d)  if fn_err_7d   is not None else None,
-        "error_rate_pct":     error_rate,
-        "avg_duration_sec":   round(fn_dur_avg / 1000, 1) if fn_dur_avg else None,
-        "daily_input_tokens": daily_tokens,
+        "models": models,
+        "lambda": {
+            "invocations_7d":   int(fn_inv_7d)  if fn_inv_7d  is not None else None,
+            "fn_errors_7d":     int(fn_err_7d)  if fn_err_7d  is not None else None,
+            "error_rate_pct":   error_rate,
+            "avg_duration_sec": round(fn_dur_avg / 1000, 1) if fn_dur_avg else None,
+        },
     }
 
 
