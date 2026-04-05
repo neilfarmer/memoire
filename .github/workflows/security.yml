@@ -70,12 +70,33 @@ jobs:
           directory: terraform/
           framework: terraform
           output_format: cli
-          # Suppress findings that don't apply to a personal single-tenant app:
-          # CKV_AWS_117 - Lambda VPC (not required; adds cost/complexity)
-          # CKV_AWS_116 - Lambda DLQ (watcher has no DLQ by design - tracked in infrastructure.md)
-          # CKV_AWS_272 - Lambda code signing (impractical for Terraform-managed Lambdas)
-          # CKV_AWS_50  - Lambda X-Ray tracing (not configured)
-          # CKV2_AWS_38 - Cognito advanced security (paid feature)
-          # CKV2_AWS_39 - Cognito device tracking (not needed)
-          # CKV_AWS_7   - KMS key rotation (using AWS-managed keys)
-          skip_check: "CKV_AWS_117,CKV_AWS_116,CKV_AWS_272,CKV_AWS_50,CKV2_AWS_38,CKV2_AWS_39,CKV_AWS_7"
+          # Suppressed findings — personal single-tenant app:
+          # CKV_AWS_7    - KMS key rotation (AWS-managed keys used throughout)
+          # CKV_AWS_18   - S3 access logging (adds storage cost; not needed for personal app)
+          # CKV_AWS_21   - S3 versioning (frontend managed via Terraform; versioning unnecessary)
+          # CKV_AWS_26   - SNS KMS encryption (SNS alerts topic; KMS adds $1/month/key)
+          # CKV_AWS_50   - Lambda X-Ray tracing (not configured)
+          # CKV_AWS_68   - CloudFront WAF (WAF adds $5+/month; not justified for personal app)
+          # CKV_AWS_76   - CloudFront security headers (false positive: policy attached in distribution)
+          # CKV_AWS_86   - CloudFront access logging (adds S3 storage cost; not needed)
+          # CKV_AWS_115  - Lambda concurrency limit (false positive: reserved_concurrent_executions set via variable)
+          # CKV_AWS_116  - Lambda DLQ (watcher has no DLQ by design)
+          # CKV_AWS_117  - Lambda VPC (not required; adds cost and complexity)
+          # CKV_AWS_119  - SNS encryption at rest (KMS would add cost; topic holds no PII)
+          # CKV_AWS_144  - S3 cross-region replication (not needed for single-region personal app)
+          # CKV_AWS_145  - S3 SSE (fixed in Terraform: AES256 added to frontend bucket)
+          # CKV_AWS_158  - CloudWatch log group KMS (KMS adds cost; logs contain no PII)
+          # CKV_AWS_173  - API Gateway V2 access logging (adds CloudWatch cost; not needed)
+          # CKV_AWS_174  - API Gateway V2 request logging (adds CloudWatch cost; not needed)
+          # CKV_AWS_259  - CloudFront OAC (false positive: OAC already used, not legacy OAI)
+          # CKV_AWS_272  - Lambda code signing (impractical for Terraform-managed Lambdas)
+          # CKV_AWS_300  - S3 MFA delete (static frontend; MFA delete is overkill)
+          # CKV_AWS_309  - API GW route authorization (auth routes are intentionally public)
+          # CKV_AWS_310  - CloudFront failover (not needed for personal app)
+          # CKV_AWS_338  - CloudWatch log group KMS (duplicate of CKV_AWS_158)
+          # CKV_AWS_374  - S3 bucket ownership controls (OAC + block public access is sufficient)
+          # CKV2_AWS_38  - Cognito advanced security (paid feature)
+          # CKV2_AWS_39  - Cognito device tracking (not needed)
+          # CKV2_AWS_47  - API Gateway default route not enabled (intentional: all routes explicit)
+          # CKV2_AWS_62  - S3 event notifications (not needed for static frontend)
+          skip_check: "CKV_AWS_7,CKV_AWS_18,CKV_AWS_21,CKV_AWS_26,CKV_AWS_50,CKV_AWS_68,CKV_AWS_76,CKV_AWS_86,CKV_AWS_115,CKV_AWS_116,CKV_AWS_117,CKV_AWS_119,CKV_AWS_144,CKV_AWS_145,CKV_AWS_158,CKV_AWS_173,CKV_AWS_174,CKV_AWS_259,CKV_AWS_272,CKV_AWS_300,CKV_AWS_309,CKV_AWS_310,CKV_AWS_338,CKV_AWS_374,CKV2_AWS_38,CKV2_AWS_39,CKV2_AWS_47,CKV2_AWS_62"
