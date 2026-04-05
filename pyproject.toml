@@ -1,0 +1,19 @@
+[tool.pytest.ini_options]
+testpaths = ["tests/unit"]
+addopts = "--tb=short -q"
+
+[tool.coverage.run]
+source = ["lambda"]
+omit = [
+    "lambda/layer/*",
+    "**/__pycache__/*",
+    "**/*.pyc",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]

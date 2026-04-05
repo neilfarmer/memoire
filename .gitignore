@@ -22,3 +22,6 @@ __pycache__/
 
 # Test artifacts
 tests/.test-content-ids.json
+htmlcov/
+coverage.xml
+.coverage

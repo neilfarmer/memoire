@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: deploy deploy-auto invalidate destroy test test-unit
+.PHONY: deploy deploy-auto invalidate destroy test test-unit coverage
 
 deploy:
 	@source .env && cd terraform && terraform apply
@@ -17,7 +17,11 @@ destroy:
 	@source .env && cd terraform && terraform destroy
 
 test-unit:
-	python -m pytest tests/unit/ -v
+	python -m pytest tests/unit/ -v --cov=lambda --cov-report=term-missing --cov-report=xml
+
+coverage:
+	python -m pytest tests/unit/ -q --cov=lambda --cov-report=html --cov-report=term-missing
+	@echo "HTML report: htmlcov/index.html"
 
 test:
 	TEST_PAT=$(TEST_PAT) python tests/test_api.py

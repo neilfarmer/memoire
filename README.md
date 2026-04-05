@@ -1,5 +1,8 @@
 # Memoire
 
+[![CI](https://github.com/neilfarmer/memoire/actions/workflows/ci.yml/badge.svg)](https://github.com/neilfarmer/memoire/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/neilfarmer/memoire/branch/main/graph/badge.svg)](https://codecov.io/gh/neilfarmer/memoire)
+
 A self-hosted personal productivity app — tasks, habits, goals, journal, notes, nutrition, exercise, and an AI assistant. Deployed entirely on AWS serverless infrastructure via a single Terraform module.
 
 **~$0.30/month** at daily personal use. ~$0 at idle.
