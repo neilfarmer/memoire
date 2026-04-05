@@ -18,8 +18,7 @@
     {
       "description": "Separate PRs for Terraform provider major updates — review individually",
       "matchManagers": ["terraform"],
-      "matchUpdateTypes": ["major"],
-      "groupName": "Terraform providers (major)"
+      "matchUpdateTypes": ["major"]
     },
     {
       "description": "Group Python test dependency updates",
@@ -39,7 +38,8 @@
       "fileMatch": ["^terraform/variables\\.tf$"],
       "matchStrings": ["default\\s*=\\s*\"python(?<currentValue>[\\d.]+)\""],
       "depNameTemplate": "python",
-      "datasourceTemplate": "python-version"
+      "datasourceTemplate": "python-version",
+      "extractVersionTemplate": "^(?<version>\\d+\\.\\d+)"
     }
   ]
 }
