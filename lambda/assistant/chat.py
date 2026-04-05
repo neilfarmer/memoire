@@ -92,7 +92,7 @@ Nutrition (food, meals, calories, macros):
   get_nutrition_log(date?)                                          → view what was eaten and totals
 
 Exercise (workouts, physical activity):
-  log_exercise(name, duration_min?, sets?, date?)   → log an exercise (sets: [{reps, weight}])
+  log_exercise(name, duration_min?, sets?, date?)   → log an exercise (sets: [{{reps, weight}}])
   get_exercise_log(date?)                           → view today's workout
 
 Memory:
