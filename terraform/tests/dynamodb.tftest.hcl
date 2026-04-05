@@ -1,7 +1,16 @@
 # Verify every DynamoDB table has point-in-time recovery enabled.
 # Adding a new table without PITR will cause this test to fail.
 
-mock_provider "aws" {}
+mock_provider "aws" {
+  # assume_role_policy requires valid JSON; mock_provider returns a placeholder
+  # string by default which fails provider validation. Supply a minimal valid
+  # policy so the plan can proceed.
+  mock_data "aws_iam_policy_document" {
+    defaults = {
+      json = "{\"Version\":\"2012-10-17\",\"Statement\":[]}"
+    }
+  }
+}
 mock_provider "archive" {}
 mock_provider "random" {}
 mock_provider "cloudflare" {}

@@ -2,7 +2,13 @@
 # These tests catch regressions if someone removes a security setting
 # that was added to satisfy a compliance check.
 
-mock_provider "aws" {}
+mock_provider "aws" {
+  mock_data "aws_iam_policy_document" {
+    defaults = {
+      json = "{\"Version\":\"2012-10-17\",\"Statement\":[]}"
+    }
+  }
+}
 mock_provider "archive" {}
 mock_provider "random" {}
 mock_provider "cloudflare" {}

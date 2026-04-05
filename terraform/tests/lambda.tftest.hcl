@@ -2,7 +2,13 @@
 # CloudWatch log group has a retention period set.
 # Adding a new Lambda without wiring up these settings will fail this test.
 
-mock_provider "aws" {}
+mock_provider "aws" {
+  mock_data "aws_iam_policy_document" {
+    defaults = {
+      json = "{\"Version\":\"2012-10-17\",\"Statement\":[]}"
+    }
+  }
+}
 mock_provider "archive" {}
 mock_provider "random" {}
 mock_provider "cloudflare" {}
