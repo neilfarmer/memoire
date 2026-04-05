@@ -182,6 +182,8 @@ def chat(user_id: str, user_message: str, model: str | None = None, local_date: 
             stop_reason = resp["stopReason"]
             messages.append(output_msg)
 
+            logger.info("stop_reason=%s content_blocks=%d", stop_reason, len(output_msg.get("content", [])))
+
             if stop_reason == "tool_use":
                 tool_results = []
                 for block in output_msg["content"]:
@@ -205,9 +207,13 @@ def chat(user_id: str, user_message: str, model: str | None = None, local_date: 
                     if "text" in block:
                         reply = block["text"]
                         break
+                if not reply:
+                    logger.warning("No text block in final response. stop_reason=%s blocks=%s", stop_reason, output_msg.get("content"))
                 break
 
         reply = _clean_reply(reply)
+        if not reply:
+            reply = "I'm here, but something went wrong with my response. Could you try again?"
         # Append any navigation links collected from tool results
         if link_tags:
             reply = reply.rstrip() + "\n" + " ".join(link_tags)

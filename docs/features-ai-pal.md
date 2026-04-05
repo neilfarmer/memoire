@@ -142,7 +142,29 @@ The admin dashboard (`/admin`) also shows a per-user breakdown of model usage ac
 | `assistant_system_prompt` | Override system prompt | `""` (uses code default) |
 | `usda_api_key` | USDA FoodData Central API key | `""` |
 
-`usda_api_key` is read from 1Password (`op://homelab/usda-token/password`) in `scripts/load-env.sh` and passed through as `TF_VAR_usda_api_key`.
+### USDA FoodData Central API
+
+**Docs:** https://fdc.nal.usda.gov/api-guide  
+**Spec:** https://fdc.nal.usda.gov/api-spec/fdc_api.html  
+**License:** CC0 1.0 Universal (public domain) — no restrictions on use  
+**Citation (if needed):** "U.S. Department of Agriculture, Agricultural Research Service. FoodData Central, 2019."
+
+#### Rate limits
+- **1,000 requests/hour per IP address** — sufficient for personal use
+- Exceeding the limit blocks the key for 1 hour
+- Higher limits available by contacting USDA support
+- A `DEMO_KEY` exists for testing but has tighter limits; use a real key in production
+
+#### Getting a key and wiring it up
+1. Go to https://fdc.nal.usda.gov/api-key-signup — register with email, key arrives immediately
+2. Store it in 1Password as a new item named `usda-token`, with the key in the `password` field (vault: `homelab`)
+3. `scripts/load-env.sh` reads it automatically: `op read "op://homelab/usda-token/password"` → `TF_VAR_usda_api_key`
+4. Run `make deploy` (or `make deploy-auto`) — Terraform passes it to the Lambda as the `USDA_API_KEY` environment variable
+
+The Lambda reads `os.environ["USDA_API_KEY"]` in `lambda/assistant/tools.py`. If the key is missing or the USDA API is unreachable, `lookup_nutrition` returns a graceful fallback and the model estimates from general knowledge.
+
+#### Endpoints used
+- `POST /foods/search` — searches by keyword with optional `dataType` filter (Branded, Foundation, SR Legacy)
 
 ---
 
