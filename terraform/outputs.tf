@@ -43,3 +43,8 @@ output "cloudfront_distribution_id" {
   description = "CloudFront distribution ID (needed for cache invalidation)"
   value       = aws_cloudfront_distribution.frontend.id
 }
+
+output "assistant_stream_url" {
+  description = "Lambda Function URL for streaming assistant chat (NDJSON)"
+  value       = aws_lambda_function_url.assistant_stream.function_url
+}
