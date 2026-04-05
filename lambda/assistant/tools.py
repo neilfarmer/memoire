@@ -6,6 +6,7 @@ import os
 import urllib.parse
 import urllib.request
 import uuid
+from decimal import Decimal
 from datetime import date, datetime, timezone
 
 import db
@@ -796,7 +797,7 @@ def _log_meal(user_id: str, inputs: dict) -> str:
     meal = {"id": str(uuid.uuid4()), "name": inputs["name"].strip()}
     for field in ("calories", "protein_g", "carbs_g", "fat_g"):
         if inputs.get(field) is not None:
-            meal[field] = inputs[field]
+            meal[field] = Decimal(str(inputs[field]))
     meals.append(meal)
 
     table.put_item(Item={
@@ -840,9 +841,12 @@ def _log_exercise(user_id: str, inputs: dict) -> str:
 
     exercise = {"id": str(uuid.uuid4()), "name": inputs["name"].strip(), "sets": []}
     if inputs.get("duration_min") is not None:
-        exercise["duration_min"] = inputs["duration_min"]
+        exercise["duration_min"] = Decimal(str(inputs["duration_min"]))
     if inputs.get("sets"):
-        exercise["sets"] = inputs["sets"]
+        exercise["sets"] = [
+            {k: Decimal(str(v)) if isinstance(v, (int, float)) else v for k, v in s.items()}
+            for s in inputs["sets"]
+        ]
     exercises.append(exercise)
 
     table.put_item(Item={
