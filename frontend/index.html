@@ -2556,7 +2556,6 @@
       display: flex;
       flex-direction: column;
       z-index: 900;
-      overflow: hidden;
     }
     #pal-window.hidden { display: none; }
     #pal-header {
@@ -2588,6 +2587,8 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      border-bottom-left-radius: 14px;
+      border-bottom-right-radius: 14px;
     }
     .pal-msg {
       max-width: 85%;
@@ -2696,7 +2697,7 @@
     .pal-model-btn .pal-tooltip {
       display: none;
       position: absolute;
-      bottom: calc(100% + 6px);
+      top: calc(100% + 6px);
       left: 50%;
       transform: translateX(-50%);
       background: var(--surface);
