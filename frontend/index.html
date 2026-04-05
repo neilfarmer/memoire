@@ -8066,8 +8066,10 @@
           const t = e.results[i][0].transcript;
           if (e.results[i].isFinal) { final += t; } else { interim += t; }
         }
-        palInput.value = baseText + (final || interim);
-        palInput.dispatchEvent(new Event("input")); // trigger auto-resize if any
+        // Accumulate finals into baseText so session restarts don't lose them
+        if (final) baseText += final;
+        palInput.value = baseText + interim;
+        palInput.dispatchEvent(new Event("input"));
       });
 
       recog.addEventListener("end", () => {
