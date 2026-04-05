@@ -2913,6 +2913,32 @@
     }
     #pal-send:hover { background: var(--primary-h); }
     #pal-send:disabled { opacity: 0.5; cursor: not-allowed; }
+    #pal-mic {
+      background: transparent;
+      color: var(--text-muted, #888);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
+      cursor: pointer;
+      font-size: 16px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    #pal-mic:hover { border-color: var(--primary); color: var(--primary); }
+    #pal-mic.recording {
+      color: #e03;
+      border-color: #e03;
+      background: rgba(238,0,51,0.08);
+      animation: pal-mic-pulse 1s ease-in-out infinite;
+    }
+    #pal-mic:disabled { opacity: 0.4; cursor: not-allowed; }
+    @keyframes pal-mic-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
     .pal-link-btn {
       display: inline-block;
       margin-top: 6px;
@@ -7978,6 +8004,9 @@
   <div id="pal-messages"></div>
   <form id="pal-form">
     <textarea id="pal-input" rows="1" placeholder="Ask me anything…" autocomplete="off"></textarea>
+    <button id="pal-mic" type="button" title="Voice input" aria-label="Voice input">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    </button>
     <button id="pal-send" type="submit">↑</button>
   </form>
 </div>
@@ -7990,7 +8019,75 @@
     const palForm    = document.getElementById("pal-form");
     const palInput   = document.getElementById("pal-input");
     const palSend    = document.getElementById("pal-send");
+    const palMic     = document.getElementById("pal-mic");
     const palMsgs    = document.getElementById("pal-messages");
+
+    // Speech-to-text
+    (function () {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        palMic.disabled = true;
+        palMic.title = "Voice input not supported in this browser";
+        return;
+      }
+      const recog = new SR();
+      recog.continuous = false;
+      recog.interimResults = true;
+      recog.lang = "en-US";
+
+      let recording = false;
+      let baseText = ""; // text in textarea before recording started
+
+      function startRecording() {
+        baseText = palInput.value;
+        recording = true;
+        palMic.classList.add("recording");
+        palMic.title = "Stop recording";
+        palSend.disabled = true;
+        recog.start();
+      }
+
+      function stopRecording() {
+        recording = false;
+        palMic.classList.remove("recording");
+        palMic.title = "Voice input";
+        palSend.disabled = false;
+        recog.stop();
+      }
+
+      palMic.addEventListener("click", () => {
+        if (recording) { stopRecording(); } else { startRecording(); }
+      });
+
+      recog.addEventListener("result", e => {
+        let interim = "";
+        let final = "";
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const t = e.results[i][0].transcript;
+          if (e.results[i].isFinal) { final += t; } else { interim += t; }
+        }
+        palInput.value = baseText + (final || interim);
+        palInput.dispatchEvent(new Event("input")); // trigger auto-resize if any
+      });
+
+      recog.addEventListener("end", () => {
+        if (recording) {
+          // auto-restarted if still in recording state (continuous workaround)
+          recog.start();
+        } else {
+          palMic.classList.remove("recording");
+          palMic.title = "Voice input";
+          palSend.disabled = false;
+        }
+      });
+
+      recog.addEventListener("error", e => {
+        stopRecording();
+        if (e.error !== "aborted" && e.error !== "no-speech") {
+          palAddMsg("assistant", "Voice input error: " + e.error);
+        }
+      });
+    })();
 
     const PAL_MODELS = [
       "us.amazon.nova-lite-v1:0",
