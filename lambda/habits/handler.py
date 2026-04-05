@@ -10,7 +10,8 @@ logger.setLevel(logging.INFO)
 
 
 def lambda_handler(event: dict, context) -> dict:
-    logger.info("Event: %s", json.dumps(event))
+    sanitized = {k: v for k, v in event.items() if k != "headers"}
+    logger.info("Event: %s", json.dumps(sanitized))
     try:
 
         from auth import get_user_id
