@@ -22,10 +22,16 @@ os.environ["JOURNAL_TABLE"]       = "test-journal-asst"
 os.environ["NUTRITION_TABLE"]     = "test-nutrition-asst"
 os.environ["HEALTH_TABLE"]        = "test-health-asst"
 os.environ["AWS_REGION"]          = "us-east-1"
+os.environ["TOKENS_TABLE"]        = "test-tokens"
+os.environ["JWKS_URI"]            = "https://cognito.example.com/.well-known/jwks.json"
+os.environ["JWT_ISSUER"]          = "https://cognito.example.com"
+os.environ["JWT_AUDIENCE"]        = "test-client-id"
 
-memory = load_lambda("assistant", "memory.py")
-tools  = load_lambda("assistant", "tools.py")
-chat   = load_lambda("assistant", "chat.py")
+memory     = load_lambda("assistant", "memory.py")
+tools      = load_lambda("assistant", "tools.py")
+chat       = load_lambda("assistant", "chat.py")
+token_auth = load_lambda("assistant", "token_auth.py")
+handler    = load_lambda("assistant", "handler.py")
 
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
@@ -44,6 +50,25 @@ def tbls():
         make_table(ddb, "test-journal-asst",      "user_id", "entry_date")
         make_table(ddb, "test-nutrition-asst",    "user_id", "log_date")
         make_table(ddb, "test-health-asst",       "user_id", "log_date")
+        # Tokens table with token-hash GSI (used by token_auth PAT lookup)
+        ddb.create_table(
+            TableName="test-tokens",
+            KeySchema=[
+                {"AttributeName": "user_id",  "KeyType": "HASH"},
+                {"AttributeName": "token_id", "KeyType": "RANGE"},
+            ],
+            AttributeDefinitions=[
+                {"AttributeName": "user_id",    "AttributeType": "S"},
+                {"AttributeName": "token_id",   "AttributeType": "S"},
+                {"AttributeName": "token_hash", "AttributeType": "S"},
+            ],
+            GlobalSecondaryIndexes=[{
+                "IndexName": "token-hash-index",
+                "KeySchema": [{"AttributeName": "token_hash", "KeyType": "HASH"}],
+                "Projection": {"ProjectionType": "KEYS_ONLY"},
+            }],
+            BillingMode="PAY_PER_REQUEST",
+        )
         yield
 
 
@@ -710,3 +735,121 @@ class TestChatStream:
             chat.chat_stream(USER, "fail", emit=lambda b: chunks.append(json.loads(b.rstrip(b"\n"))))
 
         assert any(c["type"] == "error" for c in chunks)
+
+
+# ── token_auth ────────────────────────────────────────────────────────────────
+
+class TestTokenAuthExtract:
+    def test_bearer_header(self):
+        event = {"headers": {"authorization": "Bearer mytoken"}}
+        assert token_auth.extract_token(event) == "mytoken"
+
+    def test_authorization_no_bearer_prefix(self):
+        event = {"headers": {"Authorization": "rawtoken"}}
+        assert token_auth.extract_token(event) == "rawtoken"
+
+    def test_cookie_fallback(self):
+        event = {"headers": {"cookie": "other=x; memoire_token=cookietok; z=1"}}
+        assert token_auth.extract_token(event) == "cookietok"
+
+    def test_header_takes_priority_over_cookie(self):
+        event = {"headers": {"authorization": "Bearer hdrtoken", "cookie": "memoire_token=cookietok"}}
+        assert token_auth.extract_token(event) == "hdrtoken"
+
+    def test_empty_event_returns_empty(self):
+        assert token_auth.extract_token({}) == ""
+
+    def test_no_matching_cookie_returns_empty(self):
+        event = {"headers": {"cookie": "other=value"}}
+        assert token_auth.extract_token(event) == ""
+
+
+class TestTokenAuthGetUserId:
+    def test_no_token_returns_none(self, tbls):
+        assert token_auth.get_user_id({}) is None
+
+    def test_malformed_jwt_returns_none(self, tbls):
+        # Not three dot-separated parts → rejected immediately
+        event = {"headers": {"authorization": "notajwt"}}
+        assert token_auth.get_user_id(event) is None
+
+    def test_pat_not_in_db_returns_none(self, tbls):
+        event = {"headers": {"authorization": "pat_unknowntoken"}}
+        assert token_auth.get_user_id(event) is None
+
+    def test_expired_jwt_returns_none(self, tbls):
+        # Craft a JWT with a valid structure but expired exp claim.
+        # The signature will be wrong, but exp is checked first.
+        import base64
+        header  = base64.urlsafe_b64encode(b'{"alg":"RS256","kid":"k1"}').rstrip(b"=").decode()
+        payload = base64.urlsafe_b64encode(b'{"sub":"u1","exp":1,"iss":"https://cognito.example.com","aud":"test-client-id"}').rstrip(b"=").decode()
+        token   = f"{header}.{payload}.fakesig"
+        event   = {"headers": {"authorization": f"Bearer {token}"}}
+        assert token_auth.get_user_id(event) is None
+
+    def test_wrong_issuer_returns_none(self, tbls):
+        import base64
+        import time
+        header  = base64.urlsafe_b64encode(b'{"alg":"RS256","kid":"k1"}').rstrip(b"=").decode()
+        payload_bytes = json.dumps({"sub": "u1", "exp": int(time.time()) + 3600, "iss": "https://wrong.example.com", "aud": "test-client-id"}).encode()
+        payload = base64.urlsafe_b64encode(payload_bytes).rstrip(b"=").decode()
+        token   = f"{header}.{payload}.fakesig"
+        event   = {"headers": {"authorization": f"Bearer {token}"}}
+        assert token_auth.get_user_id(event) is None
+
+
+# ── streaming handler ───���─────────────────────────────────────────────────────
+
+class TestStreamHandler:
+    """Tests for _stream_handler called directly (no awslambdaric wrapper needed)."""
+
+    def _collect(self, stream_mock):
+        chunks = []
+        for call in stream_mock.write.call_args_list:
+            line = call.args[0].rstrip(b"\n")
+            if line:
+                chunks.append(json.loads(line))
+        return chunks
+
+    def test_unauthorized_when_no_token(self, tbls):
+        from unittest.mock import MagicMock
+        stream = MagicMock()
+        handler._stream_handler({"headers": {}}, None, stream)
+        chunks = self._collect(stream)
+        assert chunks[0] == {"type": "error", "message": "Unauthorized"}
+
+    def test_invalid_json_body_returns_error(self, tbls, monkeypatch):
+        from unittest.mock import MagicMock
+        monkeypatch.setattr(token_auth, "get_user_id", lambda e: USER)
+        stream = MagicMock()
+        handler._stream_handler({"headers": {}, "body": "not-json"}, None, stream)
+        chunks = self._collect(stream)
+        assert chunks[0]["type"] == "error"
+        assert "JSON" in chunks[0]["message"]
+
+    def test_missing_message_returns_error(self, tbls, monkeypatch):
+        from unittest.mock import MagicMock
+        monkeypatch.setattr(token_auth, "get_user_id", lambda e: USER)
+        stream = MagicMock()
+        handler._stream_handler({"headers": {}, "body": "{}"}, None, stream)
+        chunks = self._collect(stream)
+        assert chunks[0]["type"] == "error"
+        assert "message" in chunks[0]["message"].lower()
+
+    def test_delegates_to_chat_stream(self, tbls, monkeypatch):
+        from unittest.mock import MagicMock
+        monkeypatch.setattr(token_auth, "get_user_id", lambda e: USER)
+        called_with = {}
+
+        def fake_chat_stream(user_id, message, emit, model=None, local_date=None):
+            called_with["user_id"] = user_id
+            called_with["message"] = message
+            emit(json.dumps({"type": "done", "tools_used": [], "reply": "hi"}).encode() + b"\n")
+
+        monkeypatch.setattr(chat, "chat_stream", fake_chat_stream)
+        stream = MagicMock()
+        body   = json.dumps({"message": "hello world"})
+        handler._stream_handler({"headers": {}, "body": body}, None, stream)
+
+        assert called_with["user_id"] == USER
+        assert called_with["message"] == "hello world"
