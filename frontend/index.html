@@ -7018,12 +7018,13 @@
       showLoader("admin-loader");
       $("admin-grid").innerHTML = "";
       try {
-        const [costs, stats] = await Promise.all([
+        const [costs, stats, usage] = await Promise.all([
           api.call("GET", "/home/costs").catch(() => null),
           api.call("GET", "/admin/stats").catch(() => null),
+          api.call("GET", "/assistant/usage").catch(() => null),
         ]);
         admin.loaded = true;
-        admin.render(costs, stats);
+        admin.render(costs, stats, usage);
       } catch (e) {
         $("admin-grid").innerHTML = `<div class="admin-card"><p style="color:var(--muted);font-size:14px;">Failed to load admin data.</p></div>`;
         console.error("Failed to load admin data:", e);
@@ -7032,7 +7033,7 @@
       }
     },
 
-    render(costs, stats) {
+    render(costs, stats, usage) {
       const fmtMoney = n => !n && n !== 0 ? "—" : n < 0.005 ? "$0.00" : n < 1 ? `$${n.toFixed(3)}` : `$${n.toFixed(2)}`;
       const fmtBytes = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b/1024).toFixed(1)} KB` : `${(b/1048576).toFixed(1)} MB`;
 
@@ -7169,6 +7170,51 @@
                 <div style="font-weight:600;${b.error_rate_pct > 5 ? 'color:var(--danger)' : ''}">${fmtPct(b.error_rate_pct)}</div>
               </div>
             </div>
+          </div>`;
+      }
+
+      // Per-user model usage card
+      if (usage && usage.length > 0) {
+        const fmtT = n => n >= 1000000 ? `${(n/1000000).toFixed(2)}M` : n >= 1000 ? `${(n/1000).toFixed(1)}K` : String(n);
+        const fmtC = n => n < 0.0001 ? "<$0.01" : n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(3)}`;
+        const PRICING = {
+          "amazon.nova-lite-v1:0":    { input: 0.00006,  output: 0.00024 },
+          "amazon.nova-pro-v1:0":     { input: 0.0008,   output: 0.0032  },
+          "amazon.nova-premier-v1:0": { input: 0.0025,   output: 0.0125  },
+        };
+        const LABELS = {
+          "amazon.nova-lite-v1:0":    "Nova Lite",
+          "amazon.nova-pro-v1:0":     "Nova Pro",
+          "amazon.nova-premier-v1:0": "Nova Premier",
+        };
+        const totalCost = usage.reduce((sum, r) => {
+          const p = PRICING[r.model_id] || { input: 0, output: 0 };
+          return sum + (r.input_tokens / 1000 * p.input) + (r.output_tokens / 1000 * p.output);
+        }, 0);
+        const totalInv = usage.reduce((s, r) => s + r.invocations, 0);
+
+        const rows = usage.map(r => {
+          const p = PRICING[r.model_id] || { input: 0, output: 0 };
+          const cost = (r.input_tokens / 1000 * p.input) + (r.output_tokens / 1000 * p.output);
+          const label = LABELS[r.model_id] || r.model_id;
+          return `
+            <div class="admin-stat-row">
+              <span style="color:var(--muted);">${escHtml(label)}</span>
+              <span style="display:flex;gap:16px;align-items:center;">
+                <span style="font-size:12px;color:var(--muted);">${r.invocations.toLocaleString()} calls &nbsp;·&nbsp; ${fmtT(r.input_tokens)}↑ ${fmtT(r.output_tokens)}↓</span>
+                <span class="admin-stat-value" style="color:var(--primary);">${fmtC(cost)}</span>
+              </span>
+            </div>`;
+        }).join("");
+
+        html += `
+          <div class="admin-card" style="grid-column: span 2;">
+            <div class="admin-card-title">AI Pal — Per-User Model Usage</div>
+            <div style="display:flex;gap:24px;margin-bottom:12px;">
+              <div><div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Total invocations</div><div style="font-size:18px;font-weight:700;">${totalInv.toLocaleString()}</div></div>
+              <div><div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Total est. cost</div><div style="font-size:18px;font-weight:700;color:var(--primary);">${fmtC(totalCost)}</div></div>
+            </div>
+            ${rows}
           </div>`;
       }
 
