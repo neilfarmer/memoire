@@ -1,0 +1,28 @@
+name: Terraform Lint
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  tflint:
+    name: tflint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: latest
+
+      - name: Init tflint
+        run: tflint --init
+        working-directory: terraform
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Run tflint
+        run: tflint --recursive
+        working-directory: terraform
