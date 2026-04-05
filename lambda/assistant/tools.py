@@ -15,6 +15,8 @@ NOTE_FOLDERS_TABLE = os.environ["NOTE_FOLDERS_TABLE"]
 HABITS_TABLE       = os.environ["HABITS_TABLE"]
 GOALS_TABLE        = os.environ["GOALS_TABLE"]
 JOURNAL_TABLE      = os.environ["JOURNAL_TABLE"]
+NUTRITION_TABLE    = os.environ["NUTRITION_TABLE"]
+HEALTH_TABLE       = os.environ["HEALTH_TABLE"]
 
 
 def _now() -> str:
@@ -296,6 +298,91 @@ TOOL_SPECS = [
     },
     {
         "toolSpec": {
+            "name": "log_meal",
+            "description": (
+                "Log a food item to the nutrition log for a given date (defaults to today). "
+                "Use this — NOT create_journal_entry — for ANY food, meal, eating, calorie, "
+                "macro, or diet tracking request. When the user mentions 'food journal', "
+                "'nutrition', 'calories', or what they ate, always use this tool."
+            ),
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "name":      {"type": "string", "description": "Food item name, e.g. 'Chorizo with cheese dip'"},
+                        "calories":  {"type": "number", "description": "Calories (kcal)"},
+                        "protein_g": {"type": "number", "description": "Protein in grams"},
+                        "carbs_g":   {"type": "number", "description": "Carbohydrates in grams"},
+                        "fat_g":     {"type": "number", "description": "Fat in grams"},
+                        "date":      {"type": "string", "description": "Date YYYY-MM-DD, defaults to today"},
+                    },
+                    "required": ["name"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "get_nutrition_log",
+            "description": "Get the nutrition log for a date to see what has been eaten and macro totals.",
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "date": {"type": "string", "description": "Date YYYY-MM-DD, defaults to today"},
+                    },
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "log_exercise",
+            "description": (
+                "Log an exercise to the exercise log for a given date (defaults to today). "
+                "Use this — NOT create_journal_entry — for ANY workout, exercise, gym, "
+                "run, swim, lift, or physical activity tracking request."
+            ),
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "name":         {"type": "string", "description": "Exercise name, e.g. 'Bench Press' or 'Morning run'"},
+                        "duration_min": {"type": "number", "description": "Duration in minutes (for cardio or timed exercises)"},
+                        "sets": {
+                            "type": "array",
+                            "description": "Sets for strength exercises, e.g. [{\"reps\": 10, \"weight\": 135}]",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "reps":   {"type": "number"},
+                                    "weight": {"type": "number", "description": "Weight in lbs"},
+                                },
+                            },
+                        },
+                        "date": {"type": "string", "description": "Date YYYY-MM-DD, defaults to today"},
+                    },
+                    "required": ["name"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "get_exercise_log",
+            "description": "Get the exercise log for a date to see what workouts were recorded.",
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "date": {"type": "string", "description": "Date YYYY-MM-DD, defaults to today"},
+                    },
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
             "name": "remember_fact",
             "description": "Remember a fact about the user for future conversations.",
             "inputSchema": {
@@ -335,6 +422,10 @@ def handle_tool(user_id: str, name: str, inputs: dict) -> str:
         "update_goal_progress": _update_goal_progress,
         "delete_goal":          _delete_goal,
         "create_journal_entry": _create_journal_entry,
+        "log_meal":             _log_meal,
+        "get_nutrition_log":    _get_nutrition_log,
+        "log_exercise":         _log_exercise,
+        "get_exercise_log":     _get_exercise_log,
         "remember_fact":        _remember_fact,
     }
     handler = handlers.get(name)
@@ -656,6 +747,95 @@ def _create_journal_entry(user_id: str, inputs: dict) -> str:
     table.put_item(Item=item)
     action = "Updated" if existing else "Created"
     return f"{action} journal entry for {entry_date} [pal-link:journal:{entry_date}:Open entry →]"
+
+
+def _log_meal(user_id: str, inputs: dict) -> str:
+    table    = db.get_table(NUTRITION_TABLE)
+    log_date = inputs.get("date") or date.today().isoformat()
+    existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
+    meals    = list(existing.get("meals", [])) if existing else []
+
+    meal = {"id": str(uuid.uuid4()), "name": inputs["name"].strip()}
+    for field in ("calories", "protein_g", "carbs_g", "fat_g"):
+        if inputs.get(field) is not None:
+            meal[field] = inputs[field]
+    meals.append(meal)
+
+    table.put_item(Item={
+        "user_id":    user_id,
+        "log_date":   log_date,
+        "meals":      meals,
+        "notes":      existing.get("notes", "") if existing else "",
+        "created_at": existing["created_at"] if existing else _now(),
+        "updated_at": _now(),
+    })
+    cal_str = f" ({int(meal['calories'])} cal)" if meal.get("calories") else ""
+    return f"Logged '{meal['name']}'{cal_str} to nutrition log for {log_date}. {len(meals)} item(s) today."
+
+
+def _get_nutrition_log(user_id: str, inputs: dict) -> str:
+    table    = db.get_table(NUTRITION_TABLE)
+    log_date = inputs.get("date") or date.today().isoformat()
+    existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
+    if not existing or not existing.get("meals"):
+        return f"No nutrition log for {log_date}."
+    meals = existing["meals"]
+    total_cal   = sum(m.get("calories",  0) or 0 for m in meals)
+    total_prot  = sum(m.get("protein_g", 0) or 0 for m in meals)
+    total_carbs = sum(m.get("carbs_g",   0) or 0 for m in meals)
+    total_fat   = sum(m.get("fat_g",     0) or 0 for m in meals)
+    lines = [f"Nutrition log for {log_date}:"]
+    for m in meals:
+        parts = []
+        if m.get("calories"):  parts.append(f"{int(m['calories'])} cal")
+        if m.get("protein_g"): parts.append(f"{m['protein_g']}g protein")
+        lines.append(f"- {m['name']}" + (f" ({', '.join(parts)})" if parts else ""))
+    lines.append(f"Totals: {int(total_cal)} cal · {total_prot}g protein · {total_carbs}g carbs · {total_fat}g fat")
+    return "\n".join(lines)
+
+
+def _log_exercise(user_id: str, inputs: dict) -> str:
+    table    = db.get_table(HEALTH_TABLE)
+    log_date = inputs.get("date") or date.today().isoformat()
+    existing  = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
+    exercises = list(existing.get("exercises", [])) if existing else []
+
+    exercise = {"id": str(uuid.uuid4()), "name": inputs["name"].strip(), "sets": []}
+    if inputs.get("duration_min") is not None:
+        exercise["duration_min"] = inputs["duration_min"]
+    if inputs.get("sets"):
+        exercise["sets"] = inputs["sets"]
+    exercises.append(exercise)
+
+    table.put_item(Item={
+        "user_id":    user_id,
+        "log_date":   log_date,
+        "exercises":  exercises,
+        "notes":      existing.get("notes", "") if existing else "",
+        "created_at": existing["created_at"] if existing else _now(),
+        "updated_at": _now(),
+    })
+    dur_str = f" ({int(exercise['duration_min'])} min)" if exercise.get("duration_min") else ""
+    sets_str = f" — {len(exercise['sets'])} set(s)" if exercise.get("sets") else ""
+    return f"Logged '{exercise['name']}'{dur_str}{sets_str} to exercise log for {log_date}. {len(exercises)} exercise(s) today."
+
+
+def _get_exercise_log(user_id: str, inputs: dict) -> str:
+    table    = db.get_table(HEALTH_TABLE)
+    log_date = inputs.get("date") or date.today().isoformat()
+    existing  = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
+    if not existing or not existing.get("exercises"):
+        return f"No exercise log for {log_date}."
+    exercises = existing["exercises"]
+    lines = [f"Exercise log for {log_date}:"]
+    for ex in exercises:
+        parts = []
+        if ex.get("duration_min"): parts.append(f"{int(ex['duration_min'])} min")
+        if ex.get("sets"):
+            set_strs = [f"{s.get('reps', '?')} reps" + (f" @ {s['weight']} lbs" if s.get("weight") else "") for s in ex["sets"]]
+            parts.append(", ".join(set_strs))
+        lines.append(f"- {ex.get('name', 'Unnamed')}" + (f" ({'; '.join(parts)})" if parts else ""))
+    return "\n".join(lines)
 
 
 def _remember_fact(user_id: str, inputs: dict) -> str:

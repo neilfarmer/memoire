@@ -32,6 +32,8 @@ resource "aws_lambda_function" "assistant" {
       HABITS_TABLE         = aws_dynamodb_table.habits.name
       GOALS_TABLE          = aws_dynamodb_table.goals.name
       JOURNAL_TABLE        = aws_dynamodb_table.journal.name
+      NUTRITION_TABLE      = aws_dynamodb_table.nutrition.name
+      HEALTH_TABLE         = aws_dynamodb_table.health.name
       ASSISTANT_MODEL_ID     = var.assistant_model_id
       ASSISTANT_SYSTEM_PROMPT = var.assistant_system_prompt
     }
@@ -68,6 +70,8 @@ resource "aws_iam_role_policy" "assistant_dynamodb" {
         aws_dynamodb_table.habits.arn,
         aws_dynamodb_table.goals.arn,
         aws_dynamodb_table.journal.arn,
+        aws_dynamodb_table.nutrition.arn,
+        aws_dynamodb_table.health.arn,
       ]
     }]
   })
