@@ -3761,7 +3761,8 @@
     _saveUserInfo(info) { localStorage.setItem("memoire_user", JSON.stringify(info)); },
     _clearUserInfo()    { localStorage.removeItem("memoire_user"); },
 
-    isLoggedIn()  { return !!this.getUserInfo(); },
+    isExpired()   { const info = this.getUserInfo(); return !!info && !!info.exp && (Date.now() / 1000) > info.exp; },
+    isLoggedIn()  { return !!this.getUserInfo() && !this.isExpired(); },
     getEmail()    { return this.getUserInfo()?.email || null; },
     // Returns the stored user info object (email, sub, exp) in place of the old
     // full JWT payload — callers should only use email, sub, and exp fields.
@@ -4412,6 +4413,9 @@
       }
       if (auth.isLoggedIn()) {
         await app.showApp();
+      } else if (auth.isExpired()) {
+        // Session expired — redirect through full logout to clear the cookie
+        app.logout();
       } else {
         app.showLogin();
       }
