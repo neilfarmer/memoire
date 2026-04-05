@@ -1,0 +1,27 @@
+name: Terraform Tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  terraform-test:
+    name: Terraform unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9"
+
+      # -backend=false skips remote state init — not needed for plan-only tests.
+      - name: Terraform init
+        run: terraform init -backend=false
+        working-directory: terraform
+
+      - name: Run Terraform tests
+        run: terraform test
+        working-directory: terraform
