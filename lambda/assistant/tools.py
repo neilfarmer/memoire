@@ -475,10 +475,17 @@ def _list_tasks(user_id: str, inputs: dict) -> str:
     if not filtered:
         return "No tasks found."
 
+    # Sort: tasks with a due_date first (earliest first), then undated tasks by created_at
+    def _sort_key(t):
+        due = t.get("due_date") or ""
+        return (0 if due else 1, due or t.get("created_at", ""))
+
+    filtered.sort(key=_sort_key)
+
     lines = []
-    for t in filtered[:20]:
+    for t in filtered[:50]:
         due  = f" (due {t['due_date']})" if t.get("due_date") else ""
-        lines.append(f"- [{t.get('status', 'todo')}] {t['title']}{due}")
+        lines.append(f"- [{t.get('status', 'todo')}] {t['title']}{due} [id:{t['task_id']}]")
     return "\n".join(lines)
 
 
