@@ -8088,10 +8088,11 @@
       });
 
       recog.addEventListener("error", e => {
+        // no-speech: let `end` fire and restart automatically
+        // aborted: we called recog.stop() intentionally, ignore it
+        if (e.error === "no-speech" || e.error === "aborted") return;
         stopRecording();
-        if (e.error !== "aborted" && e.error !== "no-speech") {
-          palAddMsg("assistant", "Voice input error: " + e.error);
-        }
+        palAddMsg("assistant", "Voice input error: " + e.error);
       });
     })();
 

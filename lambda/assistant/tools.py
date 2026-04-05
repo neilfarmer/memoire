@@ -952,7 +952,7 @@ def _lookup_nutrition(user_id: str, inputs: dict) -> str:
             )
         except (ValueError, TypeError):
             pass
-    lines.append("Scale these values to the user's actual serving size, then call log_meal.")
+    lines.append("Scale these values to the user's actual serving size, then call log_meal. When uncertain about exact weight, round calories UP — overestimating is better than underestimating for nutrition tracking.")
     return "\n".join(lines)
 
 
