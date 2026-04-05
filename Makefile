@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: deploy deploy-auto invalidate destroy test test-unit test-terraform test-all coverage security lint
+.PHONY: deploy deploy-auto invalidate destroy test-unit test-terraform test-all coverage security lint
 
 deploy:
 	@source .env && cd terraform && terraform apply
@@ -37,11 +37,3 @@ security:
 	@echo "--- Dependency CVEs (pip-audit) ---"
 	pip-audit -r requirements-test.txt -f columns
 
-test:
-	TEST_PAT=$(TEST_PAT) python tests/test_api.py
-
-test-deploy-content:
-	TEST_PAT=$(TEST_PAT) python tests/content.py deploy
-
-test-destroy-content:
-	TEST_PAT=$(TEST_PAT) python tests/content.py destroy
