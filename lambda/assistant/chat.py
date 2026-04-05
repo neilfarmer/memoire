@@ -52,6 +52,7 @@ CRITICAL RULES — you must follow these exactly:
 4. If you learn something meaningful about the user (preferences, routines, goals), call remember_fact.
 5. Be concise and friendly. When listing items, keep it brief.
 6. For delete/complete/toggle operations, always call list_* first to find the correct ID. Task IDs appear as [id:...] in list_tasks output — extract and use that id directly.
+8. For conversational questions about what you know about the user, answer directly from the facts and context already in this system prompt. Do NOT call tools to answer questions like "what do you know about me?" — the answer is already here.
 7. ROUTING RULES — use the correct tool for the domain:
    - Food, eating, calories, macros, meals, "food journal", diet → log_meal (NOT create_journal_entry)
    - Workouts, exercise, gym, running, lifting, physical activity → log_exercise (NOT create_journal_entry)
@@ -212,6 +213,25 @@ def chat(user_id: str, user_message: str, model: str | None = None, local_date: 
                 break
 
         reply = _clean_reply(reply)
+        if not reply:
+            # Loop exhausted without a text reply — force one final call without tools
+            logger.warning("No reply after %d loops, forcing final text call", MAX_LOOPS)
+            try:
+                forced = _bedrock.converse(
+                    modelId=model_id,
+                    system=system,
+                    messages=messages,
+                    inferenceConfig={"maxTokens": MAX_TOKENS},
+                )
+                for block in forced["output"]["message"]["content"]:
+                    if "text" in block:
+                        reply = _clean_reply(block["text"])
+                        break
+                usage2 = forced.get("usage", {})
+                total_in  += usage2.get("inputTokens",  0)
+                total_out += usage2.get("outputTokens", 0)
+            except Exception:
+                logger.warning("Forced final call also failed", exc_info=True)
         if not reply:
             reply = "I'm here, but something went wrong with my response. Could you try again?"
         # Append any navigation links collected from tool results
