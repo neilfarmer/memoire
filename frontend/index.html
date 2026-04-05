@@ -3180,6 +3180,16 @@
           <button class="btn btn-secondary" id="display-name-save-btn">Save</button>
         </div>
       </div>
+      <div class="settings-row">
+        <div style="flex:1;">
+          <div class="settings-label">AI Pal name</div>
+          <div class="settings-desc">The name shown in the AI assistant header (default: AI Pal)</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="pal-name-input" placeholder="AI Pal" style="width:160px;" maxlength="40" />
+          <button class="btn btn-secondary" id="pal-name-save-btn">Save</button>
+        </div>
+      </div>
     </div>
     <div class="settings-section">
       <div class="settings-section-title">Appearance</div>
@@ -4215,6 +4225,8 @@
           theme.set(settings.dark_mode ? "dark" : "light");
           if (pages.current === "home") renderHomeDashboard();
           $("display-name-input").value = settings.display_name || "";
+          $("pal-name-input").value = settings.pal_name || "";
+          applyPalName(settings.pal_name || "");
           $("ntfy-url").value = settings.ntfy_url || "";
           const secs = settings.autosave_seconds ?? 300;
           $("autosave-select").value = String(secs);
@@ -4371,6 +4383,27 @@
       console.error("Failed to save display name:", e);
     } finally {
       $("display-name-save-btn").disabled = false;
+    }
+  });
+
+  function applyPalName(name) {
+    const label = name.trim() || "AI Pal";
+    $("pal-header-name").textContent = "✨ " + label;
+  }
+
+  $("pal-name-save-btn").addEventListener("click", async () => {
+    const name = $("pal-name-input").value.trim();
+    $("pal-name-save-btn").disabled = true;
+    try {
+      const updated = await api.updateSettings({ pal_name: name });
+      state.settings = { ...state.settings, ...updated };
+      applyPalName(name);
+      $("pal-name-save-btn").textContent = "Saved";
+      setTimeout(() => { $("pal-name-save-btn").textContent = "Save"; }, 1500);
+    } catch (e) {
+      console.error("Failed to save pal name:", e);
+    } finally {
+      $("pal-name-save-btn").disabled = false;
     }
   });
 
@@ -7329,6 +7362,7 @@
       ? new Date(p.exp * 1000).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
       : "—";
     $("display-name-input").value = state.settings?.display_name || "";
+    $("pal-name-input").value = state.settings?.pal_name || "";
     loadPatList();
   }
 
@@ -7641,7 +7675,7 @@
 <button id="pal-btn" title="Chat with your AI pal" aria-label="AI assistant" class="hidden">🤖</button>
 <div id="pal-window" class="hidden">
   <div id="pal-header">
-    <span>✨ AI Pal</span>
+    <span id="pal-header-name">✨ AI Pal</span>
     <button id="pal-usage-btn" aria-label="Usage stats">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
     </button>

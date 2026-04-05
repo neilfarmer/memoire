@@ -18,6 +18,7 @@ DEFAULTS = {
     "autosave_seconds": 300,
     "timezone":         "",
     "display_name":     "",
+    "pal_name":         "",
 }
 
 ALLOWED_KEYS = set(DEFAULTS.keys())
