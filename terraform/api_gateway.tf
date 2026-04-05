@@ -6,11 +6,11 @@ resource "aws_apigatewayv2_api" "main" {
   protocol_type = "HTTP"
 
   cors_configuration {
-    allow_headers    = ["Content-Type"]
-    allow_methods    = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    allow_origins    = [local.frontend_origin]
+    allow_headers     = ["Content-Type"]
+    allow_methods     = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_origins     = [local.frontend_origin]
     allow_credentials = true
-    max_age          = 300
+    max_age           = 300
   }
 }
 
@@ -32,15 +32,15 @@ resource "aws_apigatewayv2_authorizer" "jwt" {
 # be used to create or revoke other PATs.
 
 resource "aws_apigatewayv2_authorizer" "lambda" {
-  api_id                            = aws_apigatewayv2_api.main.id
-  authorizer_type                   = "REQUEST"
-  authorizer_uri                    = aws_lambda_function.authorizer.invoke_arn
+  api_id          = aws_apigatewayv2_api.main.id
+  authorizer_type = "REQUEST"
+  authorizer_uri  = aws_lambda_function.authorizer.invoke_arn
   # No identity_sources — the Lambda reads from Cookie (browser JWTs) or
   # Authorization header (PATs) itself, so API Gateway must always invoke it.
   name                              = "lambda-authorizer"
   authorizer_payload_format_version = "2.0"
   enable_simple_responses           = true
-  authorizer_result_ttl_in_seconds  = 0  # No caching — revoked PATs must be rejected immediately
+  authorizer_result_ttl_in_seconds  = 0 # No caching — revoked PATs must be rejected immediately
 }
 
 # Access logging is intentionally not configured: each Lambda logs its own

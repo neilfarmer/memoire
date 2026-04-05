@@ -20,9 +20,9 @@ Use `make` targets for all operations. Do not run raw shell commands directly â€
 
 **Available targets:**
 ```bash
+make test              # run all tests (unit + terraform)
 make test-unit         # run unit tests with coverage (pytest tests/unit/)
 make test-terraform    # run Terraform tests
-make test-all          # test-unit + test-terraform
 make coverage          # unit tests with HTML coverage report â†’ htmlcov/index.html
 make lint              # ruff check lambda/ tests/
 make security          # bandit (SAST) + pip-audit (CVE scan)

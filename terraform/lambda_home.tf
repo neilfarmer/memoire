@@ -11,30 +11,30 @@ resource "aws_iam_role_policy_attachment" "home_basic" {
 }
 
 resource "aws_lambda_function" "home" {
-  function_name    = "${local.name_prefix}-home"
-  runtime          = var.lambda_runtime
-  handler          = "handler.lambda_handler"
-  role             = aws_iam_role.home.arn
-  filename         = data.archive_file.lambda_home.output_path
-  source_code_hash = data.archive_file.lambda_home.output_base64sha256
-  layers           = [aws_lambda_layer_version.shared.arn]
-  timeout          = 30
+  function_name                  = "${local.name_prefix}-home"
+  runtime                        = var.lambda_runtime
+  handler                        = "handler.lambda_handler"
+  role                           = aws_iam_role.home.arn
+  filename                       = data.archive_file.lambda_home.output_path
+  source_code_hash               = data.archive_file.lambda_home.output_base64sha256
+  layers                         = [aws_lambda_layer_version.shared.arn]
+  timeout                        = 30
   memory_size                    = var.lambda_memory_mb
   reserved_concurrent_executions = var.lambda_max_concurrency
 
   environment {
     variables = {
-      PROJECT_NAME    = var.project_name
-      FUNCTION_PREFIX = local.name_prefix
-      FRONTEND_BUCKET = aws_s3_bucket.frontend.id
-      TASKS_TABLE     = aws_dynamodb_table.tasks.name
-      JOURNAL_TABLE   = aws_dynamodb_table.journal.name
-      NOTES_TABLE     = aws_dynamodb_table.notes.name
-      FOLDERS_TABLE   = aws_dynamodb_table.note_folders.name
-      HABITS_TABLE    = aws_dynamodb_table.habits.name
-      HEALTH_TABLE    = aws_dynamodb_table.health.name
-      NUTRITION_TABLE = aws_dynamodb_table.nutrition.name
-      SETTINGS_TABLE  = aws_dynamodb_table.settings.name
+      PROJECT_NAME            = var.project_name
+      FUNCTION_PREFIX         = local.name_prefix
+      FRONTEND_BUCKET         = aws_s3_bucket.frontend.id
+      TASKS_TABLE             = aws_dynamodb_table.tasks.name
+      JOURNAL_TABLE           = aws_dynamodb_table.journal.name
+      NOTES_TABLE             = aws_dynamodb_table.notes.name
+      FOLDERS_TABLE           = aws_dynamodb_table.note_folders.name
+      HABITS_TABLE            = aws_dynamodb_table.habits.name
+      HEALTH_TABLE            = aws_dynamodb_table.health.name
+      NUTRITION_TABLE         = aws_dynamodb_table.nutrition.name
+      SETTINGS_TABLE          = aws_dynamodb_table.settings.name
       ADMIN_USER_IDS          = var.admin_user_ids
       ASSISTANT_FUNCTION_NAME = aws_lambda_function.assistant.function_name
       ASSISTANT_MODEL_ID      = var.assistant_model_id

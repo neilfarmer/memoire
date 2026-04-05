@@ -11,21 +11,21 @@ resource "aws_iam_role_policy_attachment" "notes_basic" {
 }
 
 resource "aws_lambda_function" "notes" {
-  function_name    = "${local.name_prefix}-notes"
-  runtime          = var.lambda_runtime
-  handler          = "handler.lambda_handler"
-  role             = aws_iam_role.notes.arn
-  filename         = data.archive_file.lambda_notes.output_path
-  source_code_hash = data.archive_file.lambda_notes.output_base64sha256
-  layers           = [aws_lambda_layer_version.shared.arn]
-  timeout          = var.lambda_timeout
+  function_name                  = "${local.name_prefix}-notes"
+  runtime                        = var.lambda_runtime
+  handler                        = "handler.lambda_handler"
+  role                           = aws_iam_role.notes.arn
+  filename                       = data.archive_file.lambda_notes.output_path
+  source_code_hash               = data.archive_file.lambda_notes.output_base64sha256
+  layers                         = [aws_lambda_layer_version.shared.arn]
+  timeout                        = var.lambda_timeout
   memory_size                    = var.lambda_memory_mb
   reserved_concurrent_executions = var.lambda_max_concurrency
 
   environment {
     variables = {
-      FOLDERS_TABLE  = aws_dynamodb_table.note_folders.name
-      NOTES_TABLE    = aws_dynamodb_table.notes.name
+      FOLDERS_TABLE   = aws_dynamodb_table.note_folders.name
+      NOTES_TABLE     = aws_dynamodb_table.notes.name
       FRONTEND_BUCKET = aws_s3_bucket.frontend.id
       CLOUDFRONT_URL  = "https://${aws_cloudfront_distribution.frontend.domain_name}"
     }
@@ -91,8 +91,8 @@ resource "aws_iam_role_policy" "notes_s3" {
         }
       },
       {
-        Effect   = "Allow"
-        Action   = ["s3:PutObject"]
+        Effect = "Allow"
+        Action = ["s3:PutObject"]
         Resource = [
           "${aws_s3_bucket.frontend.arn}/note-images/*",
           "${aws_s3_bucket.frontend.arn}/note-attachments/*",

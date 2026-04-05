@@ -11,29 +11,29 @@ resource "aws_iam_role_policy_attachment" "assistant_basic" {
 }
 
 resource "aws_lambda_function" "assistant" {
-  function_name    = "${local.name_prefix}-assistant"
-  runtime          = var.lambda_runtime
-  handler          = "handler.lambda_handler"
-  role             = aws_iam_role.assistant.arn
-  filename         = data.archive_file.lambda_assistant.output_path
-  source_code_hash = data.archive_file.lambda_assistant.output_base64sha256
-  layers           = [aws_lambda_layer_version.shared.arn]
-  timeout          = 30
+  function_name                  = "${local.name_prefix}-assistant"
+  runtime                        = var.lambda_runtime
+  handler                        = "handler.lambda_handler"
+  role                           = aws_iam_role.assistant.arn
+  filename                       = data.archive_file.lambda_assistant.output_path
+  source_code_hash               = data.archive_file.lambda_assistant.output_base64sha256
+  layers                         = [aws_lambda_layer_version.shared.arn]
+  timeout                        = 30
   memory_size                    = 256
   reserved_concurrent_executions = var.lambda_max_concurrency
 
   environment {
     variables = {
-      CONVERSATIONS_TABLE  = aws_dynamodb_table.assistant_conversations.name
-      MEMORY_TABLE         = aws_dynamodb_table.assistant_memory.name
-      TASKS_TABLE          = aws_dynamodb_table.tasks.name
-      NOTES_TABLE          = aws_dynamodb_table.notes.name
-      NOTE_FOLDERS_TABLE   = aws_dynamodb_table.note_folders.name
-      HABITS_TABLE         = aws_dynamodb_table.habits.name
-      GOALS_TABLE          = aws_dynamodb_table.goals.name
-      JOURNAL_TABLE        = aws_dynamodb_table.journal.name
-      NUTRITION_TABLE      = aws_dynamodb_table.nutrition.name
-      HEALTH_TABLE         = aws_dynamodb_table.health.name
+      CONVERSATIONS_TABLE     = aws_dynamodb_table.assistant_conversations.name
+      MEMORY_TABLE            = aws_dynamodb_table.assistant_memory.name
+      TASKS_TABLE             = aws_dynamodb_table.tasks.name
+      NOTES_TABLE             = aws_dynamodb_table.notes.name
+      NOTE_FOLDERS_TABLE      = aws_dynamodb_table.note_folders.name
+      HABITS_TABLE            = aws_dynamodb_table.habits.name
+      GOALS_TABLE             = aws_dynamodb_table.goals.name
+      JOURNAL_TABLE           = aws_dynamodb_table.journal.name
+      NUTRITION_TABLE         = aws_dynamodb_table.nutrition.name
+      HEALTH_TABLE            = aws_dynamodb_table.health.name
       ASSISTANT_MODEL_ID      = var.assistant_model_id
       ASSISTANT_SYSTEM_PROMPT = var.assistant_system_prompt
       USDA_API_KEY            = var.usda_api_key
@@ -85,8 +85,8 @@ resource "aws_iam_role_policy" "assistant_bedrock" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = ["bedrock:InvokeModel"]
+      Effect = "Allow"
+      Action = ["bedrock:InvokeModel"]
       Resource = [
         "arn:aws:bedrock:*::foundation-model/amazon.nova-lite-v1:0",
         "arn:aws:bedrock:*::foundation-model/amazon.nova-pro-v1:0",

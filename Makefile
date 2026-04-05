@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: deploy deploy-auto invalidate destroy test-unit test-terraform test-all coverage security lint
+.PHONY: deploy deploy-auto invalidate destroy test test-unit test-terraform test-all coverage security lint
 
 deploy:
 	@source .env && cd terraform && terraform apply
@@ -18,6 +18,10 @@ destroy:
 
 lint:
 	ruff check lambda/ tests/
+	djlint frontend/ --lint
+	cd terraform && terraform fmt -check -recursive
+
+test: test-unit test-terraform
 
 test-unit:
 	python -m pytest tests/unit/ -v --cov=lambda --cov-report=term-missing --cov-report=xml --cov-fail-under=80

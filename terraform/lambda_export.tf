@@ -76,8 +76,8 @@ resource "aws_iam_role_policy" "export_s3" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = ["s3:GetObject"]
+        Effect = "Allow"
+        Action = ["s3:GetObject"]
         Resource = [
           "${aws_s3_bucket.frontend.arn}/note-images/*",
           "${aws_s3_bucket.frontend.arn}/note-attachments/*",

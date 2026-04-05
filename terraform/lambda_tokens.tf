@@ -15,14 +15,14 @@ resource "aws_iam_role_policy_attachment" "tokens_basic" {
 }
 
 resource "aws_lambda_function" "tokens" {
-  function_name    = "${local.name_prefix}-tokens"
-  runtime          = var.lambda_runtime
-  handler          = "handler.lambda_handler"
-  role             = aws_iam_role.tokens.arn
-  filename         = data.archive_file.lambda_tokens.output_path
-  source_code_hash = data.archive_file.lambda_tokens.output_base64sha256
-  layers           = [aws_lambda_layer_version.shared.arn]
-  timeout          = var.lambda_timeout
+  function_name                  = "${local.name_prefix}-tokens"
+  runtime                        = var.lambda_runtime
+  handler                        = "handler.lambda_handler"
+  role                           = aws_iam_role.tokens.arn
+  filename                       = data.archive_file.lambda_tokens.output_path
+  source_code_hash               = data.archive_file.lambda_tokens.output_base64sha256
+  layers                         = [aws_lambda_layer_version.shared.arn]
+  timeout                        = var.lambda_timeout
   memory_size                    = var.lambda_memory_mb
   reserved_concurrent_executions = var.lambda_max_concurrency
 
