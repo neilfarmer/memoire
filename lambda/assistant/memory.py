@@ -91,6 +91,36 @@ def save_master_context(user_id: str, context: str) -> None:
     save_memory(user_id, MASTER_CONTEXT_KEY, context)
 
 
+USAGE_KEY_PREFIX = "__usage__"
+
+
+def update_model_usage(user_id: str, model_id: str, input_tokens: int, output_tokens: int) -> None:
+    """Atomically increment per-model token counters and invocation count."""
+    table = db.get_table(MEMORY_TABLE)
+    key   = USAGE_KEY_PREFIX + model_id
+    table.update_item(
+        Key={"user_id": user_id, "memory_key": key},
+        UpdateExpression="ADD invocations :one, input_tokens :inp, output_tokens :out",
+        ExpressionAttributeValues={":one": 1, ":inp": input_tokens, ":out": output_tokens},
+    )
+
+
+def load_model_usage(user_id: str) -> list[dict]:
+    """Return per-model usage records."""
+    table = db.get_table(MEMORY_TABLE)
+    items = db.query_by_user(table, user_id)
+    return [
+        {
+            "model_id":     item["memory_key"][len(USAGE_KEY_PREFIX):],
+            "invocations":  int(item.get("invocations", 0)),
+            "input_tokens": int(item.get("input_tokens", 0)),
+            "output_tokens":int(item.get("output_tokens", 0)),
+        }
+        for item in items
+        if item["memory_key"].startswith(USAGE_KEY_PREFIX)
+    ]
+
+
 def clear_history(user_id: str) -> None:
     """Delete all conversation history for the user."""
     table = db.get_table(CONVERSATIONS_TABLE)

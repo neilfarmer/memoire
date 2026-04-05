@@ -115,6 +115,7 @@ locals {
     "POST /assistant/chat",
     "GET /assistant/history",
     "DELETE /assistant/history",
+    "GET /assistant/usage",
   ]
 }
 

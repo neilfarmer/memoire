@@ -140,8 +140,10 @@ def chat(user_id: str, user_message: str, model: str | None = None) -> dict:
         system          = _system_prompt(facts, master)
         messages        = history + [{"role": "user", "content": [{"text": user_message}]}]
 
-        reply      = ""
-        link_tags  = []  # [pal-link:...] tags collected from tool results
+        reply        = ""
+        link_tags    = []  # [pal-link:...] tags collected from tool results
+        total_in     = 0
+        total_out    = 0
 
         for _ in range(MAX_LOOPS):
             resp   = _bedrock.converse(
@@ -151,6 +153,10 @@ def chat(user_id: str, user_message: str, model: str | None = None) -> dict:
                 toolConfig={"tools": TOOL_SPECS},
                 inferenceConfig={"maxTokens": MAX_TOKENS},
             )
+
+            usage = resp.get("usage", {})
+            total_in  += usage.get("inputTokens",  0)
+            total_out += usage.get("outputTokens", 0)
 
             output_msg  = resp["output"]["message"]
             stop_reason = resp["stopReason"]
@@ -186,6 +192,7 @@ def chat(user_id: str, user_message: str, model: str | None = None) -> dict:
             reply = reply.rstrip() + "\n" + " ".join(link_tags)
         mem.save_message(user_id, "user",      user_message)
         mem.save_message(user_id, "assistant", reply)
+        mem.update_model_usage(user_id, model_id, total_in, total_out)
         _update_master_context(user_id, master, facts, user_message, reply, model_id)
 
         return ok({"reply": reply})

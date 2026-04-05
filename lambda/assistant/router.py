@@ -29,4 +29,7 @@ def route(route_key: str, user_id: str, body: dict) -> dict:
         mem.clear_history(user_id)
         return ok({"cleared": True})
 
+    if route_key == "GET /assistant/usage":
+        return ok(mem.load_model_usage(user_id))
+
     return error("Not found", status=404)

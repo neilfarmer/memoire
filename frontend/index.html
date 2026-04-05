@@ -2568,7 +2568,7 @@
       font-size: 14px;
     }
     #pal-header span { flex: 1; }
-    #pal-close, #pal-clear {
+    #pal-close, #pal-clear, #pal-usage-btn {
       background: none;
       border: none;
       cursor: pointer;
@@ -2578,8 +2578,56 @@
       display: flex;
       align-items: center;
     }
-    #pal-close:hover, #pal-clear:hover { color: var(--text); }
+    #pal-close:hover, #pal-clear:hover, #pal-usage-btn:hover { color: var(--text); }
+    #pal-usage-btn.active { color: var(--primary); }
     #pal-close { font-size: 18px; }
+    #pal-usage-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    #pal-usage-panel.hidden { display: none; }
+    .pal-usage-model {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .pal-usage-model-name {
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .pal-usage-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    .pal-usage-stat-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 2px;
+    }
+    .pal-usage-stat-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .pal-usage-cost {
+      color: var(--primary);
+    }
+    .pal-usage-empty {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      margin-top: 32px;
+    }
     #pal-messages {
       flex: 1;
       overflow-y: auto;
@@ -7539,6 +7587,9 @@
 <div id="pal-window" class="hidden">
   <div id="pal-header">
     <span>✨ AI Pal</span>
+    <button id="pal-usage-btn" aria-label="Usage stats">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    </button>
     <button id="pal-clear" aria-label="Clear chat" title="Clear chat history">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
     </button>
@@ -7562,6 +7613,7 @@
       <span class="pal-tooltip">Nova Premier — most capable</span>
     </button>
   </div>
+  <div id="pal-usage-panel" class="hidden"></div>
   <div id="pal-messages"></div>
   <form id="pal-form">
     <textarea id="pal-input" rows="1" placeholder="Ask me anything…" autocomplete="off"></textarea>
@@ -7626,6 +7678,12 @@
       if (palOpen) {
         palInput.focus();
         palLoadHistory();
+      } else if (palShowingUsage) {
+        // Reset usage view when closing
+        palShowingUsage = false;
+        palUsageBtn.classList.remove("active");
+        palUsagePanel.classList.add("hidden");
+        palMsgs.classList.remove("hidden");
       }
     }
 
@@ -7701,7 +7759,82 @@
       }
     }
 
-    const palClear = document.getElementById("pal-clear");
+    const palClear      = document.getElementById("pal-clear");
+    const palUsageBtn   = document.getElementById("pal-usage-btn");
+    const palUsagePanel = document.getElementById("pal-usage-panel");
+
+    const BEDROCK_PRICING = {
+      "amazon.nova-lite-v1:0":    { input: 0.00006,  output: 0.00024  },
+      "amazon.nova-pro-v1:0":     { input: 0.0008,   output: 0.0032   },
+      "amazon.nova-premier-v1:0": { input: 0.0025,   output: 0.0125   },
+    };
+
+    const MODEL_LABELS = {
+      "amazon.nova-lite-v1:0":    "Nova Lite",
+      "amazon.nova-pro-v1:0":     "Nova Pro",
+      "amazon.nova-premier-v1:0": "Nova Premier",
+    };
+
+    let palShowingUsage = false;
+
+    function palRenderUsage(records) {
+      if (!records || records.length === 0) {
+        palUsagePanel.innerHTML = `<div class="pal-usage-empty">No usage recorded yet.<br>Start chatting to track model usage.</div>`;
+        return;
+      }
+      const fmtTokens = n => n >= 1000000 ? `${(n/1000000).toFixed(2)}M` : n >= 1000 ? `${(n/1000).toFixed(1)}K` : String(n);
+      const fmtCost   = n => n < 0.0001 ? "<$0.01" : n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(3)}`;
+
+      // Sort: pro → premier → lite, then by invocations desc
+      const order = ["amazon.nova-pro-v1:0", "amazon.nova-premier-v1:0", "amazon.nova-lite-v1:0"];
+      records = [...records].sort((a, b) => {
+        const ai = order.indexOf(a.model_id), bi = order.indexOf(b.model_id);
+        if (ai !== bi) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+        return b.invocations - a.invocations;
+      });
+
+      palUsagePanel.innerHTML = records.map(r => {
+        const pricing = BEDROCK_PRICING[r.model_id] || { input: 0, output: 0 };
+        const cost = (r.input_tokens / 1000 * pricing.input) + (r.output_tokens / 1000 * pricing.output);
+        const label = MODEL_LABELS[r.model_id] || r.model_id;
+        return `
+          <div class="pal-usage-model">
+            <div class="pal-usage-model-name">${escHtml(label)}</div>
+            <div class="pal-usage-stats">
+              <div>
+                <div class="pal-usage-stat-label">Invocations</div>
+                <div class="pal-usage-stat-value">${r.invocations.toLocaleString()}</div>
+              </div>
+              <div>
+                <div class="pal-usage-stat-label">Tokens in/out</div>
+                <div class="pal-usage-stat-value">${fmtTokens(r.input_tokens)} / ${fmtTokens(r.output_tokens)}</div>
+              </div>
+              <div>
+                <div class="pal-usage-stat-label">Est. cost</div>
+                <div class="pal-usage-stat-value pal-usage-cost">${fmtCost(cost)}</div>
+              </div>
+            </div>
+          </div>`;
+      }).join("");
+    }
+
+    async function palToggleUsage() {
+      palShowingUsage = !palShowingUsage;
+      palUsageBtn.classList.toggle("active", palShowingUsage);
+      palUsagePanel.classList.toggle("hidden", !palShowingUsage);
+      palMsgs.classList.toggle("hidden", palShowingUsage);
+      if (palShowingUsage) {
+        palUsagePanel.innerHTML = `<div class="pal-usage-empty">Loading…</div>`;
+        try {
+          const records = await api.call("GET", "/assistant/usage");
+          palRenderUsage(records);
+        } catch (e) {
+          palUsagePanel.innerHTML = `<div class="pal-usage-empty">Failed to load usage.</div>`;
+        }
+      }
+    }
+
+    palUsageBtn.addEventListener("click", palToggleUsage);
 
     async function palClearHistory() {
       if (!confirm("Clear chat history? Your memory and context will be kept.")) return;
