@@ -7178,14 +7178,14 @@
         const fmtT = n => n >= 1000000 ? `${(n/1000000).toFixed(2)}M` : n >= 1000 ? `${(n/1000).toFixed(1)}K` : String(n);
         const fmtC = n => n < 0.0001 ? "<$0.01" : n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(3)}`;
         const PRICING = {
-          "amazon.nova-lite-v1:0":    { input: 0.00006,  output: 0.00024 },
-          "amazon.nova-pro-v1:0":     { input: 0.0008,   output: 0.0032  },
-          "amazon.nova-premier-v1:0": { input: 0.0025,   output: 0.0125  },
+          "us.amazon.nova-lite-v1:0":    { input: 0.00006,  output: 0.00024 },
+          "us.amazon.nova-pro-v1:0":     { input: 0.0008,   output: 0.0032  },
+          "us.amazon.nova-premier-v1:0": { input: 0.0025,   output: 0.0125  },
         };
         const LABELS = {
-          "amazon.nova-lite-v1:0":    "Nova Lite",
-          "amazon.nova-pro-v1:0":     "Nova Pro",
-          "amazon.nova-premier-v1:0": "Nova Premier",
+          "us.amazon.nova-lite-v1:0":    "Nova Lite",
+          "us.amazon.nova-pro-v1:0":     "Nova Pro",
+          "us.amazon.nova-premier-v1:0": "Nova Premier",
         };
         const totalCost = usage.reduce((sum, r) => {
           const p = PRICING[r.model_id] || { input: 0, output: 0 };
@@ -7644,17 +7644,17 @@
   <div id="pal-model-bar">
     <span>Model</span>
     <!-- Lite: feather / lightweight -->
-    <button class="pal-model-btn" data-model="amazon.nova-lite-v1:0" aria-label="Nova Lite">
+    <button class="pal-model-btn" data-model="us.amazon.nova-lite-v1:0" aria-label="Nova Lite">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></svg>
       <span class="pal-tooltip">Nova Lite — fast &amp; affordable</span>
     </button>
     <!-- Pro: rocket / capable -->
-    <button class="pal-model-btn" data-model="amazon.nova-pro-v1:0" aria-label="Nova Pro">
+    <button class="pal-model-btn" data-model="us.amazon.nova-pro-v1:0" aria-label="Nova Pro">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.5-1.5 4 0 4s2.5-2.5 4-4l4-4-4-4z"/><path d="M12 12l6-6a2 2 0 0 1 3 3l-6 6"/><path d="M15 9l-6 6"/></svg>
       <span class="pal-tooltip">Nova Pro — smarter, better tool use</span>
     </button>
     <!-- Premier: crown / best -->
-    <button class="pal-model-btn" data-model="amazon.nova-premier-v1:0" aria-label="Nova Premier">
+    <button class="pal-model-btn" data-model="us.amazon.nova-premier-v1:0" aria-label="Nova Premier">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M5 20V8l7-4 7 4v12"/><path d="M9 20v-6h6v6"/></svg>
       <span class="pal-tooltip">Nova Premier — most capable</span>
     </button>
@@ -7678,11 +7678,11 @@
     const palMsgs    = document.getElementById("pal-messages");
 
     const PAL_MODELS = [
-      "amazon.nova-lite-v1:0",
-      "amazon.nova-pro-v1:0",
-      "amazon.nova-premier-v1:0",
+      "us.amazon.nova-lite-v1:0",
+      "us.amazon.nova-pro-v1:0",
+      "us.amazon.nova-premier-v1:0",
     ];
-    const DEFAULT_MODEL = "amazon.nova-lite-v1:0";
+    const DEFAULT_MODEL = "us.amazon.nova-lite-v1:0";
 
     let palOpen = false;
     let palHistoryLoaded = false;
@@ -7810,15 +7810,15 @@
     const palUsagePanel = document.getElementById("pal-usage-panel");
 
     const BEDROCK_PRICING = {
-      "amazon.nova-lite-v1:0":    { input: 0.00006,  output: 0.00024  },
-      "amazon.nova-pro-v1:0":     { input: 0.0008,   output: 0.0032   },
-      "amazon.nova-premier-v1:0": { input: 0.0025,   output: 0.0125   },
+      "us.amazon.nova-lite-v1:0":    { input: 0.00006,  output: 0.00024  },
+      "us.amazon.nova-pro-v1:0":     { input: 0.0008,   output: 0.0032   },
+      "us.amazon.nova-premier-v1:0": { input: 0.0025,   output: 0.0125   },
     };
 
     const MODEL_LABELS = {
-      "amazon.nova-lite-v1:0":    "Nova Lite",
-      "amazon.nova-pro-v1:0":     "Nova Pro",
-      "amazon.nova-premier-v1:0": "Nova Premier",
+      "us.amazon.nova-lite-v1:0":    "Nova Lite",
+      "us.amazon.nova-pro-v1:0":     "Nova Pro",
+      "us.amazon.nova-premier-v1:0": "Nova Premier",
     };
 
     let palShowingUsage = false;
@@ -7832,7 +7832,7 @@
       const fmtCost   = n => n < 0.0001 ? "<$0.01" : n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(3)}`;
 
       // Sort: pro → premier → lite, then by invocations desc
-      const order = ["amazon.nova-pro-v1:0", "amazon.nova-premier-v1:0", "amazon.nova-lite-v1:0"];
+      const order = ["us.amazon.nova-pro-v1:0", "us.amazon.nova-premier-v1:0", "us.amazon.nova-lite-v1:0"];
       records = [...records].sort((a, b) => {
         const ai = order.indexOf(a.model_id), bi = order.indexOf(b.model_id);
         if (ai !== bi) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);

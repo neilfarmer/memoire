@@ -14,14 +14,14 @@ from response import ok, server_error
 
 logger = logging.getLogger(__name__)
 
-MODEL_ID   = os.environ.get("ASSISTANT_MODEL_ID", "amazon.nova-lite-v1:0")
+MODEL_ID   = os.environ.get("ASSISTANT_MODEL_ID", "us.amazon.nova-lite-v1:0")
 MAX_TOKENS = 1024
 MAX_LOOPS  = 6
 
 _ALLOWED_MODELS = {
-    "amazon.nova-lite-v1:0",
-    "amazon.nova-pro-v1:0",
-    "amazon.nova-premier-v1:0",
+    "us.amazon.nova-lite-v1:0",
+    "us.amazon.nova-pro-v1:0",
+    "us.amazon.nova-premier-v1:0",
 }
 
 _bedrock = boto3.client("bedrock-runtime", region_name=os.environ.get("AWS_REGION", "us-east-1"))

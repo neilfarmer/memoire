@@ -151,9 +151,9 @@ variable "admin_user_ids" {
 }
 
 variable "assistant_model_id" {
-  description = "Bedrock model ID for the AI assistant. Use an inference profile ID (e.g. us.anthropic.claude-haiku-4-5-20251001-v1:0) or a direct model ID (e.g. amazon.nova-lite-v1:0)."
+  description = "Bedrock model ID for the AI assistant. Use a cross-region inference profile ID (e.g. us.amazon.nova-lite-v1:0)."
   type        = string
-  default     = "amazon.nova-lite-v1:0"
+  default     = "us.amazon.nova-lite-v1:0"
 }
 
 variable "assistant_system_prompt" {
