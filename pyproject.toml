@@ -1,0 +1,28 @@
+[tool.pytest.ini_options]
+testpaths = ["tests/unit"]
+addopts = "--tb=short -q"
+
+[tool.coverage.run]
+source = ["lambda"]
+omit = [
+    "lambda/layer/*",
+    "**/__pycache__/*",
+    "**/*.pyc",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]
+
+[tool.bandit]
+targets = ["lambda"]
+severity = "medium"
+confidence = "medium"
+skips = [
+    # B108: hardcoded /tmp path — Lambda ephemeral storage is /tmp by design
+    "B108",
+]

@@ -18,6 +18,7 @@ DEFAULTS = {
     "autosave_seconds": 300,
     "timezone":         "",
     "display_name":     "",
+    "pal_name":         "",
 }
 
 ALLOWED_KEYS = set(DEFAULTS.keys())
@@ -112,7 +113,7 @@ def test_notification(user_id: str, body: dict) -> dict:
             headers={"Title": "Memoire test notification", "Priority": "3"},
             method="POST",
         )
-        with urlopen(req, timeout=10):
+        with urlopen(req, timeout=10):  # nosec B310 — URL validated as https + non-private by _validate_ntfy_url
             pass
     except Exception as e:
         return error(f"Could not reach ntfy endpoint: {e}")

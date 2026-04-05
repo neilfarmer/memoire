@@ -377,7 +377,8 @@ def build_export(user_id: str) -> dict:
 
     today = date.today().isoformat()
     export_key = f"exports/{user_id}/{today}-{uuid.uuid4().hex[:8]}.zip"
-    tmp_path = tempfile.mktemp(suffix=".zip")
+    fd, tmp_path = tempfile.mkstemp(suffix=".zip")
+    os.close(fd)
 
     try:
         with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as zf:

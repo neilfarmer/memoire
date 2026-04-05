@@ -9,6 +9,19 @@ resource "aws_s3_bucket" "frontend" {
   force_destroy = true
 }
 
+# SSE-S3 (AES256) is free and requires no KMS key management.
+# The bucket holds only public static assets (HTML/JS/CSS) — encryption
+# satisfies compliance requirements without adding cost.
+resource "aws_s3_bucket_server_side_encryption_configuration" "frontend" {
+  bucket = aws_s3_bucket.frontend.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
 resource "aws_s3_bucket_cors_configuration" "frontend" {
   bucket = aws_s3_bucket.frontend.id
 
@@ -38,7 +51,7 @@ resource "aws_cloudfront_response_headers_policy" "security" {
       content_security_policy = join("; ", [
         "default-src 'self'",
         "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
-        "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'",
+        "style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net 'unsafe-inline'",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: blob:",
         # connect-src uses https: rather than local.api_url to avoid a dependency
@@ -84,6 +97,11 @@ resource "aws_cloudfront_origin_access_control" "frontend" {
 }
 
 # ── CloudFront distribution ───────────────────────────────────────────────────
+#
+# Security controls intentionally omitted (personal single-tenant app):
+#   WAF — adds $5-10/month minimum; attack surface does not justify the cost
+#   Access logging — adds variable S3 storage cost; CloudFront metrics suffice
+#   Failover origin — single S3 bucket is the only origin; no failover target exists
 
 resource "aws_cloudfront_distribution" "frontend" {
   enabled             = true

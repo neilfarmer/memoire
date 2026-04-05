@@ -149,3 +149,23 @@ variable "admin_user_ids" {
   type        = string
   default     = ""
 }
+
+variable "assistant_model_id" {
+  description = "Bedrock model ID for the AI assistant. Use a cross-region inference profile ID (e.g. us.amazon.nova-lite-v1:0)."
+  type        = string
+  default     = "us.amazon.nova-lite-v1:0"
+}
+
+variable "assistant_system_prompt" {
+  description = "System prompt for the AI assistant. Overrides the default prompt baked into the Lambda code."
+  type        = string
+  default     = ""
+}
+
+variable "usda_api_key" {
+  description = "USDA FoodData Central API key for nutrition lookups."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+

@@ -338,6 +338,64 @@ resource "aws_dynamodb_table" "tokens" {
   }
 }
 
+# ── Assistant conversations table ────────────────────────────────────────────
+#
+# PK: user_id  (String)
+# SK: msg_id   (String) — ISO timestamp + UUID suffix for ordering + uniqueness
+# TTL: ttl     (Number) — Unix epoch; items expire after 30 days
+
+resource "aws_dynamodb_table" "assistant_conversations" {
+  name         = "${local.name_prefix}-assistant-conversations"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "msg_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "msg_id"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
+# ── Assistant memory table ────────────────────────────────────────────────────
+#
+# PK: user_id     (String)
+# SK: memory_key  (String) — e.g. "wake_time", "prefers_morning_habits"
+
+resource "aws_dynamodb_table" "assistant_memory" {
+  name         = "${local.name_prefix}-assistant-memory"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "memory_key"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "memory_key"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
 # ── Task folders table ────────────────────────────────────────────────────────
 #
 # PK: user_id    (String)

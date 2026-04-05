@@ -1,5 +1,12 @@
 # ── Watcher Lambda ────────────────────────────────────────────────────────────
+#
 # Runs hourly via EventBridge. Scans active tasks and sends ntfy notifications.
+#
+# No DLQ configured by design: the watcher is a best-effort notification job.
+# A missed run (e.g. due to a transient error) causes a delayed notification,
+# not data loss. The next hourly invocation will re-evaluate and send any
+# outstanding notifications. A DLQ would add cost and operational overhead
+# with no meaningful reliability benefit for this use case.
 
 resource "aws_iam_role" "watcher" {
   name               = "${local.name_prefix}-watcher"

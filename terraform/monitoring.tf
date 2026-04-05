@@ -1,6 +1,11 @@
 # ── SNS topic for security alerts ─────────────────────────────────────────────
 #
 # Only created when at least one alert email is configured.
+#
+# KMS encryption is intentionally omitted: the topic publishes only CloudWatch
+# alarm state changes (no PII or secrets). A customer-managed KMS key would
+# add $1/month and require key rotation management with no meaningful security
+# benefit for this payload type.
 
 resource "aws_sns_topic" "alerts" {
   count = length(var.alert_emails) > 0 ? 1 : 0

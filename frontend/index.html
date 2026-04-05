@@ -11,55 +11,227 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #f1f5f9;
+      --bg:        #faf9f6;
       --surface:   #ffffff;
-      --border:    #e2e8f0;
-      --text:      #0f172a;
-      --muted:     #64748b;
-      --primary:   #2563eb;
-      --primary-h: #1d4ed8;
-      --accent:    #ea580c;
-      --accent-h:  #c2410c;
+      --border:    #e8e4dc;
+      --text:      #1a1612;
+      --muted:     #7d7267;
+      --primary:   #4f46e5;
+      --primary-h: #4338ca;
+      --accent:    #d97706;
+      --accent-h:  #b45309;
       --danger:    #dc2626;
       --danger-h:  #b91c1c;
-      --radius:    8px;
-      --shadow:    0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
-      --shadow-md: 0 4px 12px rgba(0,0,0,.1), 0 2px 4px rgba(0,0,0,.06);
-      --hover:     rgba(0,0,0,.04);
+      --radius:    10px;
+      --shadow:    0 1px 3px rgba(26,22,18,.07), 0 1px 2px rgba(26,22,18,.05);
+      --shadow-md: 0 4px 12px rgba(26,22,18,.1), 0 2px 4px rgba(26,22,18,.06);
+      --hover:     rgba(26,22,18,.04);
     }
 
     html[data-theme="dark"] {
-      --bg:        #0d1117;
-      --surface:   #161b22;
-      --border:    #30363d;
-      --text:      #e6edf3;
-      --muted:     #8b949e;
-      --primary:   #4493f8;
-      --primary-h: #2f81f7;
-      --accent:    #f97316;
-      --accent-h:  #ea580c;
-      --danger:    #f85149;
-      --danger-h:  #da3633;
+      --bg:        #100e0c;
+      --surface:   #1a1714;
+      --border:    #2e2924;
+      --text:      #e8e3dc;
+      --muted:     #8a8278;
+      --primary:   #818cf8;
+      --primary-h: #6366f1;
+      --accent:    #fbbf24;
+      --accent-h:  #f59e0b;
+      --danger:    #f87171;
+      --danger-h:  #ef4444;
       --shadow:    0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
       --shadow-md: 0 4px 16px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.3);
       --hover:     rgba(255,255,255,.04);
     }
 
-    html[data-theme="dark"] .badge-todo        { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
-    html[data-theme="dark"] .badge-in_progress { background: #1e3a5f; color: #93c5fd; }
-    html[data-theme="dark"] .badge-done        { background: #14532d; color: #86efac; }
-    html[data-theme="dark"] .badge-low         { background: #14532d; color: #86efac; }
-    html[data-theme="dark"] .badge-medium      { background: #451a03; color: #fcd34d; }
-    html[data-theme="dark"] .badge-high        { background: #450a0a; color: #fca5a5; }
-    html[data-theme="dark"] .error-msg         { background: #450a0a; color: #fca5a5; }
+    html[data-theme="dark"] .badge-todo        { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
+    html[data-theme="dark"] .badge-in_progress { background: rgba(129,140,248,.15); color: #a5b4fc; }
+    html[data-theme="dark"] .badge-done        { background: rgba(34,197,94,.12);   color: #86efac; }
+    html[data-theme="dark"] .badge-low         { background: rgba(34,197,94,.12);   color: #86efac; }
+    html[data-theme="dark"] .badge-medium      { background: rgba(245,158,11,.12);  color: #fde68a; }
+    html[data-theme="dark"] .badge-high        { background: rgba(248,113,113,.15); color: #fca5a5; }
+    html[data-theme="dark"] .error-msg         { background: rgba(248,113,113,.15); color: #fca5a5; }
+
+    /* ── Color themes ──────────────────────────────────────────────────────── */
+
+    html[data-color-theme="parchment"] {
+      --bg:        #f4ede0;
+      --surface:   #faf5ec;
+      --border:    #ddd0bc;
+      --text:      #2c1f14;
+      --muted:     #8c7660;
+      --primary:   #7c4b1e;
+      --primary-h: #5e3615;
+      --accent:    #b84a2b;
+      --accent-h:  #963c22;
+      --danger:    #b91c1c;
+      --danger-h:  #991b1b;
+      --hover:     rgba(44,31,20,.04);
+      --shadow:    0 1px 3px rgba(44,31,20,.07), 0 1px 2px rgba(44,31,20,.05);
+      --shadow-md: 0 4px 12px rgba(44,31,20,.1), 0 2px 4px rgba(44,31,20,.06);
+    }
+
+    html[data-color-theme="ocean"] {
+      --bg:        #f0f7ff;
+      --surface:   #ffffff;
+      --border:    #c8dff5;
+      --text:      #0c2340;
+      --muted:     #4f7096;
+      --primary:   #0369a1;
+      --primary-h: #025584;
+      --accent:    #0891b2;
+      --accent-h:  #0e7490;
+      --danger:    #dc2626;
+      --danger-h:  #b91c1c;
+      --hover:     rgba(3,105,161,.04);
+      --shadow:    0 1px 3px rgba(12,35,64,.07), 0 1px 2px rgba(12,35,64,.05);
+      --shadow-md: 0 4px 12px rgba(12,35,64,.1), 0 2px 4px rgba(12,35,64,.06);
+    }
+
+    html[data-color-theme="midnight"] {
+      --bg:        #100e0c;
+      --surface:   #1a1714;
+      --border:    #2e2924;
+      --text:      #e8e3dc;
+      --muted:     #8a8278;
+      --primary:   #818cf8;
+      --primary-h: #6366f1;
+      --accent:    #fbbf24;
+      --accent-h:  #f59e0b;
+      --danger:    #f87171;
+      --danger-h:  #ef4444;
+      --shadow:    0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
+      --shadow-md: 0 4px 16px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.3);
+      --hover:     rgba(255,255,255,.04);
+    }
+
+    html[data-color-theme="obsidian"] {
+      --bg:        #0a0a0b;
+      --surface:   #141415;
+      --border:    #2a2a2d;
+      --text:      #e8e6e3;
+      --muted:     #6b6b72;
+      --primary:   #dc2626;
+      --primary-h: #b91c1c;
+      --accent:    #ca8a04;
+      --accent-h:  #a16207;
+      --danger:    #ef4444;
+      --danger-h:  #dc2626;
+      --shadow:    0 1px 3px rgba(0,0,0,.6), 0 1px 2px rgba(0,0,0,.5);
+      --shadow-md: 0 4px 20px rgba(0,0,0,.8), 0 2px 6px rgba(0,0,0,.6);
+      --hover:     rgba(255,255,255,.04);
+    }
+
+    html[data-color-theme="void"] {
+      --bg:        #030305;
+      --surface:   #0d0d12;
+      --border:    #1e1e2e;
+      --text:      #f0edff;
+      --muted:     #6b6880;
+      --primary:   #9333ea;
+      --primary-h: #7c22c5;
+      --accent:    #ec4899;
+      --accent-h:  #db2777;
+      --danger:    #f43f5e;
+      --danger-h:  #e11d48;
+      --shadow:    0 1px 3px rgba(0,0,0,.8), 0 1px 2px rgba(0,0,0,.7);
+      --shadow-md: 0 4px 24px rgba(147,51,234,.25), 0 2px 8px rgba(0,0,0,.6);
+      --hover:     rgba(147,51,234,.07);
+    }
+
+    html[data-color-theme="bloodmoon"] {
+      --bg:        #0d0505;
+      --surface:   #160a0a;
+      --border:    #2d1515;
+      --text:      #f5e6e6;
+      --muted:     #8a6060;
+      --primary:   #cc1515;
+      --primary-h: #aa0f0f;
+      --accent:    #ff6b35;
+      --accent-h:  #e85520;
+      --danger:    #ff4040;
+      --danger-h:  #e03030;
+      --shadow:    0 1px 3px rgba(0,0,0,.7), 0 1px 2px rgba(0,0,0,.6);
+      --shadow-md: 0 4px 24px rgba(180,0,0,.3), 0 2px 8px rgba(0,0,0,.6);
+      --hover:     rgba(204,21,21,.07);
+    }
+
+    html[data-color-theme="terminal"] {
+      --bg:        #000000;
+      --surface:   #060a06;
+      --border:    #0d1f0d;
+      --text:      #33ff33;
+      --muted:     #1c7a1c;
+      --primary:   #00ff41;
+      --primary-h: #00dd38;
+      --accent:    #7fff00;
+      --accent-h:  #6de000;
+      --danger:    #ff3333;
+      --danger-h:  #cc0000;
+      --shadow:    0 1px 3px rgba(0,0,0,.95);
+      --shadow-md: 0 4px 20px rgba(0,255,65,.1), 0 2px 8px rgba(0,0,0,.8);
+      --hover:     rgba(0,255,65,.06);
+    }
+
+    html[data-color-theme="abyss"] {
+      --bg:        #020c1b;
+      --surface:   #0a1628;
+      --border:    #172a45;
+      --text:      #ccd6f6;
+      --muted:     #4a6fa5;
+      --primary:   #64ffda;
+      --primary-h: #4ae8c0;
+      --accent:    #00b4d8;
+      --accent-h:  #0096c7;
+      --danger:    #ff6b6b;
+      --danger-h:  #ee5253;
+      --shadow:    0 1px 3px rgba(0,0,0,.7), 0 1px 2px rgba(0,0,0,.6);
+      --shadow-md: 0 4px 24px rgba(0,0,0,.6), 0 2px 8px rgba(100,255,218,.05);
+      --hover:     rgba(100,255,218,.05);
+    }
+
+    html[data-color-theme="inferno"] {
+      --bg:        #0d0604;
+      --surface:   #160c06;
+      --border:    #2d1a0a;
+      --text:      #f5e6d3;
+      --muted:     #8a6040;
+      --primary:   #f97316;
+      --primary-h: #ea6a0c;
+      --accent:    #dc2626;
+      --accent-h:  #b91c1c;
+      --danger:    #ff4444;
+      --danger-h:  #ee3333;
+      --shadow:    0 1px 3px rgba(0,0,0,.7), 0 1px 2px rgba(0,0,0,.6);
+      --shadow-md: 0 4px 24px rgba(200,60,0,.25), 0 2px 8px rgba(0,0,0,.6);
+      --hover:     rgba(249,115,22,.07);
+    }
+
+    html[data-color-theme="noir"] {
+      --bg:        #080808;
+      --surface:   #111111;
+      --border:    #222222;
+      --text:      #e8e8e8;
+      --muted:     #606060;
+      --primary:   #eeeeee;
+      --primary-h: #cccccc;
+      --accent:    #888888;
+      --accent-h:  #aaaaaa;
+      --danger:    #cc3333;
+      --danger-h:  #aa2222;
+      --shadow:    0 1px 3px rgba(0,0,0,.8), 0 1px 2px rgba(0,0,0,.7);
+      --shadow-md: 0 4px 20px rgba(0,0,0,.9), 0 2px 6px rgba(0,0,0,.8);
+      --hover:     rgba(255,255,255,.04);
+    }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: 'Sora', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: var(--bg);
       color: var(--text);
       font-size: 15px;
@@ -76,20 +248,38 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 60% at 20% 20%, rgba(79,70,229,.1) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 75%, rgba(217,119,6,.08) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 40% at 55% 95%, rgba(79,70,229,.05) 0%, transparent 50%);
+    }
+    html[data-theme="dark"] #login-view {
+      background-image:
+        radial-gradient(ellipse 80% 60% at 20% 20%, rgba(129,140,248,.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 75%, rgba(251,191,36,.06) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 40% at 55% 95%, rgba(129,140,248,.04) 0%, transparent 50%);
     }
 
     .login-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(26,22,18,.1), 0 2px 8px rgba(26,22,18,.06);
+      padding: 48px 44px;
       width: 100%;
-      max-width: 380px;
+      max-width: 400px;
     }
 
-    .login-card h1 { font-size: 22px; margin-bottom: 4px; }
-    .login-card p  { color: var(--muted); margin-bottom: 28px; font-size: 14px; }
+    .login-card h1 {
+      font-family: 'Fraunces', serif;
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+      line-height: 1.05;
+    }
+    .login-card p  { color: var(--muted); margin-bottom: 32px; font-size: 14px; }
 
     /* ── Forms ── */
     label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 5px; }
@@ -108,7 +298,7 @@
     input:focus, select:focus, textarea:focus {
       outline: none;
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+      box-shadow: 0 0 0 3px rgba(79,70,229,.12);
     }
     input[type="checkbox"],
     input[type="radio"] { width: auto; padding: 0; border: none; border-radius: 0; box-shadow: none; }
@@ -163,8 +353,8 @@
       z-index: 10;
     }
 
-    .logo { font-size: 18px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; letter-spacing: -0.3px; }
-    .logo img { width: 28px; height: 28px; display: block; filter: drop-shadow(0 0 8px rgba(249,115,22,.5)); }
+    .logo { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; letter-spacing: -0.2px; }
+    .logo img { width: 28px; height: 28px; display: block; filter: drop-shadow(0 0 8px rgba(217,119,6,.5)); }
 
     /* ── Sidebar toggle ── */
     .sb-toggle {
@@ -323,11 +513,16 @@
       flex: 1;
       min-width: 0;
       overflow-y: auto;
-      background: var(--bg);
+      background-color: var(--bg);
+      background-image: radial-gradient(circle, rgba(26,22,18,.055) 1px, transparent 1px);
+      background-size: 22px 22px;
+    }
+    html[data-theme="dark"] #main-content {
+      background-image: radial-gradient(circle, rgba(232,227,220,.04) 1px, transparent 1px);
     }
 
     /* ── Main content ── */
-    main { max-width: 760px; margin: 0 auto; padding: 32px 24px; }
+    main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
 
     .toolbar {
       display: flex;
@@ -356,6 +551,7 @@
       color: var(--muted);
       transition: all .15s;
     }
+    .filter-btn:hover:not(.active) { background: var(--hover); color: var(--text); border-color: var(--muted); }
     .filter-btn.active {
       background: var(--primary);
       border-color: var(--primary);
@@ -375,7 +571,7 @@
 
     .pomodoro-widget.is-focus {
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(37,99,235,.08), var(--shadow);
+      box-shadow: 0 0 0 3px rgba(79,70,229,.08), var(--shadow);
     }
 
     .pomodoro-widget.is-break {
@@ -515,7 +711,7 @@
 
     .task-card.is-active-focus {
       border-color: var(--primary);
-      box-shadow: 0 0 0 2px rgba(37,99,235,.15), var(--shadow);
+      box-shadow: 0 0 0 2px rgba(79,70,229,.15), var(--shadow);
     }
 
     /* ── Task cards ── */
@@ -535,8 +731,8 @@
     }
     .task-card:hover {
       border-color: var(--primary);
-      box-shadow: var(--shadow-md);
-      transform: translateY(-1px);
+      box-shadow: var(--shadow-md), 0 0 0 3px rgba(79,70,229,.06);
+      transform: translateY(-2px);
     }
 
     .task-card-body { flex: 1; min-width: 0; }
@@ -572,8 +768,8 @@
       letter-spacing: .3px;
     }
 
-    .badge-todo        { background: #f1f5f9; color: #475569; }
-    .badge-in_progress { background: #dbeafe; color: #1d4ed8; }
+    .badge-todo        { background: #f5f3ef; color: #6b5e52; }
+    .badge-in_progress { background: #ede9fe; color: #4338ca; }
     .badge-done        { background: #dcfce7; color: #15803d; }
 
     .status-select {
@@ -588,13 +784,13 @@
       appearance: auto;
       width: fit-content;
     }
-    .status-select:focus { outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
-    .status-select.badge-todo        { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
-    .status-select.badge-in_progress { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+    .status-select:focus { outline: none; box-shadow: 0 0 0 3px rgba(79,70,229,.15); }
+    .status-select.badge-todo        { background: #f5f3ef; color: #6b5e52; border-color: #d9d3c9; }
+    .status-select.badge-in_progress { background: #ede9fe; color: #4338ca; border-color: #a5b4fc; }
     .status-select.badge-done        { background: #dcfce7; color: #15803d; border-color: #86efac; }
-    html[data-theme="dark"] .status-select.badge-todo        { background: #1e293b; color: #94a3b8; border-color: #334155; }
-    html[data-theme="dark"] .status-select.badge-in_progress { background: #1e3a5f; color: #93c5fd; border-color: #1d4ed8; }
-    html[data-theme="dark"] .status-select.badge-done        { background: #14532d; color: #86efac; border-color: #166534; }
+    html[data-theme="dark"] .status-select.badge-todo        { background: var(--surface); color: var(--muted); border-color: var(--border); }
+    html[data-theme="dark"] .status-select.badge-in_progress { background: rgba(129,140,248,.15); color: #a5b4fc; border-color: rgba(129,140,248,.3); }
+    html[data-theme="dark"] .status-select.badge-done        { background: rgba(34,197,94,.12);   color: #86efac; border-color: rgba(34,197,94,.3); }
 
     .badge-low    { background: #dcfce7; color: #15803d; }
     .badge-medium { background: #fef3c7; color: #b45309; }
@@ -607,6 +803,9 @@
     .task-card.is-overdue {
       border-left: 3px solid var(--danger);
       background: linear-gradient(to right, rgba(220,38,38,.04), var(--surface));
+    }
+    .task-card.is-overdue:hover {
+      box-shadow: var(--shadow-md), 0 0 0 3px rgba(220,38,38,.08);
     }
     .task-card.is-due-today {
       border-left: 3px solid #f59e0b;
@@ -642,7 +841,7 @@
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(15,23,42,.4);
+      background: rgba(26,22,18,.45);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -726,10 +925,11 @@
     .settings-desc  { font-size: 13px; color: var(--muted); margin-top: 2px; }
 
     html[data-theme="dark"] .task-card {
-      background: linear-gradient(to bottom, #1c2230, var(--surface));
+      background: linear-gradient(to bottom, var(--bg), var(--surface));
     }
     html[data-theme="dark"] .task-card:hover {
-      background: linear-gradient(to bottom, #1f2638, var(--surface));
+      background: linear-gradient(to bottom, var(--bg), var(--surface));
+      box-shadow: var(--shadow-md), 0 0 0 3px rgba(129,140,248,.08);
     }
 
     /* ── Habit cards ── */
@@ -741,14 +941,14 @@
     }
     .goal-progress-track {
       flex: 1;
-      height: 5px;
+      height: 6px;
       background: var(--border);
       border-radius: 99px;
       overflow: hidden;
     }
     .goal-progress-fill {
       height: 100%;
-      background: var(--primary);
+      background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary) 65%, var(--accent)));
       border-radius: 99px;
     }
     .goal-progress-pct {
@@ -785,7 +985,7 @@
     }
     .habits-progress-fill {
       height: 100%;
-      background: var(--primary);
+      background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary) 65%, var(--accent)));
       border-radius: 99px;
       transition: width 0.3s ease;
     }
@@ -800,11 +1000,11 @@
       transition: box-shadow .2s, transform .15s;
     }
     .habit-card:hover {
-      box-shadow: var(--shadow-md);
-      transform: translateY(-1px);
+      box-shadow: var(--shadow-md), 0 0 0 3px rgba(79,70,229,.06);
+      transform: translateY(-2px);
     }
     html[data-theme="dark"] .habit-card {
-      background: linear-gradient(to bottom, #1c2230, var(--surface));
+      background: linear-gradient(to bottom, var(--bg), var(--surface));
     }
 
     .habit-card-main {
@@ -893,9 +1093,9 @@
       margin-top: 6px;
     }
     .hm-cell {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
+      width: 13px;
+      height: 13px;
+      border-radius: 3px;
       background: var(--border);
       cursor: default;
       position: relative;
@@ -955,23 +1155,33 @@
     }
 
     /* Inline status messages */
-    .msg-ok  { color: #15803d; }
+    .msg-ok  { color: #16a34a; }
     .msg-err { color: var(--danger); }
 
     /* ── Home page ── */
     .home-greeting {
-      margin-bottom: 8px;
-      padding-bottom: 24px;
-      border-bottom: 1px solid var(--border);
+      padding-bottom: 28px;
       margin-bottom: 28px;
+      position: relative;
+    }
+    .home-greeting::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 40px;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 2px;
     }
 
     .home-greeting-name {
-      font-size: 30px;
+      font-family: 'Fraunces', serif;
+      font-size: 34px;
       font-weight: 700;
       color: var(--text);
       letter-spacing: -0.5px;
-      line-height: 1.2;
+      line-height: 1.15;
     }
 
     .home-greeting-date {
@@ -982,7 +1192,7 @@
 
     .home-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
       gap: 16px;
       margin-top: 8px;
     }
@@ -1000,7 +1210,7 @@
       transform: translateY(-1px);
     }
     html[data-theme="dark"] .home-widget {
-      background: linear-gradient(to bottom, #1c2230, var(--surface));
+      background: linear-gradient(to bottom, var(--bg), var(--surface));
     }
 
     .home-widget-title {
@@ -1220,7 +1430,7 @@
       width: 260px;
       transition: border-color .15s, color .15s, box-shadow .15s;
     }
-    .search-btn:hover { border-color: var(--primary); color: var(--text); box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
+    .search-btn:hover { border-color: var(--primary); color: var(--text); box-shadow: 0 0 0 3px rgba(79,70,229,.08); }
     .search-btn svg { flex-shrink: 0; }
     .search-btn-hint {
       margin-left: auto;
@@ -1304,10 +1514,10 @@
       margin-right: 6px;
       vertical-align: middle;
     }
-    .stb-task    { background: #dbeafe; color: #1d4ed8; }
+    .stb-task    { background: #ede9fe; color: #4338ca; }
     .stb-note    { background: #dcfce7; color: #166534; }
     .stb-journal { background: #fce7f3; color: #9d174d; }
-    [data-theme="dark"] .stb-task    { background: #1e3a5f; color: #93c5fd; }
+    [data-theme="dark"] .stb-task    { background: #1e1b4b; color: #a5b4fc; }
     [data-theme="dark"] .stb-note    { background: #14532d; color: #86efac; }
     [data-theme="dark"] .stb-journal { background: #500724; color: #f9a8d4; }
     #search-empty { padding: 24px 16px; text-align: center; color: var(--muted); font-size: 14px; }
@@ -1333,7 +1543,7 @@
       color: var(--text);
       line-height: 1;
     }
-    .streak-fire { font-size: 18px; }
+    .streak-fire { display: inline-flex; align-items: center; color: var(--accent); }
 
     /* ── Reference autocomplete dropdown ── */
     .ref-dropdown {
@@ -1370,9 +1580,9 @@
       flex-shrink: 0;
       text-transform: uppercase;
     }
-    .ref-badge-note { background: #dbeafe; color: #1d4ed8; }
+    .ref-badge-note { background: #ede9fe; color: #4338ca; }
     .ref-badge-task { background: #dcfce7; color: #15803d; }
-    html[data-theme="dark"] .ref-badge-note { background: #1e3a5f; color: #93c5fd; }
+    html[data-theme="dark"] .ref-badge-note { background: #1e1b4b; color: #a5b4fc; }
     html[data-theme="dark"] .ref-badge-task { background: #14532d; color: #86efac; }
 
     .ref-item-label { flex: 1; min-width: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1589,13 +1799,13 @@
       line-height: 1.6;
       white-space: nowrap;
     }
-    .tag-pill-0 { background: #dbeafe; color: #1d4ed8; }
+    .tag-pill-0 { background: #ede9fe; color: #4338ca; }
     .tag-pill-1 { background: #dcfce7; color: #166534; }
     .tag-pill-2 { background: #fef9c3; color: #854d0e; }
     .tag-pill-3 { background: #fce7f3; color: #9d174d; }
     .tag-pill-4 { background: #ede9fe; color: #5b21b6; }
     .tag-pill-5 { background: #ffedd5; color: #9a3412; }
-    [data-theme="dark"] .tag-pill-0 { background: #1e3a5f; color: #93c5fd; }
+    [data-theme="dark"] .tag-pill-0 { background: #1e1b4b; color: #a5b4fc; }
     [data-theme="dark"] .tag-pill-1 { background: #14532d; color: #86efac; }
     [data-theme="dark"] .tag-pill-2 { background: #422006; color: #fde047; }
     [data-theme="dark"] .tag-pill-3 { background: #500724; color: #f9a8d4; }
@@ -1697,7 +1907,7 @@
       border-radius: 4px;
       background: var(--surface);
       color: var(--text);
-      box-shadow: 0 0 0 2px rgba(37,99,235,.12);
+      box-shadow: 0 0 0 2px rgba(79,70,229,.12);
     }
     .tree-inline-input:focus { outline: none; }
 
@@ -2257,7 +2467,7 @@
     .cal-dot-nutrition { background: #f97316; }
 
     .cal-day.cal-selected {
-      background: rgba(99,102,241,0.12);
+      background: rgba(79,70,229,.12);
       outline: 2px solid var(--primary);
       outline-offset: -2px;
     }
@@ -2482,8 +2692,8 @@
     .btn:active:not(:disabled) { transform: scale(0.97); }
 
     .btn-primary { box-shadow: 0 1px 2px rgba(0,0,0,.15); }
-    .btn-primary:hover:not(:disabled) { box-shadow: 0 2px 6px rgba(37,99,235,.3); }
-    html[data-theme="dark"] .btn-primary:hover:not(:disabled) { box-shadow: 0 2px 6px rgba(68,147,248,.3); }
+    .btn-primary:hover:not(:disabled) { box-shadow: 0 2px 6px rgba(79,70,229,.3); }
+    html[data-theme="dark"] .btn-primary:hover:not(:disabled) { box-shadow: 0 2px 6px rgba(129,140,248,.3); }
 
     .filter-btn { transition: all .15s; }
     .filter-btn:active { transform: scale(0.96); }
@@ -2503,15 +2713,22 @@
       color: var(--text);
     }
 
+    /* ── Sidebar dark mode depth ── */
+    html[data-theme="dark"] #sidebar { background: var(--bg); }
+
+    /* ── Pomodoro reveal animation ── */
+    @keyframes pomodoroReveal {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .pomodoro-widget:not(.hidden) { animation: pomodoroReveal .2s ease; }
+
     /* ── Journal streak numbers — amber ── */
     .streak-num { color: var(--accent); }
 
     /* ── Settings card lift ── */
     .settings-section {
       transition: box-shadow .15s;
-    }
-    .settings-section:hover {
-      box-shadow: var(--shadow-md);
     }
 
     /* ── Search result hover ── */
@@ -2521,6 +2738,271 @@
     .modal {
       border: 1px solid var(--border);
     }
+
+    /* ── AI Pal chat widget ── */
+    #pal-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 900;
+      font-size: 22px;
+      transition: background 0.15s, transform 0.15s;
+    }
+    #pal-btn:hover { background: var(--primary-h); transform: scale(1.05); }
+    #pal-window {
+      position: fixed;
+      bottom: 84px;
+      right: 24px;
+      width: 340px;
+      height: min(560px, 65vh);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+      display: flex;
+      flex-direction: column;
+      z-index: 900;
+    }
+    #pal-window.hidden { display: none; }
+    #pal-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    #pal-header span { flex: 1; }
+    #pal-close, #pal-clear, #pal-usage-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      line-height: 1;
+      padding: 2px 4px;
+      display: flex;
+      align-items: center;
+    }
+    #pal-close:hover, #pal-clear:hover, #pal-usage-btn:hover { color: var(--text); }
+    #pal-usage-btn.active { color: var(--primary); }
+    #pal-close { font-size: 18px; }
+    #pal-usage-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    #pal-usage-panel.hidden { display: none; }
+    .pal-usage-model {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .pal-usage-model-name {
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .pal-usage-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    .pal-usage-stat-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 2px;
+    }
+    .pal-usage-stat-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .pal-usage-cost {
+      color: var(--primary);
+    }
+    .pal-usage-empty {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      margin-top: 32px;
+    }
+    #pal-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border-bottom-left-radius: 14px;
+      border-bottom-right-radius: 14px;
+    }
+    .pal-msg {
+      max-width: 85%;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .pal-msg-user {
+      background: var(--primary);
+      color: #fff;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+    .pal-msg-assistant {
+      background: var(--bg);
+      color: var(--text);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+    .pal-msg-typing {
+      background: var(--bg);
+      color: var(--muted);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+      font-style: italic;
+    }
+    #pal-form {
+      padding: 10px 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+    }
+    #pal-input {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+      background: var(--bg);
+      color: var(--text);
+      resize: none;
+      font-family: inherit;
+      line-height: 1.4;
+    }
+    #pal-input:focus { outline: none; border-color: var(--primary); }
+    #pal-send {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 12px;
+      cursor: pointer;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    #pal-send:hover { background: var(--primary-h); }
+    #pal-send:disabled { opacity: 0.5; cursor: not-allowed; }
+    #pal-mic {
+      background: transparent;
+      color: var(--text-muted, #888);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
+      cursor: pointer;
+      font-size: 16px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    #pal-mic:hover { border-color: var(--primary); color: var(--primary); }
+    #pal-mic.recording {
+      color: #e03;
+      border-color: #e03;
+      background: rgba(238,0,51,0.08);
+      animation: pal-mic-pulse 1s ease-in-out infinite;
+    }
+    #pal-mic:disabled { opacity: 0.4; cursor: not-allowed; }
+    @keyframes pal-mic-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .pal-link-btn {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 4px 10px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .pal-link-btn:hover { background: var(--primary-h); }
+    #pal-model-bar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    #pal-model-bar span {
+      font-size: 10px;
+      color: var(--muted);
+      margin-right: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .pal-model-btn {
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 4px 6px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      position: relative;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .pal-model-btn:hover { color: var(--text); }
+    .pal-model-btn.active {
+      color: var(--primary);
+      border-color: var(--primary);
+      background: color-mix(in srgb, var(--primary) 10%, transparent);
+    }
+    .pal-model-btn .pal-tooltip {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 9px;
+      font-size: 11px;
+      white-space: nowrap;
+      color: var(--text);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      pointer-events: none;
+      z-index: 10;
+    }
+    .pal-model-btn:hover .pal-tooltip { display: block; }
   </style>
 </head>
 <body>
@@ -2619,7 +3101,7 @@
               <button class="btn btn-secondary btn-sm btn-full" id="journal-today-btn" onclick="event.stopPropagation()">Today's entry</button>
             </div>
             <div class="sb-sub-label">Health</div>
-            <button class="sb-sub-link" data-page="health" onclick="pages.show('health')">Exercise Log</button>
+            <button class="sb-sub-link" data-page="health" onclick="pages.show('health')">Exercise</button>
             <button class="sb-sub-link" data-page="nutrition" onclick="pages.show('nutrition')">Nutrition</button>
           </div>
         </div>
@@ -2802,7 +3284,7 @@
     <!-- Left: calendar + log list -->
     <div class="health-left">
       <div class="health-left-header">
-        <h2>Exercise Log</h2>
+        <h2>Exercise</h2>
         <button class="btn btn-primary btn-sm" id="health-today-btn">Log today</button>
       </div>
       <div class="health-list-scroll">
@@ -2913,13 +3395,30 @@
           <button class="btn btn-secondary" id="display-name-save-btn">Save</button>
         </div>
       </div>
+      <div class="settings-row">
+        <div style="flex:1;">
+          <div class="settings-label">AI Pal name</div>
+          <div class="settings-desc">The name shown in the AI assistant header (default: AI Pal)</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="pal-name-input" placeholder="AI Pal" style="width:160px;" maxlength="40" />
+          <button class="btn btn-secondary" id="pal-name-save-btn">Save</button>
+        </div>
+      </div>
     </div>
     <div class="settings-section">
       <div class="settings-section-title">Appearance</div>
       <div class="settings-row">
         <div>
+          <div class="settings-label">Color theme</div>
+          <div class="settings-desc">Choose a color palette for the interface</div>
+        </div>
+        <select id="color-theme-select" style="min-width:160px;"></select>
+      </div>
+      <div class="settings-row" id="dark-mode-row">
+        <div>
           <div class="settings-label">Dark mode</div>
-          <div class="settings-desc">Switch to a darker color scheme</div>
+          <div class="settings-desc" id="dark-mode-desc">Switch to a darker color scheme</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="dark-mode-toggle" />
@@ -3262,7 +3761,8 @@
     _saveUserInfo(info) { localStorage.setItem("memoire_user", JSON.stringify(info)); },
     _clearUserInfo()    { localStorage.removeItem("memoire_user"); },
 
-    isLoggedIn()  { return !!this.getUserInfo(); },
+    isExpired()   { const info = this.getUserInfo(); return !!info && !!info.exp && (Date.now() / 1000) > info.exp; },
+    isLoggedIn()  { return !!this.getUserInfo() && !this.isExpired(); },
     getEmail()    { return this.getUserInfo()?.email || null; },
     // Returns the stored user info object (email, sub, exp) in place of the old
     // full JWT payload — callers should only use email, sub, and exp fields.
@@ -3913,6 +4413,9 @@
       }
       if (auth.isLoggedIn()) {
         await app.showApp();
+      } else if (auth.isExpired()) {
+        // Session expired — redirect through full logout to clear the cookie
+        app.logout();
       } else {
         app.showLogin();
       }
@@ -3921,11 +4424,13 @@
     showLogin() {
       $("login-view").classList.remove("hidden");
       $("app-view").classList.add("hidden");
+      document.dispatchEvent(new Event("pal:hide"));
     },
 
     async showApp() {
       $("login-view").classList.add("hidden");
       $("app-view").classList.remove("hidden");
+      document.dispatchEvent(new Event("pal:show"));
       await app.loadSettings();
       app.loadTasks();   // preload so [[task: references work from any page
       taskFolders.load(); // preload sidebar folder list
@@ -3946,6 +4451,8 @@
           theme.set(settings.dark_mode ? "dark" : "light");
           if (pages.current === "home") renderHomeDashboard();
           $("display-name-input").value = settings.display_name || "";
+          $("pal-name-input").value = settings.pal_name || "";
+          applyPalName(settings.pal_name || "");
           $("ntfy-url").value = settings.ntfy_url || "";
           const secs = settings.autosave_seconds ?? 300;
           $("autosave-select").value = String(secs);
@@ -4105,6 +4612,27 @@
     }
   });
 
+  function applyPalName(name) {
+    const label = name.trim() || "AI Pal";
+    $("pal-header-name").textContent = label;
+  }
+
+  $("pal-name-save-btn").addEventListener("click", async () => {
+    const name = $("pal-name-input").value.trim();
+    $("pal-name-save-btn").disabled = true;
+    try {
+      const updated = await api.updateSettings({ pal_name: name });
+      state.settings = { ...state.settings, ...updated };
+      applyPalName(name);
+      $("pal-name-save-btn").textContent = "Saved";
+      setTimeout(() => { $("pal-name-save-btn").textContent = "Save"; }, 1500);
+    } catch (e) {
+      console.error("Failed to save pal name:", e);
+    } finally {
+      $("pal-name-save-btn").disabled = false;
+    }
+  });
+
   $("ntfy-test-btn").addEventListener("click", async () => {
     $("ntfy-test-btn").disabled = true;
     $("ntfy-test-btn").textContent = "Sending...";
@@ -4247,8 +4775,11 @@
     get() { return localStorage.getItem("memoire_theme") || "light"; },
     set(t) {
       localStorage.setItem("memoire_theme", t);
-      document.documentElement.dataset.theme = t;
-      $("dark-mode-toggle").checked = (t === "dark");
+      const ct = localStorage.getItem("memoire_color_theme") || "default";
+      if (ct === "default") {
+        document.documentElement.dataset.theme = t;
+      }
+      $("dark-mode-toggle").checked = (document.documentElement.dataset.theme === "dark");
     },
     async toggle() {
       const next = theme.get() === "dark" ? "light" : "dark";
@@ -4262,6 +4793,80 @@
   };
 
   $("dark-mode-toggle").addEventListener("change", () => theme.toggle());
+
+  // ── Color themes ─────────────────────────────────────────────────────────────
+
+  const colorTheme = {
+    THEMES: [
+      { id: "default",   label: "Default",    base: "auto",  desc: "Warm cream, indigo and amber" },
+      { id: "parchment", label: "Parchment",  base: "light", desc: "Antiquarian warmth" },
+      { id: "ocean",     label: "Ocean",      base: "light", desc: "Cool coastal blues" },
+      { id: "midnight",  label: "Midnight",   base: "dark",  desc: "Deep warm charcoal" },
+      { id: "obsidian",  label: "Obsidian",   base: "dark",  desc: "Black glass, crimson edge" },
+      { id: "void",      label: "Void",       base: "dark",  desc: "Electric violet abyss" },
+      { id: "bloodmoon", label: "Blood Moon", base: "dark",  desc: "Crimson dark ritual" },
+      { id: "terminal",  label: "Terminal",   base: "dark",  desc: "Phosphor green on black" },
+      { id: "abyss",     label: "Abyss",      base: "dark",  desc: "Deep ocean midnight" },
+      { id: "inferno",   label: "Inferno",    base: "dark",  desc: "Molten orange, ember dark" },
+      { id: "noir",      label: "Noir",       base: "dark",  desc: "Zero color, pure shadow" },
+    ],
+
+    get() {
+      return localStorage.getItem("memoire_color_theme") || "default";
+    },
+
+    set(id) {
+      const t = colorTheme.THEMES.find(th => th.id === id) || colorTheme.THEMES[0];
+      localStorage.setItem("memoire_color_theme", id);
+      const html = document.documentElement;
+      html.dataset.colorTheme = id;
+      if (t.base !== "auto") {
+        html.dataset.theme = t.base;
+      } else {
+        html.dataset.theme = localStorage.getItem("memoire_theme") || "light";
+      }
+      $("dark-mode-toggle").checked = (html.dataset.theme === "dark");
+      const row = $("dark-mode-row");
+      if (row) {
+        const isAuto = t.base === "auto";
+        row.style.opacity = isAuto ? "1" : "0.45";
+        row.querySelector("label").style.pointerEvents = isAuto ? "" : "none";
+        const desc = $("dark-mode-desc");
+        if (desc) desc.textContent = isAuto ? "Switch to a darker color scheme" : "Controlled by the selected color theme";
+      }
+      const select = $("color-theme-select");
+      if (select && select.value !== id) select.value = id;
+    },
+
+    init() {
+      colorTheme.populateSelect();
+      colorTheme.set(colorTheme.get());
+    },
+
+    populateSelect() {
+      const select = $("color-theme-select");
+      if (!select) return;
+      select.innerHTML = "";
+      const defOpt = document.createElement("option");
+      defOpt.value = "default";
+      defOpt.textContent = "Default";
+      select.appendChild(defOpt);
+      const lightGroup = document.createElement("optgroup");
+      lightGroup.label = "Light";
+      const darkGroup = document.createElement("optgroup");
+      darkGroup.label = "Dark";
+      colorTheme.THEMES.filter(t => t.id !== "default").forEach(t => {
+        const opt = document.createElement("option");
+        opt.value = t.id;
+        opt.textContent = t.label;
+        (t.base === "light" ? lightGroup : darkGroup).appendChild(opt);
+      });
+      select.appendChild(lightGroup);
+      select.appendChild(darkGroup);
+    },
+  };
+
+  $("color-theme-select").addEventListener("change", e => colorTheme.set(e.target.value));
 
   // ── Notes ─────────────────────────────────────────────────────────────────────
 
@@ -6777,12 +7382,13 @@
       showLoader("admin-loader");
       $("admin-grid").innerHTML = "";
       try {
-        const [costs, stats] = await Promise.all([
+        const [costs, stats, usage] = await Promise.all([
           api.call("GET", "/home/costs").catch(() => null),
           api.call("GET", "/admin/stats").catch(() => null),
+          api.call("GET", "/assistant/usage").catch(() => null),
         ]);
         admin.loaded = true;
-        admin.render(costs, stats);
+        admin.render(costs, stats, usage);
       } catch (e) {
         $("admin-grid").innerHTML = `<div class="admin-card"><p style="color:var(--muted);font-size:14px;">Failed to load admin data.</p></div>`;
         console.error("Failed to load admin data:", e);
@@ -6791,7 +7397,7 @@
       }
     },
 
-    render(costs, stats) {
+    render(costs, stats, usage) {
       const fmtMoney = n => !n && n !== 0 ? "—" : n < 0.005 ? "$0.00" : n < 1 ? `$${n.toFixed(3)}` : `$${n.toFixed(2)}`;
       const fmtBytes = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b/1024).toFixed(1)} KB` : `${(b/1048576).toFixed(1)} MB`;
 
@@ -6855,6 +7461,105 @@
             <div class="admin-card-title">Lambda Invocations (7d)</div>
             <div class="admin-stat-row"><span style="color:var(--muted);">Total</span><span class="admin-stat-value">${total.toLocaleString()}</span></div>
             ${stats.lambda.slice(-4).map(p => `<div class="admin-stat-row"><span style="color:var(--muted);">${p.date.slice(5)}</span><span class="admin-stat-value">${p.count}</span></div>`).join("")}
+          </div>`;
+      }
+
+      // Bedrock / AI usage card — per-model breakdown
+      if (stats?.bedrock) {
+        const b        = stats.bedrock;
+        const lam      = b.lambda || {};
+        const models   = b.models || [];
+        const fmtTok   = n => n == null ? "—" : n >= 1000000 ? `${(n/1000000).toFixed(2)}M` : n >= 1000 ? `${(n/1000).toFixed(1)}K` : String(n);
+        const fmtCost  = n => n == null ? "—" : n < 0.001 ? "<$0.001" : `$${n.toFixed(4)}`;
+        const fmtMs    = n => n == null ? "—" : `${n.toLocaleString()} ms`;
+        const fmtSec   = n => n == null ? "—" : `${n}s`;
+        const fmtPct   = n => n == null ? "—" : `${n}%`;
+
+        const modelRows = models.map(m => `
+          <tr>
+            <td style="padding:8px 0;font-weight:600;">${escHtml(m.label || m.model_id)}</td>
+            <td style="padding:8px 12px;text-align:right;">${fmtTok(m.input_tokens_7d)}</td>
+            <td style="padding:8px 12px;text-align:right;">${fmtTok(m.output_tokens_7d)}</td>
+            <td style="padding:8px 0;text-align:right;color:var(--primary);font-weight:600;">${fmtCost(m.estimated_cost_7d)}</td>
+            <td style="padding:8px 12px 8px 24px;text-align:right;color:var(--muted);">${fmtTok(m.input_tokens_30d)}</td>
+            <td style="padding:8px 12px;text-align:right;color:var(--muted);">${fmtTok(m.output_tokens_30d)}</td>
+            <td style="padding:8px 0;text-align:right;color:var(--muted);">${fmtCost(m.estimated_cost_30d)}</td>
+          </tr>`).join("");
+
+        html += `
+          <div class="admin-card" style="grid-column: span 2;">
+            <div class="admin-card-title">AI Pal — Bedrock Usage</div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead>
+                <tr style="font-size:11px;color:var(--muted);">
+                  <th style="text-align:left;padding-bottom:8px;border-bottom:1px solid var(--border);">Model</th>
+                  <th style="text-align:right;padding-bottom:8px;border-bottom:1px solid var(--border);padding-right:12px;">In (7d)</th>
+                  <th style="text-align:right;padding-bottom:8px;border-bottom:1px solid var(--border);padding-right:12px;">Out (7d)</th>
+                  <th style="text-align:right;padding-bottom:8px;border-bottom:1px solid var(--border);">Cost (7d)</th>
+                  <th style="text-align:right;padding-bottom:8px;border-bottom:1px solid var(--border);padding-left:24px;padding-right:12px;">In (30d)</th>
+                  <th style="text-align:right;padding-bottom:8px;border-bottom:1px solid var(--border);padding-right:12px;">Out (30d)</th>
+                  <th style="text-align:right;padding-bottom:8px;border-bottom:1px solid var(--border);">Cost (30d)</th>
+                </tr>
+              </thead>
+              <tbody>${modelRows}</tbody>
+            </table>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
+              <div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Lambda invocations (7d)</div>
+                <div style="font-weight:600;">${lam.invocations_7d?.toLocaleString() ?? "—"}</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Avg duration</div>
+                <div style="font-weight:600;">${fmtSec(lam.avg_duration_sec)}</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Error rate</div>
+                <div style="font-weight:600;${lam.error_rate_pct > 5 ? 'color:var(--danger)' : ''}">${fmtPct(lam.error_rate_pct)}</div>
+              </div>
+            </div>
+          </div>`;
+      }
+
+      // Per-user model usage card
+      if (usage && usage.length > 0) {
+        const fmtT = n => n >= 1000000 ? `${(n/1000000).toFixed(2)}M` : n >= 1000 ? `${(n/1000).toFixed(1)}K` : String(n);
+        const fmtC = n => n < 0.0001 ? "<$0.01" : n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(3)}`;
+        const PRICING = {
+          "us.amazon.nova-lite-v1:0": { input: 0.00006, output: 0.00024 },
+          "us.amazon.nova-pro-v1:0":  { input: 0.0008,  output: 0.0032  },
+        };
+        const LABELS = {
+          "us.amazon.nova-lite-v1:0": "Nova Lite",
+          "us.amazon.nova-pro-v1:0":  "Nova Pro",
+        };
+        const totalCost = usage.reduce((sum, r) => {
+          const p = PRICING[r.model_id] || { input: 0, output: 0 };
+          return sum + (r.input_tokens / 1000 * p.input) + (r.output_tokens / 1000 * p.output);
+        }, 0);
+        const totalInv = usage.reduce((s, r) => s + r.invocations, 0);
+
+        const rows = usage.map(r => {
+          const p = PRICING[r.model_id] || { input: 0, output: 0 };
+          const cost = (r.input_tokens / 1000 * p.input) + (r.output_tokens / 1000 * p.output);
+          const label = LABELS[r.model_id] || r.model_id;
+          return `
+            <div class="admin-stat-row">
+              <span style="color:var(--muted);">${escHtml(label)}</span>
+              <span style="display:flex;gap:16px;align-items:center;">
+                <span style="font-size:12px;color:var(--muted);">${r.invocations.toLocaleString()} calls &nbsp;·&nbsp; ${fmtT(r.input_tokens)}↑ ${fmtT(r.output_tokens)}↓</span>
+                <span class="admin-stat-value" style="color:var(--primary);">${fmtC(cost)}</span>
+              </span>
+            </div>`;
+        }).join("");
+
+        html += `
+          <div class="admin-card" style="grid-column: span 2;">
+            <div class="admin-card-title">AI Pal — Per-User Model Usage</div>
+            <div style="display:flex;gap:24px;margin-bottom:12px;">
+              <div><div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Total invocations</div><div style="font-size:18px;font-weight:700;">${totalInv.toLocaleString()}</div></div>
+              <div><div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Total est. cost</div><div style="font-size:18px;font-weight:700;color:var(--primary);">${fmtC(totalCost)}</div></div>
+            </div>
+            ${rows}
           </div>`;
       }
 
@@ -6960,6 +7665,7 @@
       ? new Date(p.exp * 1000).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
       : "—";
     $("display-name-input").value = state.settings?.display_name || "";
+    $("pal-name-input").value = state.settings?.pal_name || "";
     loadPatList();
   }
 
@@ -7171,7 +7877,7 @@
     const el = $("journal-streaks");
     el.innerHTML = `
       <div class="streak-card">
-        <span class="streak-fire">&#x1F525;</span>
+        <span class="streak-fire"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></span>
         <div><div class="streak-num">${current}</div><div>day streak</div></div>
       </div>
       <div class="streak-card">
@@ -7263,9 +7969,402 @@
   $("admin-refresh-btn").addEventListener("click", () => { admin.loaded = false; admin.load(); });
 
   // ── Boot ──────────────────────────────────────────────────────────────────────
+  colorTheme.init();
   theme.set(theme.get());
   pomodoro.init();
   app.init();
+</script>
+
+<!-- ── AI Pal widget ── -->
+<button id="pal-btn" title="Chat with your AI pal" aria-label="AI assistant" class="hidden">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+</button>
+<div id="pal-window" class="hidden">
+  <div id="pal-header">
+    <span id="pal-header-name">AI Pal</span>
+    <button id="pal-usage-btn" aria-label="Usage stats">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    </button>
+    <button id="pal-clear" aria-label="Clear chat" title="Clear chat history">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+    </button>
+    <button id="pal-close" aria-label="Close">✕</button>
+  </div>
+  <div id="pal-model-bar">
+    <span>Model</span>
+    <!-- Lite: feather / lightweight -->
+    <button class="pal-model-btn" data-model="us.amazon.nova-lite-v1:0" aria-label="Nova Lite">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></svg>
+      <span class="pal-tooltip">Nova Lite — fast &amp; affordable</span>
+    </button>
+    <!-- Pro: rocket / capable -->
+    <button class="pal-model-btn" data-model="us.amazon.nova-pro-v1:0" aria-label="Nova Pro">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.5-1.5 4 0 4s2.5-2.5 4-4l4-4-4-4z"/><path d="M12 12l6-6a2 2 0 0 1 3 3l-6 6"/><path d="M15 9l-6 6"/></svg>
+      <span class="pal-tooltip">Nova Pro — smarter, better tool use</span>
+    </button>
+    <!-- Premier removed (Legacy/inactive in Bedrock) -->
+  </div>
+  <div id="pal-usage-panel" class="hidden"></div>
+  <div id="pal-messages"></div>
+  <form id="pal-form">
+    <textarea id="pal-input" rows="1" placeholder="Ask me anything…" autocomplete="off"></textarea>
+    <button id="pal-mic" type="button" title="Voice input" aria-label="Voice input">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    </button>
+    <button id="pal-send" type="submit">↑</button>
+  </form>
+</div>
+
+<script>
+  (function () {
+    const palBtn     = document.getElementById("pal-btn");
+    const palWindow  = document.getElementById("pal-window");
+    const palClose   = document.getElementById("pal-close");
+    const palForm    = document.getElementById("pal-form");
+    const palInput   = document.getElementById("pal-input");
+    const palSend    = document.getElementById("pal-send");
+    const palMic     = document.getElementById("pal-mic");
+    const palMsgs    = document.getElementById("pal-messages");
+
+    // Speech-to-text
+    (function () {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        palMic.disabled = true;
+        palMic.title = "Voice input not supported in this browser";
+        return;
+      }
+      const recog = new SR();
+      recog.continuous = false;
+      recog.interimResults = true;
+      recog.lang = "en-US";
+
+      let recording = false;
+      let baseText = ""; // text in textarea before recording started
+
+      function startRecording() {
+        baseText = palInput.value;
+        recording = true;
+        palMic.classList.add("recording");
+        palMic.title = "Stop recording";
+        palSend.disabled = true;
+        recog.start();
+      }
+
+      function stopRecording() {
+        recording = false;
+        palMic.classList.remove("recording");
+        palMic.title = "Voice input";
+        palSend.disabled = false;
+        recog.stop();
+      }
+
+      palMic.addEventListener("click", () => {
+        if (recording) { stopRecording(); } else { startRecording(); }
+      });
+
+      recog.addEventListener("result", e => {
+        let interim = "";
+        let final = "";
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const t = e.results[i][0].transcript;
+          if (e.results[i].isFinal) { final += t; } else { interim += t; }
+        }
+        // Accumulate finals into baseText so session restarts don't lose them
+        if (final) baseText += final;
+        palInput.value = baseText + interim;
+        palInput.dispatchEvent(new Event("input"));
+      });
+
+      recog.addEventListener("end", () => {
+        if (recording) {
+          // auto-restarted if still in recording state (continuous workaround)
+          recog.start();
+        } else {
+          palMic.classList.remove("recording");
+          palMic.title = "Voice input";
+          palSend.disabled = false;
+        }
+      });
+
+      recog.addEventListener("error", e => {
+        // no-speech: let `end` fire and restart automatically
+        // aborted: we called recog.stop() intentionally, ignore it
+        if (e.error === "no-speech" || e.error === "aborted") return;
+        stopRecording();
+        palAddMsg("assistant", "Voice input error: " + e.error);
+      });
+    })();
+
+    const PAL_MODELS = [
+      "us.amazon.nova-lite-v1:0",
+      "us.amazon.nova-pro-v1:0",
+    ];
+    const DEFAULT_MODEL = "us.amazon.nova-lite-v1:0";
+
+    let palOpen = false;
+    let palHistoryLoaded = false;
+    let palModel = localStorage.getItem("pal_model") || DEFAULT_MODEL;
+    if (!PAL_MODELS.includes(palModel)) palModel = DEFAULT_MODEL;
+
+    function palSetModel(modelId) {
+      palModel = modelId;
+      localStorage.setItem("pal_model", modelId);
+      document.querySelectorAll(".pal-model-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.model === modelId);
+      });
+    }
+
+    // Wire model buttons
+    document.querySelectorAll(".pal-model-btn").forEach(btn => {
+      btn.addEventListener("click", () => palSetModel(btn.dataset.model));
+    });
+    palSetModel(palModel); // apply initial active state
+
+    async function palLoadHistory() {
+      if (palHistoryLoaded) return;
+      palHistoryLoaded = true;
+      try {
+        const history = await api.call("GET", "/assistant/history");
+        if (history && history.length > 0) {
+          history.forEach(msg => palAddMsg(msg.role, msg.content));
+        } else {
+          palAddMsg("assistant", "Hi! I'm your AI pal. I can create tasks, notes, habits, goals, and journal entries for you. What would you like to do?");
+        }
+      } catch (e) {
+        palAddMsg("assistant", "Hi! I'm your AI pal. I can create tasks, notes, habits, goals, and journal entries for you. What would you like to do?");
+      }
+    }
+
+    function palToggle() {
+      palOpen = !palOpen;
+      palWindow.classList.toggle("hidden", !palOpen);
+      if (palOpen) {
+        palInput.focus();
+        palLoadHistory();
+      } else if (palShowingUsage) {
+        // Reset usage view when closing
+        palShowingUsage = false;
+        palUsageBtn.classList.remove("active");
+        palUsagePanel.classList.add("hidden");
+        palMsgs.classList.remove("hidden");
+      }
+    }
+
+    window.palNavigate = function palNavigate(type, id) {
+      if (type === "task") {
+        pages.show("tasks");
+        modal.open(id);
+      } else if (type === "note") {
+        pages.show("notes");
+        if (notesApp.folders.length === 0) {
+          notesApp.load().then(() => notesApp.openNote(id));
+        } else {
+          notesApp.openNote(id);
+        }
+      } else if (type === "goal") {
+        pages.show("goals");
+        goalModal.open(id);
+      } else if (type === "journal") {
+        pages.show("journal");
+        if (journal.entries.length === 0) {
+          journal.load().then(() => journal.openEntry(id));
+        } else {
+          journal.openEntry(id);
+        }
+      }
+    };
+
+    function palRenderText(text) {
+      const rendered = new Set();
+      // Replace markdown-style [link text](pal-link:type:id:label) with clickable buttons
+      text = text.replace(/\[([^\]]+)\]\(pal-link:(\w+):([^:)]+):([^)]+)\)/g, (_, _linkText, type, id, label) => {
+        rendered.add(`${type}:${id}`);
+        return `<button class="pal-link-btn" onclick="palNavigate('${type}','${escHtml(id)}')">${escHtml(label.trim())}</button>`;
+      });
+      // Replace standalone [pal-link:type:id:label] with clickable buttons, skipping duplicates
+      text = text.replace(/\[pal-link:(\w+):([^:]+):([^\]]+)\]/g, (_, type, id, label) => {
+        if (rendered.has(`${type}:${id}`)) return "";
+        rendered.add(`${type}:${id}`);
+        return `<button class="pal-link-btn" onclick="palNavigate('${type}','${escHtml(id)}')">${escHtml(label)}</button>`;
+      });
+      return text.trim();
+    }
+
+    function palAddMsg(role, text) {
+      const div = document.createElement("div");
+      div.className = "pal-msg pal-msg-" + role;
+      if (role === "assistant") {
+        div.innerHTML = palRenderText(escHtml(text));
+      } else {
+        div.textContent = text;
+      }
+      palMsgs.appendChild(div);
+      palMsgs.scrollTop = palMsgs.scrollHeight;
+      return div;
+    }
+
+    async function palSendMsg() {
+      const msg = palInput.value.trim();
+      if (!msg) return;
+
+      palAddMsg("user", msg);
+      palInput.value = "";
+      palInput.style.height = "";
+      palSend.disabled = true;
+
+      const typing = palAddMsg("typing", "Thinking…");
+
+      try {
+        const localDate = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local timezone
+        const res  = await api.call("POST", "/assistant/chat", { message: msg, model: palModel, local_date: localDate });
+        typing.remove();
+        if (res && res.reply) {
+          palAddMsg("assistant", res.reply);
+        } else {
+          palAddMsg("assistant", "Sorry, something went wrong. Try again.");
+        }
+        // Refresh whichever sections were mutated by tool calls
+        if (res && res.tools_used && res.tools_used.length) {
+          const used = new Set(res.tools_used);
+          const TASK_TOOLS    = ["create_task","complete_task","delete_task"];
+          const NOTE_TOOLS    = ["create_note","delete_note","create_note_folder"];
+          const HABIT_TOOLS   = ["create_habit","toggle_habit","delete_habit"];
+          const GOAL_TOOLS    = ["create_goal","update_goal_progress","delete_goal"];
+          const JOURNAL_TOOLS = ["create_journal_entry"];
+          const NUTRITION_TOOLS = ["log_meal"];
+          const HEALTH_TOOLS  = ["log_exercise"];
+          if (TASK_TOOLS.some(t => used.has(t)))     app.loadTasks();
+          if (NOTE_TOOLS.some(t => used.has(t)))     notesApp.load();
+          if (HABIT_TOOLS.some(t => used.has(t)))    habits.load();
+          if (GOAL_TOOLS.some(t => used.has(t)))     goals.load();
+          if (JOURNAL_TOOLS.some(t => used.has(t)))  journal.load();
+          if (NUTRITION_TOOLS.some(t => used.has(t))) nutrition.load();
+          if (HEALTH_TOOLS.some(t => used.has(t)))   health.load();
+        }
+      } catch (e) {
+        typing.remove();
+        palAddMsg("assistant", "Network error. Please try again.");
+      } finally {
+        palSend.disabled = false;
+        palInput.focus();
+      }
+    }
+
+    const palClear      = document.getElementById("pal-clear");
+    const palUsageBtn   = document.getElementById("pal-usage-btn");
+    const palUsagePanel = document.getElementById("pal-usage-panel");
+
+    const BEDROCK_PRICING = {
+      "us.amazon.nova-lite-v1:0": { input: 0.00006, output: 0.00024 },
+      "us.amazon.nova-pro-v1:0":  { input: 0.0008,  output: 0.0032  },
+    };
+
+    const MODEL_LABELS = {
+      "us.amazon.nova-lite-v1:0": "Nova Lite",
+      "us.amazon.nova-pro-v1:0":  "Nova Pro",
+    };
+
+    let palShowingUsage = false;
+
+    function palRenderUsage(records) {
+      if (!records || records.length === 0) {
+        palUsagePanel.innerHTML = `<div class="pal-usage-empty">No usage recorded yet.<br>Start chatting to track model usage.</div>`;
+        return;
+      }
+      const fmtTokens = n => n >= 1000000 ? `${(n/1000000).toFixed(2)}M` : n >= 1000 ? `${(n/1000).toFixed(1)}K` : String(n);
+      const fmtCost   = n => n < 0.0001 ? "<$0.01" : n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(3)}`;
+
+      // Sort: pro → premier → lite, then by invocations desc
+      const order = ["us.amazon.nova-pro-v1:0", "us.amazon.nova-lite-v1:0"];
+      records = [...records].sort((a, b) => {
+        const ai = order.indexOf(a.model_id), bi = order.indexOf(b.model_id);
+        if (ai !== bi) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+        return b.invocations - a.invocations;
+      });
+
+      palUsagePanel.innerHTML = records.map(r => {
+        const pricing = BEDROCK_PRICING[r.model_id] || { input: 0, output: 0 };
+        const cost = (r.input_tokens / 1000 * pricing.input) + (r.output_tokens / 1000 * pricing.output);
+        const label = MODEL_LABELS[r.model_id] || r.model_id;
+        return `
+          <div class="pal-usage-model">
+            <div class="pal-usage-model-name">${escHtml(label)}</div>
+            <div class="pal-usage-stats">
+              <div>
+                <div class="pal-usage-stat-label">Invocations</div>
+                <div class="pal-usage-stat-value">${r.invocations.toLocaleString()}</div>
+              </div>
+              <div>
+                <div class="pal-usage-stat-label">Tokens in/out</div>
+                <div class="pal-usage-stat-value">${fmtTokens(r.input_tokens)} / ${fmtTokens(r.output_tokens)}</div>
+              </div>
+              <div>
+                <div class="pal-usage-stat-label">Est. cost</div>
+                <div class="pal-usage-stat-value pal-usage-cost">${fmtCost(cost)}</div>
+              </div>
+            </div>
+          </div>`;
+      }).join("");
+    }
+
+    async function palToggleUsage() {
+      palShowingUsage = !palShowingUsage;
+      palUsageBtn.classList.toggle("active", palShowingUsage);
+      palUsagePanel.classList.toggle("hidden", !palShowingUsage);
+      palMsgs.classList.toggle("hidden", palShowingUsage);
+      if (palShowingUsage) {
+        palUsagePanel.innerHTML = `<div class="pal-usage-empty">Loading…</div>`;
+        try {
+          const records = await api.call("GET", "/assistant/usage");
+          palRenderUsage(records);
+        } catch (e) {
+          palUsagePanel.innerHTML = `<div class="pal-usage-empty">Failed to load usage.</div>`;
+        }
+      }
+    }
+
+    palUsageBtn.addEventListener("click", palToggleUsage);
+
+    async function palClearHistory() {
+      try {
+        await api.call("DELETE", "/assistant/history");
+        palMsgs.innerHTML = "";
+        palHistoryLoaded = true;
+        palAddMsg("assistant", "Chat cleared. What would you like to do?");
+      } catch (e) {
+        palAddMsg("assistant", "Failed to clear history. Please try again.");
+      }
+    }
+
+    palBtn.addEventListener("click", palToggle);
+    palClose.addEventListener("click", palToggle);
+    palClear.addEventListener("click", palClearHistory);
+
+    palForm.addEventListener("submit", e => { e.preventDefault(); palSendMsg(); });
+
+    palInput.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        palSendMsg();
+      }
+    });
+
+    // Auto-resize textarea
+    palInput.addEventListener("input", () => {
+      palInput.style.height = "";
+      palInput.style.height = Math.min(palInput.scrollHeight, 100) + "px";
+    });
+
+    // Show/hide based on auth state
+    document.addEventListener("pal:hide", () => { palBtn.classList.add("hidden"); palWindow.classList.add("hidden"); palOpen = false; });
+    document.addEventListener("pal:show", () => palBtn.classList.remove("hidden"));
+
+    // In case pal:show already fired before this script ran (app was already loaded)
+    if (!document.getElementById("app-view").classList.contains("hidden")) {
+      palBtn.classList.remove("hidden");
+    }
+  })();
 </script>
 </body>
 </html>
