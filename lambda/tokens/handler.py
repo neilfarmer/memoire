@@ -15,7 +15,8 @@ logger.setLevel(logging.INFO)
 
 
 def lambda_handler(event: dict, context) -> dict:
-    logger.info("Event: %s", json.dumps(event))
+    from auth import sanitize_event
+    logger.info("Event: %s", json.dumps(sanitize_event(event)))
     try:
         authorizer  = event["requestContext"]["authorizer"]["lambda"]
         user_id     = authorizer["user_id"]
