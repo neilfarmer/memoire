@@ -6,6 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - No emojis in any code, UI, or output.
 
+## Commits
+
+Always use Conventional Commits: `type(scope): description`
+
+Types: `feat`, `fix`, `chore`, `refactor`, `test`, `ci`, `docs`, `build`
+
+Scope is optional but encouraged for larger repos (e.g. `feat(notes)`, `fix(auth)`). Breaking changes append `!` after the type: `feat!: ...`
+
 ## Commands
 
 Use `make` targets for all operations. Do not run raw shell commands directly — propose a new make target and get approval before adding one.
@@ -16,6 +24,7 @@ make test-unit         # run unit tests with coverage (pytest tests/unit/)
 make test-terraform    # run Terraform tests
 make test-all          # test-unit + test-terraform
 make coverage          # unit tests with HTML coverage report → htmlcov/index.html
+make lint              # ruff check lambda/ tests/
 make security          # bandit (SAST) + pip-audit (CVE scan)
 make test              # integration tests against live API (requires TEST_PAT in .env)
 make deploy            # terraform apply (interactive)
@@ -30,9 +39,8 @@ python -m pytest tests/unit/test_tasks.py -v
 python -m pytest tests/unit/test_tasks.py::TestValidateFields::test_valid_status -v
 ```
 
-**Lint** (exception to the make-only rule — no `make lint` target exists):
 ```bash
-ruff check lambda/ tests/
+make lint          # ruff check lambda/ tests/
 ```
 
 **First-time test user setup:**
