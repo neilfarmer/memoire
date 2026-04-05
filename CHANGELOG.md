@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.8.0](https://github.com/neilfarmer/memoire/compare/v0.7.0...v0.8.0) (2026-04-05)
+
+
+### Features
+
+* AI pal, themes, security scanning, and test coverage ([#68](https://github.com/neilfarmer/memoire/issues/68)) ([dcbcedd](https://github.com/neilfarmer/memoire/commit/dcbcedd41a6f50e4652f4035d87d8a841b1845e8))
+
+
+### Bug Fixes
+
+* **ci:** pin renovatebot/github-action to v46.1.7 ([a891bb1](https://github.com/neilfarmer/memoire/commit/a891bb11fb48d9fba25ffa459fcd153f6c709673))
+* **ci:** update renovatebot/github-action to v46 ([285f7e4](https://github.com/neilfarmer/memoire/commit/285f7e4e98c4e5028429b93fbd67f5b3bc09402c))
+* **terraform-tests:** supply valid JSON mock for aws_iam_policy_document ([2a18106](https://github.com/neilfarmer/memoire/commit/2a1810636ddfefc81341e5a5c9b078fd7c0345a0))
+* **terraform-tests:** use one() for set-typed rule block in SSE assertion ([a22aed7](https://github.com/neilfarmer/memoire/commit/a22aed73371df64cd3c777997d57d89883273904))
+
+
+### Reverts
+
+* remove Infracost workflow (paid service) ([5592698](https://github.com/neilfarmer/memoire/commit/55926984f2daa2418fc5c6cfea6b53e975f8666e))
+
 ## [0.7.0](https://github.com/neilfarmer/memoire/compare/v0.6.0...v0.7.0) (2026-04-04)
 
 
