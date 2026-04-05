@@ -7883,7 +7883,6 @@
     palUsageBtn.addEventListener("click", palToggleUsage);
 
     async function palClearHistory() {
-      if (!confirm("Clear chat history? Your memory and context will be kept.")) return;
       try {
         await api.call("DELETE", "/assistant/history");
         palMsgs.innerHTML = "";
