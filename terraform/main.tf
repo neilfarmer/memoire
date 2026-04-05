@@ -8,15 +8,15 @@ terraform {
     }
     archive = {
       source  = "hashicorp/archive"
-      version = "~> 2.0"
+      version = "2.7.1"
     }
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "~> 4.0"
+      version = "4.52.7"
     }
     random = {
       source  = "hashicorp/random"
-      version = "~> 3.0"
+      version = "3.8.1"
     }
   }
 
