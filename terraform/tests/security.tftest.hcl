@@ -16,8 +16,9 @@ mock_provider "cloudflare" {}
 run "s3_frontend_has_sse" {
   command = plan
 
+  # rule is a set type in the AWS provider — use one() to extract the single element
   assert {
-    condition     = aws_s3_bucket_server_side_encryption_configuration.frontend.rule[0].apply_server_side_encryption_by_default[0].sse_algorithm == "AES256"
+    condition     = one(aws_s3_bucket_server_side_encryption_configuration.frontend.rule).apply_server_side_encryption_by_default[0].sse_algorithm == "AES256"
     error_message = "frontend bucket: SSE-S3 (AES256) must be configured"
   }
 }
