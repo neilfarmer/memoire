@@ -8176,10 +8176,15 @@
     };
 
     function palRenderText(text) {
-      // Replace [pal-link:type:id:label] with clickable buttons
-      return text.replace(/\[pal-link:(\w+):([^:]+):([^\]]+)\]/g, (_, type, id, label) => {
+      // Replace markdown-style [link text](pal-link:type:id:label) with clickable buttons
+      text = text.replace(/\[([^\]]+)\]\(pal-link:(\w+):([^:)]+):([^)]+)\)/g, (_, _linkText, type, id, label) => {
+        return `<button class="pal-link-btn" onclick="palNavigate('${type}','${escHtml(id)}')">${escHtml(label.trim())}</button>`;
+      });
+      // Replace standalone [pal-link:type:id:label] with clickable buttons
+      text = text.replace(/\[pal-link:(\w+):([^:]+):([^\]]+)\]/g, (_, type, id, label) => {
         return `<button class="pal-link-btn" onclick="palNavigate('${type}','${escHtml(id)}')">${escHtml(label)}</button>`;
       });
+      return text;
     }
 
     function palAddMsg(role, text) {
