@@ -103,24 +103,38 @@ def _extract_first_img(html: str) -> str:
 
 
 def _fetch_og_image(url: str) -> str:
-    """Fetch article page and extract og:image meta tag. Returns empty string on failure."""
+    """Fetch article page and extract an image URL. Returns empty string on failure."""
     if not url:
         return ""
     try:
         req = urllib.request.Request(
-            url, headers={"User-Agent": "Memoire/1.0 RSS Reader"}
+            url, headers={"User-Agent": "Mozilla/5.0 (compatible; Memoire/1.0)"}
         )
-        with urllib.request.urlopen(req, timeout=4) as resp:
-            # Only read first 32KB — enough to get <head> content
-            chunk = resp.read(32_768).decode("utf-8", errors="ignore")
-        m = re.search(
-            r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
-            chunk, re.IGNORECASE
-        ) or re.search(
-            r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
-            chunk, re.IGNORECASE
-        )
-        return m.group(1) if m else ""
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            chunk = resp.read(65_536).decode("utf-8", errors="ignore")
+
+        # Try og:image (quoted and unquoted attribute values)
+        patterns = [
+            r'<meta[^>]+property=["\']?og:image["\']?[^>]+content=["\']?([^"\'>\s]+)',
+            r'<meta[^>]+content=["\']?([^"\'>\s]+)["\']?[^>]+property=["\']?og:image',
+            r'<meta[^>]+name=["\']?twitter:image["\']?[^>]+content=["\']?([^"\'>\s]+)',
+            r'<meta[^>]+content=["\']?([^"\'>\s]+)["\']?[^>]+name=["\']?twitter:image',
+        ]
+        for pattern in patterns:
+            m = re.search(pattern, chunk, re.IGNORECASE)
+            if m:
+                img = m.group(1).strip().rstrip('"\'')
+                if img.startswith("http"):
+                    return img
+
+        # Last resort: first <img> inside the article body with a reasonable src
+        body_match = re.search(r'<(?:article|main|div[^>]+class=["\'][^"\']*(?:content|post|body|entry)[^"\']*["\'])[^>]*>(.*)', chunk, re.IGNORECASE | re.DOTALL)
+        search_area = body_match.group(1) if body_match else chunk
+        img_m = re.search(r'<img[^>]+src=["\']?(https://[^"\'>\s]+\.(jpg|jpeg|png|webp|gif|svg))', search_area, re.IGNORECASE)
+        if img_m:
+            return img_m.group(1)
+
+        return ""
     except Exception:
         return ""
 
