@@ -6531,7 +6531,7 @@
       const now = new Date();
       health.calMonth = { year: now.getFullYear(), month: now.getMonth() };
       health.renderCalendar();
-      if ($("journal-calendar")) journal.renderCalendar();
+      if ($("journal-calendar") && journal.calMonth) journal.renderCalendar();
       health.renderLogList();
     },
 
@@ -6794,7 +6794,7 @@
       nutrition.calMonth = { year: now.getFullYear(), month: now.getMonth() };
       nutrition.renderCalendar();
       nutrition.renderLogList();
-      if ($("journal-calendar")) journal.renderCalendar();
+      if ($("journal-calendar") && journal.calMonth) journal.renderCalendar();
     },
 
     logDates() {
