@@ -174,7 +174,7 @@ resource "aws_cloudwatch_log_group" "assistant_stream" {
 resource "aws_lambda_function_url" "assistant_stream" {
   function_name = aws_lambda_function.assistant_stream.function_name
   qualifier     = null
-  invoke_mode   = "RESPONSE_STREAM"
+  invoke_mode   = "BUFFERED"
 
   # checkov:skip=CKV_AWS_258: AuthType NONE is intentional — the Lambda validates
   # Cognito JWTs and PATs directly in token_auth.py (same RS256 + PAT logic as

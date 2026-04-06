@@ -49,71 +49,69 @@ def lambda_handler(event: dict, context) -> dict:
 # Auth is handled in-function (no API Gateway authorizer) via token_auth.py,
 # which supports the same Cognito JWTs and PATs as the authorizer Lambda.
 
-def _stream_handler(event: dict, context, response_stream) -> None:
-    response_stream.set_response({
-        "statusCode": 200,
-        "headers": {
-            "Content-Type":           "application/x-ndjson",
-            "X-Content-Type-Options": "nosniff",
-            "Cache-Control":          "no-cache, no-store",
-        },
-    })
+def streaming_lambda_handler(event: dict, context) -> dict:
+    """Lambda Function URL handler (BUFFERED invoke mode).
 
+    Auth is handled in-function (no API Gateway authorizer context).
+    Calls Bedrock, collects the full NDJSON output, and returns it in one
+    response.  Clients receive the same NDJSON format as the streaming path;
+    the full response just arrives in one payload rather than token-by-token.
+    """
     try:
         import token_auth
         user_id = token_auth.get_user_id(event)
         if not user_id:
-            response_stream.write(
-                json.dumps({"type": "error", "message": "Unauthorized"}).encode() + b"\n"
-            )
-            return
+            return {
+                "statusCode": 401,
+                "headers": {"Content-Type": "application/x-ndjson"},
+                "body": json.dumps({"type": "error", "message": "Unauthorized"}) + "\n",
+            }
 
         body: dict = {}
         if event.get("body"):
             try:
                 body = json.loads(event["body"])
             except (json.JSONDecodeError, TypeError):
-                response_stream.write(
-                    json.dumps({"type": "error", "message": "Invalid JSON body"}).encode() + b"\n"
-                )
-                return
+                return {
+                    "statusCode": 400,
+                    "headers": {"Content-Type": "application/x-ndjson"},
+                    "body": json.dumps({"type": "error", "message": "Invalid JSON body"}) + "\n",
+                }
 
         message = (body.get("message") or "").strip()
         if not message:
-            response_stream.write(
-                json.dumps({"type": "error", "message": "message is required"}).encode() + b"\n"
-            )
-            return
+            return {
+                "statusCode": 400,
+                "headers": {"Content-Type": "application/x-ndjson"},
+                "body": json.dumps({"type": "error", "message": "message is required"}) + "\n",
+            }
+
+        buf: list[bytes] = []
 
         import chat
         chat.chat_stream(
             user_id,
             message,
-            emit=response_stream.write,
+            emit=buf.append,
             model=body.get("model") or None,
             local_date=body.get("local_date") or None,
             no_history=bool(body.get("no_history")),
         )
 
+        return {
+            "statusCode": 200,
+            "headers": {
+                "Content-Type":           "application/x-ndjson",
+                "X-Content-Type-Options": "nosniff",
+                "Cache-Control":          "no-cache, no-store",
+            },
+            "body": b"".join(buf).decode("utf-8", errors="replace"),
+        }
+
     except Exception:
         logger.exception("Unhandled exception in streaming_lambda_handler")
-        try:
-            response_stream.write(
-                json.dumps({"type": "error", "message": "Internal server error"}).encode() + b"\n"
-            )
-        except Exception:
-            pass
-
-
-try:
-    from awslambdaric.bootstrap import wrap_streaming_handler
-    streaming_lambda_handler = wrap_streaming_handler(_stream_handler)
-except ImportError as _e:
-    logger.warning("wrap_streaming_handler unavailable (%s); inspecting awslambdaric", _e)
-    try:
-        import awslambdaric.bootstrap as _bs
-        logger.warning("awslambdaric.bootstrap attrs with 'stream': %s",
-                       [a for a in dir(_bs) if "stream" in a.lower()])
-    except Exception as _e2:
-        logger.warning("Could not inspect awslambdaric.bootstrap: %s", _e2)
-    streaming_lambda_handler = None  # type: ignore[assignment]
+        return {
+            "statusCode": 500,
+            "headers": {"Content-Type": "application/x-ndjson"},
+            "body": json.dumps({"type": "error", "message": "Internal server error"}) + "\n",
+        }
