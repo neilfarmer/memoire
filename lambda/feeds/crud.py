@@ -7,7 +7,7 @@ import urllib.request
 import urllib.error
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
 
 import db
@@ -194,6 +194,8 @@ def get_articles(user_id: str) -> dict:
     if not feeds:
         return ok([])
 
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+
     all_articles: list[dict] = []
     workers = min(len(feeds), MAX_WORKERS)
     with ThreadPoolExecutor(max_workers=workers) as executor:
@@ -204,5 +206,7 @@ def get_articles(user_id: str) -> dict:
             except Exception:
                 pass
 
-    all_articles.sort(key=lambda x: x.get("published", ""), reverse=True)
-    return ok(all_articles[:MAX_ARTICLES])
+    # Filter to last 30 days and sort descending
+    recent = [a for a in all_articles if a.get("published", "") >= cutoff]
+    recent.sort(key=lambda x: x.get("published", ""), reverse=True)
+    return ok(recent[:MAX_ARTICLES])

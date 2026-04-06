@@ -4661,7 +4661,7 @@
         state.tasks = await api.listTasks() || [];
         renderTasks();
         if (pages.current === "home") renderHomeDashboard();
-        if ($("journal-calendar")) journal.renderCalendar();
+        if ($("journal-calendar") && journal.calMonth) journal.renderCalendar();
       } catch (e) {
         console.error("Failed to load tasks:", e);
       } finally {
@@ -7046,7 +7046,7 @@
         habits.data = await api.call("GET", "/habits") || [];
         habits.render();
         if (pages.current === "home") renderHomeDashboard();
-        if ($("journal-calendar")) journal.renderCalendar();
+        if ($("journal-calendar") && journal.calMonth) journal.renderCalendar();
       } catch (e) {
         console.error("Failed to load habits:", e);
       } finally {
