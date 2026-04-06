@@ -10,6 +10,8 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
 
+import urllib.parse
+
 import db
 from response import ok, created, no_content, error, not_found
 
@@ -126,6 +128,8 @@ def _fetch_og_image(url: str) -> str:
                 img = m.group(1).strip().rstrip('"\'')
                 if img.startswith("http"):
                     return img
+                if img.startswith("/"):
+                    return urllib.parse.urljoin(url, img)
 
         # Last resort: first <img> inside the article body with a reasonable src
         body_match = re.search(r'<(?:article|main|div[^>]+class=["\'][^"\']*(?:content|post|body|entry)[^"\']*["\'])[^>]*>(.*)', chunk, re.IGNORECASE | re.DOTALL)
