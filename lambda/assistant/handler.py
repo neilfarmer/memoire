@@ -59,8 +59,13 @@ def streaming_lambda_handler(event: dict, context) -> dict:
     """
     try:
         import token_auth
+        hdrs = event.get("headers") or {}
+        logger.info("Auth headers: auth=%s cookie_keys=%s",
+                    bool(hdrs.get("authorization") or hdrs.get("Authorization")),
+                    [k for k in hdrs if "cookie" in k.lower()])
         user_id = token_auth.get_user_id(event)
         if not user_id:
+            logger.warning("Auth failed; headers present: %s", sorted(hdrs.keys()))
             return {
                 "statusCode": 401,
                 "headers": {"Content-Type": "application/x-ndjson"},
