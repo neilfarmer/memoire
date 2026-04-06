@@ -8586,7 +8586,7 @@
             </div>
             <div class="feed-card-footer">
               <button class="feed-sum-btn" onclick="event.preventDefault();event.stopPropagation();summaryModal.open(feeds._byUrl.get(decodeURIComponent('${encodedUrl}')))">
-                ${sumIcon} Summarize
+                ${sumIcon} Preview
               </button>
               <button class="feed-fav-btn${isFaved ? " active" : ""}" data-url="${escHtml(a.url)}"
                 onclick="event.preventDefault();event.stopPropagation();favs.toggleByUrl(decodeURIComponent('${encodedUrl}'),this)">
@@ -8870,11 +8870,11 @@
       $("sum-source").textContent = article.feed_title || "";
       $("sum-title").textContent  = article.title || "Untitled";
       $("sum-open-btn").href      = article.url || "#";
-      $("sum-body").innerHTML = `
-        <div class="sum-thinking">
-          <div class="sum-thinking-dots"><span></span><span></span><span></span></div>
-          Summarizing...
-        </div>`;
+
+      const desc = (article.description || "").trim();
+      $("sum-body").innerHTML = desc
+        ? escHtml(desc).replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>")
+        : `<p class="sum-no-desc">No description available.</p>`;
 
       // Wire up Favorite button
       const favBtn = $("sum-fav-btn");
@@ -8892,84 +8892,37 @@
         });
       };
 
-      // Reset Create Note button
+      // Wire up Create Note button
       const noteBtn = $("sum-note-btn");
-      noteBtn.disabled = true;
+      noteBtn.disabled = false;
       noteBtn.textContent = "Create Note";
-      noteBtn.onclick = null;
-      this._summary = null;
+      noteBtn.onclick = async () => {
+        noteBtn.disabled = true;
+        noteBtn.textContent = "Saving...";
+        const content = [
+          article.description || "",
+          "",
+          article.url || "",
+        ].join("\n").trim();
+        try {
+          await api.call("POST", "/notes", {
+            title:       article.title || "Article Note",
+            content,
+            folder_name: "Article Summaries",
+          });
+          noteBtn.textContent = "Note saved";
+        } catch {
+          noteBtn.disabled = false;
+          noteBtn.textContent = "Create Note";
+        }
+      };
 
       $("sum-overlay").classList.remove("hidden");
-      this._fetch(article);
     },
 
     close() {
       $("sum-overlay").classList.add("hidden");
       this._article = null;
-    },
-
-    async _fetch(article) {
-      // Fetch article text to give the model real content to summarize
-      let articleText = "";
-      try {
-        const textRes = await api.call("GET", `/feeds/article-text?url=${encodeURIComponent(article.url)}`);
-        if (textRes && textRes.text) articleText = textRes.text;
-      } catch {}
-
-      const prompt = [
-        `Write a detailed summary of the following article for a software/DevOps engineer.`,
-        `Cover all of: the article's main goal, its key findings or conclusions, any specific techniques or tools introduced, and whether it's worth reading in full.`,
-        `Be specific — enumerate actual items, findings, or steps from the article content. Do not describe categories without filling them in.`,
-        `Be direct — no filler phrases like "In summary", "This article", or "The author".`,
-        ``,
-        `Title: ${article.title || ""}`,
-        `Source: ${article.feed_title || ""}`,
-        `URL: ${article.url || ""}`,
-        articleText ? `\nArticle content:\n${articleText}` : `Description: ${article.description || "(none provided)"}`,
-      ].join("\n");
-
-      try {
-        const res = await api.call("POST", "/assistant/chat", {
-          message:    prompt,
-          model:      "us.amazon.nova-pro-v1:0",
-          local_date: new Date().toLocaleDateString("en-CA"),
-          no_history: true,
-        });
-        if (!$("sum-overlay").classList.contains("hidden")) {
-          if (res && res.reply) {
-            // Strip pal-link tags (AI should not use them, but just in case)
-            let bodyText = res.reply
-              .replace(/\[[^\]]*\]\(pal-link:[^)]+\)/g, "")
-              .replace(/\[pal-link:[^\]]+\]/g, "")
-              .trim();
-            $("sum-body").innerHTML = escHtml(bodyText).replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>");
-            this._summary = bodyText;
-            const noteBtn = $("sum-note-btn");
-            noteBtn.disabled = false;
-            noteBtn.onclick = async () => {
-              noteBtn.disabled = true;
-              noteBtn.textContent = "Saving...";
-              try {
-                await api.call("POST", "/notes", {
-                  title:       this._article?.title || "Article Summary",
-                  content:     this._summary + "\n\n" + (this._article?.url || ""),
-                  folder_name: "Article Summaries",
-                });
-                noteBtn.textContent = "Note saved";
-              } catch {
-                noteBtn.disabled = false;
-                noteBtn.textContent = "Create Note";
-              }
-            };
-          } else {
-            $("sum-body").textContent = "Failed to get summary. Please try again.";
-          }
-        }
-      } catch (e) {
-        if (!$("sum-overlay").classList.contains("hidden")) {
-          $("sum-body").textContent = "Failed to get summary. Please try again.";
-        }
-      }
     },
   };
 
