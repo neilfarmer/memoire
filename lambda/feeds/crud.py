@@ -90,8 +90,39 @@ def _strip_html(html: str) -> str:
 
 
 def _extract_first_img(html: str) -> str:
-    m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', html or "", re.IGNORECASE)
-    return m.group(1) if m else ""
+    """Extract first img src from HTML, handling both raw and HTML-escaped content."""
+    if not html:
+        return ""
+    import html as html_module
+    # Try raw HTML first, then unescape and try again
+    for content in (html, html_module.unescape(html)):
+        m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', content, re.IGNORECASE)
+        if m:
+            return m.group(1)
+    return ""
+
+
+def _fetch_og_image(url: str) -> str:
+    """Fetch article page and extract og:image meta tag. Returns empty string on failure."""
+    if not url:
+        return ""
+    try:
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "Memoire/1.0 RSS Reader"}
+        )
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            # Only read first 32KB — enough to get <head> content
+            chunk = resp.read(32_768).decode("utf-8", errors="ignore")
+        m = re.search(
+            r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
+            chunk, re.IGNORECASE
+        ) or re.search(
+            r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
+            chunk, re.IGNORECASE
+        )
+        return m.group(1) if m else ""
+    except Exception:
+        return ""
 
 
 def _find_image(element) -> str:
@@ -209,4 +240,20 @@ def get_articles(user_id: str) -> dict:
     # Filter to last 30 days and sort descending
     recent = [a for a in all_articles if a.get("published", "") >= cutoff]
     recent.sort(key=lambda x: x.get("published", ""), reverse=True)
-    return ok(recent[:MAX_ARTICLES])
+    recent = recent[:MAX_ARTICLES]
+
+    # For articles without images, attempt to fetch og:image from the article page
+    no_image = [a for a in recent if not a.get("image") and a.get("url")]
+    if no_image:
+        og_workers = min(len(no_image), 8)
+        with ThreadPoolExecutor(max_workers=og_workers) as executor:
+            futures = {executor.submit(_fetch_og_image, a["url"]): a for a in no_image}
+            for future, article in futures.items():
+                try:
+                    img = future.result(timeout=5)
+                    if img:
+                        article["image"] = img
+                except Exception:
+                    pass
+
+    return ok(recent)
