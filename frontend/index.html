@@ -8907,6 +8907,8 @@
         `Use as many sentences as needed to capture the substance — do not truncate important details.`,
         `Be direct — no filler phrases like "In summary", "This article", or "The author".`,
         ``,
+        `After writing the summary, use the create_note tool to save it as a note titled "${article.title || "Article Summary"}" in a folder called "Article Summaries". Include the article URL at the bottom of the note.`,
+        ``,
         `Title: ${article.title || ""}`,
         `Source: ${article.feed_title || ""}`,
         `Description: ${article.description || "(none provided)"}`,
@@ -8922,7 +8924,22 @@
         });
         if (!$("sum-overlay").classList.contains("hidden")) {
           if (res && res.reply) {
-            $("sum-body").innerHTML = escHtml(res.reply).replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>");
+            // Strip pal-link tags from the summary body text and collect them separately
+            const palLinks = [];
+            const bodyText = res.reply.replace(/\[pal-link:(\w+):([^:]+):([^\]]+)\]/g, (_, type, id, label) => {
+              palLinks.push({ type, id, label: label.trim() });
+              return "";
+            }).trim();
+            $("sum-body").innerHTML = escHtml(bodyText).replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>");
+            // Append note links below the summary
+            palLinks.forEach(({ type, id, label }) => {
+              const btn = document.createElement("button");
+              btn.className = "pal-link-btn";
+              btn.style.marginTop = "12px";
+              btn.textContent = label;
+              btn.onclick = () => { summaryModal.close(); palNavigate(type, id); };
+              $("sum-body").appendChild(btn);
+            });
           } else {
             $("sum-body").textContent = "Failed to get summary. Please try again.";
           }
