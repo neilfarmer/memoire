@@ -8901,18 +8901,25 @@
     },
 
     async _fetch(article) {
+      // Fetch article text to give the model real content to summarize
+      let articleText = "";
+      try {
+        const textRes = await api.call("GET", `/feeds/article-text?url=${encodeURIComponent(article.url)}`);
+        if (textRes && textRes.text) articleText = textRes.text;
+      } catch {}
+
       const prompt = [
         `Write a detailed summary of the following article for a software/DevOps engineer.`,
         `Cover all of: the article's main goal, its key findings or conclusions, any specific techniques or tools introduced, and whether it's worth reading in full.`,
-        `Use as many sentences as needed to capture the substance — do not truncate important details.`,
+        `Be specific — enumerate actual items, findings, or steps from the article content. Do not describe categories without filling them in.`,
         `Be direct — no filler phrases like "In summary", "This article", or "The author".`,
         ``,
         `After writing the summary, use the create_note tool to save it as a note titled "${article.title || "Article Summary"}" in a folder called "Article Summaries". Include the article URL at the bottom of the note.`,
         ``,
         `Title: ${article.title || ""}`,
         `Source: ${article.feed_title || ""}`,
-        `Description: ${article.description || "(none provided)"}`,
         `URL: ${article.url || ""}`,
+        articleText ? `\nArticle content:\n${articleText}` : `Description: ${article.description || "(none provided)"}`,
       ].join("\n");
 
       try {
@@ -8927,13 +8934,14 @@
             // Strip pal-link tags from the summary body text and collect them separately
             const palLinks = [];
             // Handle markdown-style [text](pal-link:type:id:label)
+            const seenIds = new Set();
             let bodyText = res.reply.replace(/\[[^\]]*\]\(pal-link:(\w+):([^:)]+):([^)]+)\)/g, (_, type, id, label) => {
-              palLinks.push({ type, id, label: label.trim() });
+              if (!seenIds.has(id)) { seenIds.add(id); palLinks.push({ type, id, label: label.trim() }); }
               return "";
             });
             // Handle standalone [pal-link:type:id:label]
             bodyText = bodyText.replace(/\[pal-link:(\w+):([^:]+):([^\]]+)\]/g, (_, type, id, label) => {
-              palLinks.push({ type, id, label: label.trim() });
+              if (!seenIds.has(id)) { seenIds.add(id); palLinks.push({ type, id, label: label.trim() }); }
               return "";
             }).trim();
             $("sum-body").innerHTML = escHtml(bodyText).replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>");

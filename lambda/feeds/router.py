@@ -22,5 +22,9 @@ def route(route_key: str, user_id: str, body: dict, path_params: dict) -> dict:
         case "GET /feeds/articles":
             return crud.get_articles(user_id)
 
+        case "GET /feeds/article-text":
+            url = path_params.get("url") or body.get("url") or ""
+            return crud.fetch_article_text(user_id, url)
+
         case _:
             return not_found("Route")

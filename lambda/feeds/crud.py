@@ -143,6 +143,38 @@ def _fetch_og_image(url: str) -> str:
         return ""
 
 
+MAX_ARTICLE_CHARS = 8_000  # ~2k tokens, enough for summarization
+
+
+def fetch_article_text(user_id: str, url: str) -> dict:  # noqa: ARG001
+    """Fetch an article URL and return extracted plain text for summarization."""
+    if not url or not url.startswith("http"):
+        return error("Invalid URL")
+    try:
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "Mozilla/5.0 (compatible; Memoire/1.0)"}
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            html = resp.read(200_000).decode("utf-8", errors="ignore")
+
+        # Strip script/style blocks
+        html = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.IGNORECASE | re.DOTALL)
+        # Try to isolate the article body
+        body_m = re.search(
+            r"<(?:article|main)[^>]*>(.*?)</(?:article|main)>",
+            html, re.IGNORECASE | re.DOTALL
+        )
+        text_html = body_m.group(1) if body_m else html
+        # Strip remaining tags
+        text = re.sub(r"<[^>]+>", " ", text_html)
+        # Collapse whitespace
+        text = re.sub(r"\s+", " ", text).strip()
+        text = text[:MAX_ARTICLE_CHARS]
+        return ok({"text": text, "url": url})
+    except Exception:
+        return error("Could not fetch article")
+
+
 def _find_image(element) -> str:
     """Try common RSS image locations on an item/entry element."""
     # media:thumbnail

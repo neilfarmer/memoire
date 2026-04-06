@@ -78,6 +78,7 @@ locals {
     "POST /feeds",
     "DELETE /feeds/{id}",
     "GET /feeds/articles",
+    "GET /feeds/article-text",
   ]
 }
 
