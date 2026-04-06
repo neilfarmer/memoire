@@ -8902,9 +8902,10 @@
 
     async _fetch(article) {
       const prompt = [
-        `Summarize the following article for a software/DevOps engineer in 4-6 sentences.`,
-        `Cover: what it's about, the key takeaway, and whether it's worth reading in full.`,
-        `Be direct — no filler phrases like "In summary" or "This article".`,
+        `Write a detailed summary of the following article for a software/DevOps engineer.`,
+        `Cover all of: the article's main goal, its key findings or conclusions, any specific techniques or tools introduced, and whether it's worth reading in full.`,
+        `Use as many sentences as needed to capture the substance — do not truncate important details.`,
+        `Be direct — no filler phrases like "In summary", "This article", or "The author".`,
         ``,
         `Title: ${article.title || ""}`,
         `Source: ${article.feed_title || ""}`,
