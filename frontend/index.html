@@ -8382,6 +8382,7 @@
     data: [],        // feed URL records
     articles: [],
     loaded: false,
+    _byUrl: new Map(), // url → article object for onclick lookups
 
     async loadFeeds() {
       feeds.data = await api.call("GET", "/feeds").catch(() => []) || [];
@@ -8402,6 +8403,7 @@
           return;
         }
         feeds.articles = await api.call("GET", "/feeds/articles") || [];
+        feeds._byUrl = new Map(feeds.articles.map(a => [a.url, a]));
         feeds.renderGrid();
       } catch (e) {
         console.error("Failed to load feed articles:", e);
@@ -8434,6 +8436,7 @@
           : "";
         const isFaved = favs.has(a.url);
         const favIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+        const encodedUrl = encodeURIComponent(a.url);
         return `
           <a class="feed-card" href="${escHtml(a.url)}" target="_blank" rel="noopener noreferrer">
             ${imgHtml}
@@ -8445,7 +8448,7 @@
             </div>
             <div class="feed-card-footer">
               <button class="feed-fav-btn${isFaved ? " active" : ""}" data-url="${escHtml(a.url)}"
-                onclick="event.preventDefault();event.stopPropagation();favs.toggle(${JSON.stringify(a)},this)">
+                onclick="event.preventDefault();event.stopPropagation();favs.toggleByUrl(decodeURIComponent('${encodedUrl}'),this)">
                 ${favIcon}${isFaved ? "Favorited" : "Favorite"}
               </button>
             </div>
@@ -8531,6 +8534,12 @@
       } finally {
         hideLoader("favorites-loader");
       }
+    },
+
+    async toggleByUrl(url, btn) {
+      const article = feeds._byUrl.get(url);
+      if (!article) return;
+      return this.toggle(article, btn);
     },
 
     async toggle(article, btn) {
