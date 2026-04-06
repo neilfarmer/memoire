@@ -8870,11 +8870,11 @@
       $("sum-source").textContent = article.feed_title || "";
       $("sum-title").textContent  = article.title || "Untitled";
       $("sum-open-btn").href      = article.url || "#";
-
-      const desc = (article.description || "").trim();
-      $("sum-body").innerHTML = desc
-        ? escHtml(desc).replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>")
-        : `<p class="sum-no-desc">No description available.</p>`;
+      $("sum-body").innerHTML = `
+        <div class="sum-thinking">
+          <div class="sum-thinking-dots"><span></span><span></span><span></span></div>
+          Summarizing...
+        </div>`;
 
       // Wire up Favorite button
       const favBtn = $("sum-fav-btn");
@@ -8892,37 +8892,84 @@
         });
       };
 
-      // Wire up Create Note button
+      // Reset Create Note button until summary is ready
       const noteBtn = $("sum-note-btn");
-      noteBtn.disabled = false;
+      noteBtn.disabled = true;
       noteBtn.textContent = "Create Note";
-      noteBtn.onclick = async () => {
-        noteBtn.disabled = true;
-        noteBtn.textContent = "Saving...";
-        const content = [
-          article.description || "",
-          "",
-          article.url || "",
-        ].join("\n").trim();
-        try {
-          await api.call("POST", "/notes", {
-            title:       article.title || "Article Note",
-            content,
-            folder_name: "Article Summaries",
-          });
-          noteBtn.textContent = "Note saved";
-        } catch {
-          noteBtn.disabled = false;
-          noteBtn.textContent = "Create Note";
-        }
-      };
+      noteBtn.onclick = null;
+      this._summary = null;
 
       $("sum-overlay").classList.remove("hidden");
+      this._fetch(article);
     },
 
     close() {
       $("sum-overlay").classList.add("hidden");
       this._article = null;
+    },
+
+    async _fetch(article) {
+      let articleText = "";
+      try {
+        const textRes = await api.call("GET", `/feeds/article-text?url=${encodeURIComponent(article.url)}`);
+        if (textRes && textRes.text) articleText = textRes.text;
+      } catch {}
+
+      const prompt = [
+        `Summarize the following article comprehensively. Target length: 250–750 words (1–3 minute read).`,
+        ``,
+        `Cover every key point, finding, technique, tool, or argument the article makes. Do not omit important details to save space — include anything a reader would need to understand the article's full value without reading it themselves.`,
+        ``,
+        `Format as flowing paragraphs. No bullet lists. No headers. No filler phrases like "In summary", "This article", or "The author explains".`,
+        `Be direct and specific — use actual names, numbers, and examples from the article when available.`,
+        ``,
+        `Title: ${article.title || ""}`,
+        `Source: ${article.feed_title || ""}`,
+        `URL: ${article.url || ""}`,
+        articleText ? `\nArticle content:\n${articleText}` : `Description: ${article.description || "(none provided)"}`,
+      ].join("\n");
+
+      try {
+        const res = await api.call("POST", "/assistant/chat", {
+          message:    prompt,
+          model:      "us.amazon.nova-pro-v1:0",
+          local_date: new Date().toLocaleDateString("en-CA"),
+          no_history: true,
+        });
+        if (!$("sum-overlay").classList.contains("hidden")) {
+          if (res && res.reply) {
+            let bodyText = res.reply
+              .replace(/\[[^\]]*\]\(pal-link:[^)]+\)/g, "")
+              .replace(/\[pal-link:[^\]]+\]/g, "")
+              .trim();
+            $("sum-body").innerHTML = escHtml(bodyText).replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>");
+            this._summary = bodyText;
+            const noteBtn = $("sum-note-btn");
+            noteBtn.disabled = false;
+            noteBtn.onclick = async () => {
+              noteBtn.disabled = true;
+              noteBtn.textContent = "Saving...";
+              try {
+                await api.call("POST", "/notes", {
+                  title:       this._article?.title || "Article Summary",
+                  content:     this._summary + "\n\n" + (this._article?.url || ""),
+                  folder_name: "Article Summaries",
+                });
+                noteBtn.textContent = "Note saved";
+              } catch {
+                noteBtn.disabled = false;
+                noteBtn.textContent = "Create Note";
+              }
+            };
+          } else {
+            $("sum-body").textContent = "Failed to get summary. Please try again.";
+          }
+        }
+      } catch (e) {
+        if (!$("sum-overlay").classList.contains("hidden")) {
+          $("sum-body").textContent = "Failed to get summary. Please try again.";
+        }
+      }
     },
   };
 
