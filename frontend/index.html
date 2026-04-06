@@ -2026,81 +2026,133 @@
     }
 
     .day-view {
-      padding: 20px 24px;
+      padding: 28px 32px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 20px;
+      max-width: 860px;
     }
     .day-view-header {
       display: flex;
-      align-items: center;
+      align-items: baseline;
       justify-content: space-between;
-      padding-bottom: 12px;
+      padding-bottom: 20px;
       border-bottom: 1px solid var(--border);
     }
     .day-view-date {
-      font-size: 17px;
+      font-size: 22px;
       font-weight: 700;
       color: var(--text);
+      letter-spacing: -0.02em;
     }
     .day-section {
       border: 1px solid var(--border);
       border-radius: var(--radius);
       overflow: hidden;
+      transition: border-color .15s;
     }
+    .day-section:hover { border-color: rgba(255,255,255,.12); }
     .day-section-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 14px;
+      padding: 12px 18px;
       background: var(--bg);
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
       border-bottom: 1px solid var(--border);
     }
     .day-section-body {
-      padding: 12px 14px;
+      padding: 16px 18px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 10px;
     }
-    .day-view-empty { font-size: 13px; color: var(--muted); }
-    .day-view-mood  { font-size: 13px; color: var(--muted); }
-    .day-view-title { font-size: 14px; font-weight: 600; }
+    .day-view-empty { font-size: 13px; color: var(--muted); padding: 4px 0; }
+    .day-view-mood  {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(255,255,255,.07);
+      color: var(--text);
+      border: 1px solid var(--border);
+      align-self: flex-start;
+    }
+    .day-view-title { font-size: 15px; font-weight: 600; }
     .day-view-preview {
       font-size: 13px;
       color: var(--muted);
-      line-height: 1.5;
+      line-height: 1.6;
       display: -webkit-box;
-      -webkit-line-clamp: 3;
+      -webkit-line-clamp: 4;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
-    .day-view-exercise { font-size: 13px; }
+    .day-view-exercise { font-size: 13px; padding: 2px 0; }
     .day-view-ex-name  { font-weight: 500; }
-    .day-view-ex-detail { color: var(--muted); margin-left: 6px; }
-    .day-view-meal { display: flex; justify-content: space-between; font-size: 13px; }
+    .day-view-ex-detail { color: var(--muted); margin-left: 8px; font-size: 12px; }
+    .day-view-meal { display: flex; justify-content: space-between; font-size: 13px; padding: 2px 0; }
     .day-view-meal-cal { color: var(--muted); font-size: 12px; }
-    .day-view-totals { font-size: 12px; color: var(--muted); margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--border); }
+    .day-view-totals { font-size: 12px; color: var(--muted); margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--border); }
     .day-view-notes  { font-size: 12px; color: var(--muted); margin-top: 4px; font-style: italic; }
-    .day-section-loading { padding: 40px; display: flex; justify-content: center; }
-    .day-view-task { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; padding: 2px 0; }
-    .day-view-task:hover { color: var(--primary); }
+    .day-section-loading { padding: 48px; display: flex; justify-content: center; }
+    .day-view-task { display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; padding: 6px 10px; border-radius: 6px; transition: background .1s; }
+    .day-view-task:hover { background: var(--bg); color: var(--primary); }
     .day-view-task-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .day-view-task-title.done-title { text-decoration: line-through; color: var(--muted); }
-    .day-view-habit { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-    .day-view-habit-name { flex: 1; }
-    .day-view-habit-done { color: #06b6d4; font-size: 12px; font-weight: 600; }
-    .day-view-habit-pending { color: var(--muted); font-size: 12px; }
+    .day-view-habits-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .day-view-habit {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      background: var(--bg);
+    }
+    .day-view-habit-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+    .day-view-habit-done {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #06b6d4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      color: #000;
+      font-weight: 800;
+    }
+    .day-view-habit-done::after { content: "✓"; }
+    .day-view-habit-pending {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+    }
 
     .journal-cal-legend {
-      display: flex;
-      gap: 12px;
-      padding: 8px 12px 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 16px;
+      padding: 12px 16px 16px;
       font-size: 11px;
       color: var(--muted);
     }
-    .journal-cal-legend-item { display: flex; align-items: center; gap: 5px; }
+    .journal-cal-legend-item { display: flex; align-items: center; gap: 6px; }
 
     .journal-entry-item {
       padding: 10px 14px;
@@ -6111,13 +6163,17 @@
         // Habits
         let habitsBody;
         if (dayHabits.length > 0) {
-          habitsBody = dayHabits.map(h => `
+          const doneCount = dayHabits.filter(h => h.doneOnDate).length;
+          const habitItems = dayHabits.map(h => `
             <div class="day-view-habit">
               <span class="day-view-habit-name">${escHtml(h.name || "Unnamed habit")}</span>
               ${h.doneOnDate
-                ? `<span class="day-view-habit-done">Done</span>`
-                : `<span class="day-view-habit-pending">Pending</span>`}
+                ? `<span class="day-view-habit-done" title="Done"></span>`
+                : `<span class="day-view-habit-pending" title="Pending"></span>`}
             </div>`).join("");
+          habitsBody = `
+            <div style="font-size:12px;color:var(--muted);margin-bottom:2px;">${doneCount} of ${dayHabits.length} completed</div>
+            <div class="day-view-habits-grid">${habitItems}</div>`;
         } else {
           habitsBody = `<div class="day-view-empty">No habits tracked.</div>`;
         }
