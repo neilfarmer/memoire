@@ -3978,6 +3978,7 @@
     <div class="sum-footer">
       <button class="btn btn-primary btn-sm" id="sum-fav-btn">Favorite</button>
       <a class="btn btn-secondary btn-sm" id="sum-open-btn" target="_blank" rel="noopener noreferrer">Open article</a>
+      <button class="btn btn-secondary btn-sm" id="sum-note-btn" disabled>Create Note</button>
       <button class="sum-close-btn" onclick="summaryModal.close()" title="Close">&times;</button>
     </div>
   </div>
@@ -8891,6 +8892,13 @@
         });
       };
 
+      // Reset Create Note button
+      const noteBtn = $("sum-note-btn");
+      noteBtn.disabled = true;
+      noteBtn.textContent = "Create Note";
+      noteBtn.onclick = null;
+      this._summary = null;
+
       $("sum-overlay").classList.remove("hidden");
       this._fetch(article);
     },
@@ -8914,8 +8922,6 @@
         `Be specific — enumerate actual items, findings, or steps from the article content. Do not describe categories without filling them in.`,
         `Be direct — no filler phrases like "In summary", "This article", or "The author".`,
         ``,
-        `After writing the summary, use the create_note tool to save it as a note titled "${article.title || "Article Summary"}" in a folder called "Article Summaries". Include the article URL at the bottom of the note.`,
-        ``,
         `Title: ${article.title || ""}`,
         `Source: ${article.feed_title || ""}`,
         `URL: ${article.url || ""}`,
@@ -8931,45 +8937,30 @@
         });
         if (!$("sum-overlay").classList.contains("hidden")) {
           if (res && res.reply) {
-            // Strip pal-link tags from the summary body text and collect them separately
-            const palLinks = [];
-            // Handle markdown-style [text](pal-link:type:id:label)
-            const seenIds = new Set();
-            let bodyText = res.reply.replace(/\[[^\]]*\]\(pal-link:(\w+):([^:)]+):([^)]+)\)/g, (_, type, id, label) => {
-              if (!seenIds.has(id)) { seenIds.add(id); palLinks.push({ type, id, label: label.trim() }); }
-              return "";
-            });
-            // Handle standalone [pal-link:type:id:label]
-            bodyText = bodyText.replace(/\[pal-link:(\w+):([^:]+):([^\]]+)\]/g, (_, type, id, label) => {
-              if (!seenIds.has(id)) { seenIds.add(id); palLinks.push({ type, id, label: label.trim() }); }
-              return "";
-            }).trim();
+            // Strip pal-link tags (AI should not use them, but just in case)
+            let bodyText = res.reply
+              .replace(/\[[^\]]*\]\(pal-link:[^)]+\)/g, "")
+              .replace(/\[pal-link:[^\]]+\]/g, "")
+              .trim();
             $("sum-body").innerHTML = escHtml(bodyText).replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>");
-            // Append action row: note links + inline favorite button
-            const actRow = document.createElement("div");
-            actRow.style.cssText = "display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;";
-            palLinks.forEach(({ type, id, label }) => {
-              const btn = document.createElement("button");
-              btn.className = "pal-link-btn";
-              btn.textContent = label;
-              btn.onclick = () => { summaryModal.close(); palNavigate(type, id); };
-              actRow.appendChild(btn);
-            });
-            // Inline favorite button
-            const favInline = document.createElement("button");
-            const isFavedNow = favs.has(this._article?.url);
-            favInline.className = "btn btn-primary btn-sm";
-            favInline.textContent = isFavedNow ? "Favorited" : "Favorite";
-            favInline.disabled = isFavedNow;
-            favInline.onclick = async () => {
-              await favs.toggle(this._article, { classList: { add(){}, remove(){} }, innerHTML: "" });
-              favInline.textContent = "Favorited";
-              favInline.disabled = true;
-              $("sum-fav-btn").textContent = "Favorited";
-              $("sum-fav-btn").disabled = true;
+            this._summary = bodyText;
+            const noteBtn = $("sum-note-btn");
+            noteBtn.disabled = false;
+            noteBtn.onclick = async () => {
+              noteBtn.disabled = true;
+              noteBtn.textContent = "Saving...";
+              try {
+                await api.call("POST", "/notes", {
+                  title:       this._article?.title || "Article Summary",
+                  content:     this._summary + "\n\n" + (this._article?.url || ""),
+                  folder_name: "Article Summaries",
+                });
+                noteBtn.textContent = "Note saved";
+              } catch {
+                noteBtn.disabled = false;
+                noteBtn.textContent = "Create Note";
+              }
             };
-            actRow.appendChild(favInline);
-            $("sum-body").appendChild(actRow);
           } else {
             $("sum-body").textContent = "Failed to get summary. Please try again.";
           }
