@@ -158,6 +158,7 @@ def chat_stream(
     emit,
     model: str | None = None,
     local_date: str | None = None,
+    no_history: bool = False,
 ) -> None:
     """Run the chat loop, streaming text tokens via emit(bytes) as they arrive.
 
@@ -171,7 +172,7 @@ def chat_stream(
     """
     model_id = model if model in _ALLOWED_MODELS else MODEL_ID
     try:
-        history       = mem.load_history(user_id)
+        history       = [] if no_history else mem.load_history(user_id)
         facts, master = mem.load_memory(user_id)
         system        = _system_prompt(facts, master, local_date=local_date)
         messages      = history + [{"role": "user", "content": [{"text": user_message}]}]
@@ -316,10 +317,11 @@ def chat_stream(
             emit(json.dumps({"type": "token", "text": links_text}).encode() + b"\n")
             reply = reply.rstrip() + links_text
 
-        mem.save_message(user_id, "user",      user_message)
-        mem.save_message(user_id, "assistant", reply)
+        if not no_history:
+            mem.save_message(user_id, "user",      user_message)
+            mem.save_message(user_id, "assistant", reply)
+            _update_master_context(user_id, master, facts, user_message, reply, model_id)
         mem.update_model_usage(user_id, model_id, total_in, total_out)
-        _update_master_context(user_id, master, facts, user_message, reply, model_id)
 
         emit(json.dumps({"type": "done", "tools_used": tools_used, "reply": reply}).encode() + b"\n")
 

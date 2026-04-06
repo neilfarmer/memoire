@@ -2765,6 +2765,121 @@
       width: 90px;
       outline: none;
     }
+    /* ── Summary modal ── */
+    .sum-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      backdrop-filter: blur(3px);
+      z-index: 1100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: fadeIn .15s ease;
+    }
+    .sum-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) * 1.5);
+      width: 100%;
+      max-width: 540px;
+      display: flex;
+      flex-direction: column;
+      max-height: 80vh;
+      box-shadow: 0 24px 64px rgba(0,0,0,.5);
+      animation: slideUp .18s ease;
+    }
+    @keyframes slideUp {
+      from { opacity:0; transform:translateY(16px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .sum-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sum-source {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--primary);
+    }
+    .sum-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    .sum-body {
+      padding: 18px 20px;
+      overflow-y: auto;
+      flex: 1;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text);
+      min-height: 80px;
+    }
+    .sum-body p { margin: 0 0 10px; }
+    .sum-body p:last-child { margin: 0; }
+    .sum-thinking {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .sum-thinking-dots span {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+      animation: blink 1.2s infinite;
+    }
+    .sum-thinking-dots span:nth-child(2) { animation-delay: .2s; }
+    .sum-thinking-dots span:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink {
+      0%,80%,100% { opacity:.2; }
+      40% { opacity:1; }
+    }
+    .sum-footer {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .sum-footer .btn-sm { font-size: 13px; padding: 6px 14px; }
+    .sum-close-btn {
+      margin-left: auto;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 20px;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .sum-close-btn:hover { color: var(--text); background: var(--bg); }
+    .feed-sum-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      transition: color .15s, background .15s;
+      line-height: 1;
+    }
+    .feed-sum-btn:hover { color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); }
     .feed-settings-item {
       display: flex;
       align-items: center;
@@ -3843,6 +3958,27 @@
       <div class="admin-grid" id="admin-grid"></div>
     </div>
   </main>
+    </div>
+  </div>
+</div>
+
+<!-- ── Article summary modal ── -->
+<div id="sum-overlay" class="sum-overlay hidden" onclick="if(event.target===this)summaryModal.close()">
+  <div class="sum-modal" role="dialog" aria-modal="true">
+    <div class="sum-header">
+      <div class="sum-source" id="sum-source"></div>
+      <div class="sum-title" id="sum-title"></div>
+    </div>
+    <div class="sum-body" id="sum-body">
+      <div class="sum-thinking">
+        <div class="sum-thinking-dots"><span></span><span></span><span></span></div>
+        Summarizing...
+      </div>
+    </div>
+    <div class="sum-footer">
+      <button class="btn btn-primary btn-sm" id="sum-fav-btn">Favorite</button>
+      <a class="btn btn-secondary btn-sm" id="sum-open-btn" target="_blank" rel="noopener noreferrer">Open article</a>
+      <button class="sum-close-btn" onclick="summaryModal.close()" title="Close">&times;</button>
     </div>
   </div>
 </div>
@@ -8436,6 +8572,7 @@
           : "";
         const isFaved = favs.has(a.url);
         const favIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+        const sumIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20z"/><path d="M12 8v4l3 3"/></svg>`;
         const encodedUrl = encodeURIComponent(a.url);
         return `
           <a class="feed-card" href="${escHtml(a.url)}" target="_blank" rel="noopener noreferrer">
@@ -8447,6 +8584,9 @@
               ${dateStr ? `<div class="feed-card-date">${dateStr}</div>` : ""}
             </div>
             <div class="feed-card-footer">
+              <button class="feed-sum-btn" onclick="event.preventDefault();event.stopPropagation();summaryModal.open(feeds._byUrl.get(decodeURIComponent('${encodedUrl}')))">
+                ${sumIcon} Summarize
+              </button>
               <button class="feed-fav-btn${isFaved ? " active" : ""}" data-url="${escHtml(a.url)}"
                 onclick="event.preventDefault();event.stopPropagation();favs.toggleByUrl(decodeURIComponent('${encodedUrl}'),this)">
                 ${favIcon}${isFaved ? "Favorited" : "Favorite"}
@@ -8716,6 +8856,125 @@
 
   $("sb-toggle").addEventListener("click", () => sidebar.toggle());
   $("admin-refresh-btn").addEventListener("click", () => { admin.loaded = false; admin.load(); });
+
+  // ── Article summary modal ────────────────────────────────────────────────────
+
+  const summaryModal = {
+    _article: null,
+    _reader:  null,
+
+    open(article) {
+      if (!article) return;
+      this._article = article;
+      this._abort();
+
+      $("sum-source").textContent = article.feed_title || "";
+      $("sum-title").textContent  = article.title || "Untitled";
+      $("sum-open-btn").href      = article.url || "#";
+      $("sum-body").innerHTML = `
+        <div class="sum-thinking">
+          <div class="sum-thinking-dots"><span></span><span></span><span></span></div>
+          Summarizing...
+        </div>`;
+
+      // Wire up Favorite button
+      const favBtn = $("sum-fav-btn");
+      const isFaved = favs.has(article.url);
+      favBtn.textContent = isFaved ? "Favorited" : "Favorite";
+      favBtn.disabled = isFaved;
+      favBtn.onclick = async () => {
+        await favs.toggle(article, { classList: { add(){}, remove(){} }, innerHTML: "" });
+        favBtn.textContent = "Favorited";
+        favBtn.disabled = true;
+        // Refresh feed card button state
+        document.querySelectorAll(`.feed-fav-btn[data-url="${CSS.escape(article.url)}"]`).forEach(b => {
+          b.classList.add("active");
+          b.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Favorited`;
+        });
+      };
+
+      $("sum-overlay").classList.remove("hidden");
+      this._stream(article);
+    },
+
+    close() {
+      $("sum-overlay").classList.add("hidden");
+      this._abort();
+      this._article = null;
+    },
+
+    _abort() {
+      if (this._reader) { try { this._reader.cancel(); } catch {} this._reader = null; }
+    },
+
+    async _stream(article) {
+      const streamUrl = window.MEMOIRE_CONFIG?.assistantStreamUrl;
+      if (!streamUrl) {
+        $("sum-body").textContent = "AI assistant not configured.";
+        return;
+      }
+
+      const prompt = [
+        `Summarize the following article for a software/DevOps engineer in 4-6 sentences.`,
+        `Cover: what it's about, the key takeaway, and whether it's worth reading in full.`,
+        `Be direct — no filler phrases like "In summary" or "This article".`,
+        ``,
+        `Title: ${article.title || ""}`,
+        `Source: ${article.feed_title || ""}`,
+        `Description: ${article.description || "(none provided)"}`,
+        `URL: ${article.url || ""}`,
+      ].join("\n");
+
+      try {
+        const resp = await fetch(streamUrl, {
+          method:      "POST",
+          credentials: "include",
+          headers:     { "Content-Type": "application/json" },
+          body:        JSON.stringify({
+            message:    prompt,
+            model:      "us.amazon.nova-lite-v1:0",
+            local_date: new Date().toLocaleDateString("en-CA"),
+            no_history: true,
+          }),
+        });
+
+        if (!resp.ok || !resp.body) {
+          $("sum-body").textContent = "Failed to get summary. Please try again.";
+          return;
+        }
+
+        this._reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = "", accText = "";
+        $("sum-body").innerHTML = "";
+
+        while (true) {
+          const { done, value } = await this._reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split("\n");
+          buf = lines.pop();
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            let evt;
+            try { evt = JSON.parse(line); } catch { continue; }
+            if (evt.type === "token") {
+              accText += evt.text;
+              $("sum-body").innerHTML = escHtml(accText).replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>");
+            } else if (evt.type === "done" && evt.reply) {
+              $("sum-body").innerHTML = escHtml(evt.reply).replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>");
+            }
+          }
+        }
+        this._reader = null;
+      } catch (e) {
+        if ($("sum-overlay").classList.contains("hidden")) return; // closed mid-stream
+        $("sum-body").textContent = "Failed to get summary. Please try again.";
+      }
+    },
+  };
+
+  document.addEventListener("keydown", e => { if (e.key === "Escape") summaryModal.close(); });
 
   // ── Boot ──────────────────────────────────────────────────────────────────────
   colorTheme.init();

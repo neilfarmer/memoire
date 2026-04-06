@@ -92,6 +92,7 @@ def _stream_handler(event: dict, context, response_stream) -> None:
             emit=response_stream.write,
             model=body.get("model") or None,
             local_date=body.get("local_date") or None,
+            no_history=bool(body.get("no_history")),
         )
 
     except Exception:
