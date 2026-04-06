@@ -283,7 +283,6 @@ resource "aws_s3_object" "config_js" {
       cognitoUserPoolId: "${var.auth_provider == "cognito" ? aws_cognito_user_pool.main[0].id : ""}",
       authDomain: "${local.auth_hosted_ui_url}",
       awsRegion: "${var.aws_region}",
-      assistantStreamUrl: "${aws_lambda_function_url.assistant_stream.function_url}",
     };
   JS
 }

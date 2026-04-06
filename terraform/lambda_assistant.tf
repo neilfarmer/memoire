@@ -37,12 +37,6 @@ resource "aws_lambda_function" "assistant" {
       ASSISTANT_MODEL_ID      = var.assistant_model_id
       ASSISTANT_SYSTEM_PROMPT = var.assistant_system_prompt
       USDA_API_KEY            = var.usda_api_key
-      # Auth env vars for the streaming handler (validates tokens directly,
-      # no API Gateway authorizer context available via Function URL).
-      TOKENS_TABLE = aws_dynamodb_table.tokens.name
-      JWKS_URI     = "${local.auth_jwt_issuer_url}/.well-known/jwks.json"
-      JWT_ISSUER   = local.auth_jwt_issuer_url
-      JWT_AUDIENCE = local.auth_jwt_client_id
     }
   }
 }
@@ -109,87 +103,7 @@ resource "aws_iam_role_policy" "assistant_bedrock" {
   })
 }
 
-# Allow the streaming handler to look up PATs in the tokens GSI
-resource "aws_iam_role_policy" "assistant_tokens_read" {
-  name = "${local.name_prefix}-assistant-tokens-read"
-  role = aws_iam_role.assistant.id
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["dynamodb:Query"]
-      Resource = ["${aws_dynamodb_table.tokens.arn}/index/token-hash-index"]
-    }]
-  })
-}
-
-# ── Streaming Lambda (separate function, RESPONSE_STREAM invoke mode) ─────────
-#
-# Lambda Function URLs do not support Lambda authorizers, so auth is validated
-# directly inside the handler via token_auth.py.  A separate function is needed
-# because a single Lambda can only have one handler, and the streaming handler
-# (wrap_streaming_handler) is incompatible with the API Gateway handler.
-
-resource "aws_lambda_function" "assistant_stream" {
-  function_name                  = "${local.name_prefix}-assistant-stream"
-  runtime                        = var.lambda_runtime
-  handler                        = "handler.streaming_lambda_handler"
-  role                           = aws_iam_role.assistant.arn
-  filename                       = data.archive_file.lambda_assistant.output_path
-  source_code_hash               = data.archive_file.lambda_assistant.output_base64sha256
-  layers                         = [aws_lambda_layer_version.shared.arn]
-  timeout                        = 60
-  memory_size                    = 256
-  reserved_concurrent_executions = var.lambda_max_concurrency
-
-  environment {
-    variables = {
-      CONVERSATIONS_TABLE     = aws_dynamodb_table.assistant_conversations.name
-      MEMORY_TABLE            = aws_dynamodb_table.assistant_memory.name
-      TASKS_TABLE             = aws_dynamodb_table.tasks.name
-      NOTES_TABLE             = aws_dynamodb_table.notes.name
-      NOTE_FOLDERS_TABLE      = aws_dynamodb_table.note_folders.name
-      HABITS_TABLE            = aws_dynamodb_table.habits.name
-      GOALS_TABLE             = aws_dynamodb_table.goals.name
-      JOURNAL_TABLE           = aws_dynamodb_table.journal.name
-      NUTRITION_TABLE         = aws_dynamodb_table.nutrition.name
-      HEALTH_TABLE            = aws_dynamodb_table.health.name
-      ASSISTANT_MODEL_ID      = var.assistant_model_id
-      ASSISTANT_SYSTEM_PROMPT = var.assistant_system_prompt
-      USDA_API_KEY            = var.usda_api_key
-      TOKENS_TABLE            = aws_dynamodb_table.tokens.name
-      JWKS_URI                = "${local.auth_jwt_issuer_url}/.well-known/jwks.json"
-      JWT_ISSUER              = local.auth_jwt_issuer_url
-      JWT_AUDIENCE            = local.auth_jwt_client_id
-    }
-  }
-}
-
-resource "aws_cloudwatch_log_group" "assistant_stream" {
-  name              = "/aws/lambda/${aws_lambda_function.assistant_stream.function_name}"
-  retention_in_days = var.log_retention_days
-}
-
-resource "aws_lambda_function_url" "assistant_stream" {
-  function_name = aws_lambda_function.assistant_stream.function_name
-  qualifier     = null
-  invoke_mode   = "BUFFERED"
-
-  # checkov:skip=CKV_AWS_258: AuthType NONE is intentional — the Lambda validates
-  # Cognito JWTs and PATs directly in token_auth.py (same RS256 + PAT logic as
-  # the authorizer Lambda).  AWS_IAM would require SigV4 request signing in the
-  # browser, which is incompatible with the existing cookie-based auth session.
-  authorization_type = "NONE"
-
-  cors {
-    allow_credentials = true
-    allow_headers     = ["content-type", "authorization"]
-    allow_methods     = ["POST"]
-    allow_origins     = [local.frontend_origin]
-    max_age           = 86400
-  }
-}
 
 resource "aws_lambda_permission" "assistant_api" {
   statement_id  = "AllowAPIGatewayInvoke"

@@ -333,10 +333,10 @@ def chat_stream(
             pass
 
 
-def chat(user_id: str, user_message: str, model: str | None = None, local_date: str | None = None) -> dict:
+def chat(user_id: str, user_message: str, model: str | None = None, local_date: str | None = None, no_history: bool = False) -> dict:
     model_id = model if model in _ALLOWED_MODELS else MODEL_ID
     try:
-        history         = mem.load_history(user_id)
+        history         = [] if no_history else mem.load_history(user_id)
         facts, master   = mem.load_memory(user_id)
         system          = _system_prompt(facts, master, local_date=local_date)
         messages        = history + [{"role": "user", "content": [{"text": user_message}]}]
@@ -418,10 +418,11 @@ def chat(user_id: str, user_message: str, model: str | None = None, local_date: 
         # Append any navigation links collected from tool results
         if link_tags:
             reply = reply.rstrip() + "\n" + " ".join(link_tags)
-        mem.save_message(user_id, "user",      user_message)
-        mem.save_message(user_id, "assistant", reply)
+        if not no_history:
+            mem.save_message(user_id, "user",      user_message)
+            mem.save_message(user_id, "assistant", reply)
+            _update_master_context(user_id, master, facts, user_message, reply, model_id)
         mem.update_model_usage(user_id, model_id, total_in, total_out)
-        _update_master_context(user_id, master, facts, user_message, reply, model_id)
 
         return ok({"reply": reply, "tools_used": tools_used})
 

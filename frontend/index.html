@@ -8861,12 +8861,10 @@
 
   const summaryModal = {
     _article: null,
-    _reader:  null,
 
     open(article) {
       if (!article) return;
       this._article = article;
-      this._abort();
 
       $("sum-source").textContent = article.feed_title || "";
       $("sum-title").textContent  = article.title || "Untitled";
@@ -8894,26 +8892,15 @@
       };
 
       $("sum-overlay").classList.remove("hidden");
-      this._stream(article);
+      this._fetch(article);
     },
 
     close() {
       $("sum-overlay").classList.add("hidden");
-      this._abort();
       this._article = null;
     },
 
-    _abort() {
-      if (this._reader) { try { this._reader.cancel(); } catch {} this._reader = null; }
-    },
-
-    async _stream(article) {
-      const streamUrl = window.MEMOIRE_CONFIG?.assistantStreamUrl;
-      if (!streamUrl) {
-        $("sum-body").textContent = "AI assistant not configured.";
-        return;
-      }
-
+    async _fetch(article) {
       const prompt = [
         `Summarize the following article for a software/DevOps engineer in 4-6 sentences.`,
         `Cover: what it's about, the key takeaway, and whether it's worth reading in full.`,
@@ -8926,50 +8913,23 @@
       ].join("\n");
 
       try {
-        const resp = await fetch(streamUrl, {
-          method:      "POST",
-          credentials: "include",
-          headers:     { "Content-Type": "application/json", "Authorization": "Bearer " + (localStorage.getItem("access_token") || "") },
-          body:        JSON.stringify({
-            message:    prompt,
-            model:      "us.amazon.nova-pro-v1:0",
-            local_date: new Date().toLocaleDateString("en-CA"),
-            no_history: true,
-          }),
+        const res = await api.call("POST", "/assistant/chat", {
+          message:    prompt,
+          model:      "us.amazon.nova-pro-v1:0",
+          local_date: new Date().toLocaleDateString("en-CA"),
+          no_history: true,
         });
-
-        if (!resp.ok || !resp.body) {
-          $("sum-body").textContent = "Failed to get summary. Please try again.";
-          return;
-        }
-
-        this._reader = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let buf = "", accText = "";
-        $("sum-body").innerHTML = "";
-
-        while (true) {
-          const { done, value } = await this._reader.read();
-          if (done) break;
-          buf += decoder.decode(value, { stream: true });
-          const lines = buf.split("\n");
-          buf = lines.pop();
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            let evt;
-            try { evt = JSON.parse(line); } catch { continue; }
-            if (evt.type === "token") {
-              accText += evt.text;
-              $("sum-body").innerHTML = escHtml(accText).replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>");
-            } else if (evt.type === "done" && evt.reply) {
-              $("sum-body").innerHTML = escHtml(evt.reply).replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>");
-            }
+        if (!$("sum-overlay").classList.contains("hidden")) {
+          if (res && res.reply) {
+            $("sum-body").innerHTML = escHtml(res.reply).replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>");
+          } else {
+            $("sum-body").textContent = "Failed to get summary. Please try again.";
           }
         }
-        this._reader = null;
       } catch (e) {
-        if ($("sum-overlay").classList.contains("hidden")) return; // closed mid-stream
-        $("sum-body").textContent = "Failed to get summary. Please try again.";
+        if (!$("sum-overlay").classList.contains("hidden")) {
+          $("sum-body").textContent = "Failed to get summary. Please try again.";
+        }
       }
     },
   };
