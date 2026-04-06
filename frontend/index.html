@@ -2650,6 +2650,14 @@
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
+    .feed-card--read { opacity: 0.55; }
+    .feed-card--read:hover { opacity: 1; }
+    .feeds-filter-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
     .feed-card-desc {
       font-size: 12px;
       color: var(--muted);
@@ -3930,6 +3938,7 @@
       <p>No feeds added yet.</p>
       <p style="font-size:13px;color:var(--muted);">Add RSS feed URLs in Settings to get started.</p>
     </div>
+    <div id="feeds-filter-bar" class="feeds-filter-bar hidden"></div>
     <div id="feeds-grid" class="feeds-grid"></div>
   </main>
 
@@ -8515,11 +8524,23 @@
 
   // ── RSS Feeds ─────────────────────────────────────────────────────────────────
 
+  const reads = {
+    _key: "memoire_feed_read",
+    _set: new Set(JSON.parse(localStorage.getItem("memoire_feed_read") || "[]")),
+    has(url) { return this._set.has(url); },
+    mark(url) {
+      if (this._set.has(url)) return;
+      this._set.add(url);
+      localStorage.setItem(this._key, JSON.stringify([...this._set]));
+    },
+  };
+
   const feeds = {
     data: [],        // feed URL records
     articles: [],
     loaded: false,
     _byUrl: new Map(), // url → article object for onclick lookups
+    _filter: "all",  // "all" | "unread" | feed_title string
 
     async loadFeeds() {
       feeds.data = await api.call("GET", "/feeds").catch(() => []) || [];
@@ -8541,12 +8562,32 @@
         }
         feeds.articles = await api.call("GET", "/feeds/articles") || [];
         feeds._byUrl = new Map(feeds.articles.map(a => [a.url, a]));
+        feeds.renderFilters();
         feeds.renderGrid();
       } catch (e) {
         console.error("Failed to load feed articles:", e);
       } finally {
         hideLoader("feeds-loader");
       }
+    },
+
+    renderFilters() {
+      const bar = $("feeds-filter-bar");
+      if (!feeds.articles.length) { bar.classList.add("hidden"); return; }
+      const sources = [...new Set(feeds.articles.map(a => a.feed_title).filter(Boolean))].sort();
+      const unreadCount = feeds.articles.filter(a => !reads.has(a.url)).length;
+      const btn = (label, value) => {
+        const active = feeds._filter === value ? " active" : "";
+        return `<button class="filter-btn${active}" onclick="feeds.setFilter(${JSON.stringify(value)})">${escHtml(label)}</button>`;
+      };
+      bar.innerHTML = btn("All", "all") + btn(`Unread (${unreadCount})`, "unread") + sources.map(s => btn(s, s)).join("");
+      bar.classList.remove("hidden");
+    },
+
+    setFilter(value) {
+      feeds._filter = value;
+      feeds.renderFilters();
+      feeds.renderGrid();
     },
 
     renderGrid() {
@@ -8556,7 +8597,18 @@
         grid.innerHTML = "";
         return;
       }
-      grid.innerHTML = feeds.articles.map(a => {
+      let articles = feeds.articles;
+      if (feeds._filter === "unread") {
+        articles = articles.filter(a => !reads.has(a.url));
+      } else if (feeds._filter !== "all") {
+        articles = articles.filter(a => a.feed_title === feeds._filter);
+      }
+      if (!articles.length) {
+        grid.innerHTML = `<div style="color:var(--muted);font-size:14px;padding:32px 0;">No articles match this filter.</div>`;
+        return;
+      }
+      grid.innerHTML = articles.map(a => {
+        const isRead = reads.has(a.url);
         const domain = (() => { try { return new URL(a.url).hostname; } catch { return ""; } })();
         const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64` : "";
         const initial = (a.feed_title || domain || "?")[0].toUpperCase();
@@ -8576,7 +8628,8 @@
         const sumIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20z"/><path d="M12 8v4l3 3"/></svg>`;
         const encodedUrl = encodeURIComponent(a.url);
         return `
-          <a class="feed-card" href="${escHtml(a.url)}" target="_blank" rel="noopener noreferrer">
+          <a class="feed-card${isRead ? " feed-card--read" : ""}" href="${escHtml(a.url)}" target="_blank" rel="noopener noreferrer"
+            onclick="reads.mark(decodeURIComponent('${encodedUrl}'));this.classList.add('feed-card--read');feeds.renderFilters()">
             ${imgHtml}
             <div class="feed-card-body">
               <div class="feed-card-source">${escHtml(a.feed_title || "")}</div>
@@ -8870,6 +8923,7 @@
       $("sum-source").textContent = article.feed_title || "";
       $("sum-title").textContent  = article.title || "Untitled";
       $("sum-open-btn").href      = article.url || "#";
+      $("sum-open-btn").onclick   = () => { reads.mark(article.url); feeds.renderFilters(); };
       $("sum-body").innerHTML = `
         <div class="sum-thinking">
           <div class="sum-thinking-dots"><span></span><span></span><span></span></div>
