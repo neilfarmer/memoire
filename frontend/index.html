@@ -2084,6 +2084,14 @@
     .day-view-totals { font-size: 12px; color: var(--muted); margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--border); }
     .day-view-notes  { font-size: 12px; color: var(--muted); margin-top: 4px; font-style: italic; }
     .day-section-loading { padding: 40px; display: flex; justify-content: center; }
+    .day-view-task { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; padding: 2px 0; }
+    .day-view-task:hover { color: var(--primary); }
+    .day-view-task-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .day-view-task-title.done-title { text-decoration: line-through; color: var(--muted); }
+    .day-view-habit { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .day-view-habit-name { flex: 1; }
+    .day-view-habit-done { color: #06b6d4; font-size: 12px; font-weight: 600; }
+    .day-view-habit-pending { color: var(--muted); font-size: 12px; }
 
     .journal-cal-legend {
       display: flex;
@@ -2465,6 +2473,8 @@
     .cal-dot-low       { background: var(--muted); }
     .cal-dot-exercise  { background: #22c55e; }
     .cal-dot-nutrition { background: #f97316; }
+    .cal-dot-task      { background: #8b5cf6; }
+    .cal-dot-habit     { background: #06b6d4; }
 
     .cal-day.cal-selected {
       background: rgba(79,70,229,.12);
@@ -3268,6 +3278,8 @@
       </div>
       <div class="journal-cal-legend">
         <div class="journal-cal-legend-item"><span class="cal-dot"></span> Journal</div>
+        <div class="journal-cal-legend-item"><span class="cal-dot cal-dot-task"></span> Tasks</div>
+        <div class="journal-cal-legend-item"><span class="cal-dot cal-dot-habit"></span> Habits</div>
         <div class="journal-cal-legend-item"><span class="cal-dot cal-dot-exercise"></span> Exercise</div>
         <div class="journal-cal-legend-item"><span class="cal-dot cal-dot-nutrition"></span> Nutrition</div>
       </div>
@@ -4470,6 +4482,7 @@
         state.tasks = await api.listTasks() || [];
         renderTasks();
         if (pages.current === "home") renderHomeDashboard();
+        if ($("journal-calendar")) journal.renderCalendar();
       } catch (e) {
         console.error("Failed to load tasks:", e);
       } finally {
@@ -5912,6 +5925,17 @@
       const monthNames     = ["January","February","March","April","May","June",
                               "July","August","September","October","November","December"];
 
+      // Build a set of dates that have tasks due
+      const taskDates = new Set((state.tasks || []).filter(t => t.due_date).map(t => t.due_date));
+
+      // Build a set of dates where any habit was completed
+      const habitDates = new Set();
+      (habits.data || []).forEach(h => {
+        (h.history || []).forEach(e => { if (e.done) habitDates.add(e.date); });
+        // last_completed may fall outside the 30-day history window
+        if (h.last_completed) habitDates.add(h.last_completed);
+      });
+
       const firstDay  = new Date(year, month, 1).getDay(); // 0=Sun
       const daysInMon = new Date(year, month + 1, 0).getDate();
       // Shift so week starts Monday
@@ -5924,15 +5948,19 @@
         const isToday      = dateStr === today;
         const isSelected   = dateStr === journal.selectedDate;
         const hasEntry     = dates.has(dateStr);
+        const hasTasks     = taskDates.has(dateStr);
+        const hasHabits    = habitDates.has(dateStr);
         const hasExercise  = healthDates.has(dateStr);
         const hasNutrition = nutritionDates.has(dateStr);
-        const hasDots      = hasEntry || hasExercise || hasNutrition;
+        const hasDots      = hasEntry || hasTasks || hasHabits || hasExercise || hasNutrition;
         cells += `
-          <div class="cal-day ${isToday ? "cal-today" : ""} ${hasEntry ? "cal-has-entry" : ""} ${isSelected ? "cal-selected" : ""}"
+          <div class="cal-day ${isToday ? "cal-today" : ""} ${hasEntry || hasTasks || hasHabits ? "cal-has-entry" : ""} ${isSelected ? "cal-selected" : ""}"
                onclick="journal.openDay('${dateStr}')">
             <span>${d}</span>
             ${hasDots ? `<div class="cal-day-dots">
               ${hasEntry     ? `<span class="cal-dot"></span>` : ""}
+              ${hasTasks     ? `<span class="cal-dot cal-dot-task"></span>` : ""}
+              ${hasHabits    ? `<span class="cal-dot cal-dot-habit"></span>` : ""}
               ${hasExercise  ? `<span class="cal-dot cal-dot-exercise"></span>` : ""}
               ${hasNutrition ? `<span class="cal-dot cal-dot-nutrition"></span>` : ""}
             </div>` : ""}
@@ -6033,6 +6061,16 @@
           </div>
         </div>`;
 
+      // Tasks due on this date (from already-loaded state)
+      const dayTasks = (state.tasks || []).filter(t => t.due_date === dateStr);
+
+      // Habits and their completion status on this date
+      const dayHabits = (habits.data || []).map(h => {
+        const histEntry = (h.history || []).find(e => e.date === dateStr);
+        const done = histEntry ? histEntry.done : (h.last_completed === dateStr);
+        return { ...h, doneOnDate: done };
+      });
+
       Promise.allSettled([
         api.call("GET", `/journal/${dateStr}`).catch(() => null),
         api.call("GET", `/health/${dateStr}`).catch(() => null),
@@ -6054,6 +6092,34 @@
             (entry.body ? `<div class="day-view-preview">${escHtml(entry.body)}</div>` : "");
         } else {
           journalBody = `<div class="day-view-empty">No entry for this day.</div>`;
+        }
+
+        // Tasks
+        let tasksBody;
+        if (dayTasks.length > 0) {
+          const dotClass = { high: "cal-dot-high", medium: "cal-dot-medium", low: "cal-dot-low" };
+          tasksBody = dayTasks.map(t => `
+            <div class="day-view-task" onclick="modal.open('${t.task_id}')">
+              <span class="cal-dot ${dotClass[t.priority] || "cal-dot-low"}" style="flex-shrink:0"></span>
+              <span class="day-view-task-title ${t.status === "done" ? "done-title" : ""}">${escHtml(t.title)}</span>
+              <span class="badge badge-${t.status}">${statusLabel(t.status)}</span>
+            </div>`).join("");
+        } else {
+          tasksBody = `<div class="day-view-empty">No tasks due.</div>`;
+        }
+
+        // Habits
+        let habitsBody;
+        if (dayHabits.length > 0) {
+          habitsBody = dayHabits.map(h => `
+            <div class="day-view-habit">
+              <span class="day-view-habit-name">${escHtml(h.name || "Unnamed habit")}</span>
+              ${h.doneOnDate
+                ? `<span class="day-view-habit-done">Done</span>`
+                : `<span class="day-view-habit-pending">Pending</span>`}
+            </div>`).join("");
+        } else {
+          habitsBody = `<div class="day-view-empty">No habits tracked.</div>`;
         }
 
         // Exercise
@@ -6103,6 +6169,19 @@
               </button>
             </div>
             <div class="day-section-body">${journalBody}</div>
+          </div>
+          <div class="day-section">
+            <div class="day-section-header">
+              <span>Tasks</span>
+              <button class="btn btn-secondary btn-sm" onclick="modal.open()">+ New</button>
+            </div>
+            <div class="day-section-body">${tasksBody}</div>
+          </div>
+          <div class="day-section">
+            <div class="day-section-header">
+              <span>Habits</span>
+            </div>
+            <div class="day-section-body">${habitsBody}</div>
           </div>
           <div class="day-section">
             <div class="day-section-header">
@@ -6784,6 +6863,7 @@
         habits.data = await api.call("GET", "/habits") || [];
         habits.render();
         if (pages.current === "home") renderHomeDashboard();
+        if ($("journal-calendar")) journal.renderCalendar();
       } catch (e) {
         console.error("Failed to load habits:", e);
       } finally {
@@ -7959,6 +8039,8 @@
       if (name === "journal") {
         if (journal.entries.length === 0) journal.load().then(renderJournalStreaks);
         else renderJournalStreaks();
+        if (state.tasks.length === 0) app.loadTasks();
+        if (habits.data.length === 0) habits.load();
       }
       if (name === "health"    && health.logs.length === 0)     health.load();
       if (name === "nutrition" && nutrition.logs.length === 0) nutrition.load();
