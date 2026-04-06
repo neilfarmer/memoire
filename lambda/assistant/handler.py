@@ -108,8 +108,12 @@ def _stream_handler(event: dict, context, response_stream) -> None:
 try:
     from awslambdaric.bootstrap import wrap_streaming_handler
     streaming_lambda_handler = wrap_streaming_handler(_stream_handler)
-except ImportError:
-    # Fallback: awslambdaric not available (e.g. local unit tests).
-    # The streaming handler is not usable without the runtime, but defining
-    # the name prevents import errors in test code that imports this module.
+except ImportError as _e:
+    logger.warning("wrap_streaming_handler unavailable (%s); inspecting awslambdaric", _e)
+    try:
+        import awslambdaric.bootstrap as _bs
+        logger.warning("awslambdaric.bootstrap attrs with 'stream': %s",
+                       [a for a in dir(_bs) if "stream" in a.lower()])
+    except Exception as _e2:
+        logger.warning("Could not inspect awslambdaric.bootstrap: %s", _e2)
     streaming_lambda_handler = None  # type: ignore[assignment]
