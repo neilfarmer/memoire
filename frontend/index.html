@@ -8945,15 +8945,31 @@
               return "";
             }).trim();
             $("sum-body").innerHTML = escHtml(bodyText).replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>");
-            // Append note links below the summary
+            // Append action row: note links + inline favorite button
+            const actRow = document.createElement("div");
+            actRow.style.cssText = "display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;";
             palLinks.forEach(({ type, id, label }) => {
               const btn = document.createElement("button");
               btn.className = "pal-link-btn";
-              btn.style.marginTop = "12px";
               btn.textContent = label;
               btn.onclick = () => { summaryModal.close(); palNavigate(type, id); };
-              $("sum-body").appendChild(btn);
+              actRow.appendChild(btn);
             });
+            // Inline favorite button
+            const favInline = document.createElement("button");
+            const isFavedNow = favs.has(this._article?.url);
+            favInline.className = "btn btn-primary btn-sm";
+            favInline.textContent = isFavedNow ? "Favorited" : "Favorite";
+            favInline.disabled = isFavedNow;
+            favInline.onclick = async () => {
+              await favs.toggle(this._article, { classList: { add(){}, remove(){} }, innerHTML: "" });
+              favInline.textContent = "Favorited";
+              favInline.disabled = true;
+              $("sum-fav-btn").textContent = "Favorited";
+              $("sum-fav-btn").disabled = true;
+            };
+            actRow.appendChild(favInline);
+            $("sum-body").appendChild(actRow);
           } else {
             $("sum-body").textContent = "Failed to get summary. Please try again.";
           }
