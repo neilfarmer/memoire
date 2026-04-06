@@ -425,3 +425,29 @@ resource "aws_dynamodb_table" "task_folders" {
     enabled = true
   }
 }
+
+# ── RSS Feeds table ───────────────────────────────────────────────────────────
+#
+# PK: user_id  (String)
+# SK: feed_id  (String) — UUID
+
+resource "aws_dynamodb_table" "feeds" {
+  name         = "${local.name_prefix}-feeds"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "feed_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "feed_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
