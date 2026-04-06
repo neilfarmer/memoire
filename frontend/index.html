@@ -2665,6 +2665,106 @@
       margin-top: auto;
       padding-top: 8px;
     }
+    .feed-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 8px 12px 10px;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+    .feed-fav-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      transition: color .15s, background .15s;
+      line-height: 1;
+    }
+    .feed-fav-btn:hover { color: #ef4444; background: rgba(239,68,68,.08); }
+    .feed-fav-btn.active { color: #ef4444; }
+    .feed-fav-btn.active svg { fill: #ef4444; }
+    /* Tag bar */
+    .fav-tag-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 0 0 16px;
+    }
+    .fav-tag-filter {
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .fav-tag-filter:hover { border-color: var(--primary); color: var(--text); }
+    .fav-tag-filter.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    /* Tags on favorite cards */
+    .fav-card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px;
+      padding: 0 12px 10px;
+    }
+    .fav-tag-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--primary) 15%, transparent);
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .fav-tag-remove {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: inherit;
+      padding: 0;
+      font-size: 13px;
+      line-height: 1;
+      opacity: .7;
+    }
+    .fav-tag-remove:hover { opacity: 1; }
+    .fav-tag-add-btn {
+      background: none;
+      border: 1px dashed var(--border);
+      cursor: pointer;
+      padding: 2px 8px;
+      border-radius: 12px;
+      color: var(--muted);
+      font-size: 11px;
+      transition: border-color .15s, color .15s;
+    }
+    .fav-tag-add-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .fav-tag-input-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .fav-tag-input {
+      border: 1px solid var(--primary);
+      background: var(--bg);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 11px;
+      width: 90px;
+      outline: none;
+    }
     .feed-settings-item {
       display: flex;
       align-items: center;
@@ -3286,6 +3386,10 @@
           <div class="sb-section-hdr" onclick="sidebar.navigate('feeds')">
             <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg></span>
             <span class="sb-hdr-label">RSS Feeds</span>
+            <span class="sb-arrow"><svg viewBox="0 0 10 10" fill="currentColor"><polygon points="2,1 8,5 2,9"/></svg></span>
+          </div>
+          <div class="sb-section-body hidden" id="sb-feeds-body">
+            <button class="sb-sub-link" data-page="favorites" onclick="pages.show('favorites')">Favorited</button>
           </div>
         </div>
         <div class="sb-spacer"></div>
@@ -3712,6 +3816,20 @@
       <p style="font-size:13px;color:var(--muted);">Add RSS feed URLs in Settings to get started.</p>
     </div>
     <div id="feeds-grid" class="feeds-grid"></div>
+  </main>
+
+  <!-- Favorites page -->
+  <main id="page-favorites" class="hidden">
+    <div class="toolbar">
+      <h2>Favorited</h2>
+    </div>
+    <div id="favorites-tag-bar" class="fav-tag-bar hidden"></div>
+    <div id="favorites-loader" class="page-loader hidden"><div class="spinner"></div></div>
+    <div id="favorites-empty" class="empty-state hidden">
+      <p>No favorited articles yet.</p>
+      <p style="font-size:13px;color:var(--muted);">Heart articles on the RSS Feeds page to save them here.</p>
+    </div>
+    <div id="favorites-grid" class="feeds-grid"></div>
   </main>
 
   <!-- Admin page -->
@@ -4654,6 +4772,7 @@
       goals.load();      // preload so home dashboard shows active goals
       health.load();     // preload so journal calendar shows exercise dots
       nutrition.load();  // preload so journal calendar shows nutrition dots
+      favs.load();       // preload so heart buttons show correct state on feeds page
       pages.show("home");
     },
 
@@ -8214,12 +8333,14 @@
 
   const pages = {
     current: "home",
-    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "settings", "admin"],
+    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "settings", "admin"],
 
     show(name) {
       pages.current = name;
-      // health and nutrition are sub-sections of journal
-      const sbSection = (name === "health" || name === "nutrition") ? "journal" : name;
+      // health and nutrition are sub-sections of journal; favorites is a sub-section of feeds
+      const sbSection = (name === "health" || name === "nutrition") ? "journal"
+                      : name === "favorites" ? "feeds"
+                      : name;
       sidebar.expand(sbSection);
       // highlight sub-links for health/nutrition
       document.querySelectorAll(".sb-sub-link").forEach(link => {
@@ -8250,7 +8371,8 @@
       }
       if (name === "health"    && health.logs.length === 0)     health.load();
       if (name === "nutrition" && nutrition.logs.length === 0) nutrition.load();
-      if (name === "feeds")    feeds.refresh();
+      if (name === "feeds")     feeds.refresh();
+      if (name === "favorites") { if (!favs.loaded) favs.load(); else favs.render(); }
     },
   };
 
@@ -8310,6 +8432,8 @@
         const dateStr = a.published
           ? new Date(a.published).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
           : "";
+        const isFaved = favs.has(a.url);
+        const favIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
         return `
           <a class="feed-card" href="${escHtml(a.url)}" target="_blank" rel="noopener noreferrer">
             ${imgHtml}
@@ -8318,6 +8442,12 @@
               <div class="feed-card-title">${escHtml(a.title || "Untitled")}</div>
               ${a.description ? `<div class="feed-card-desc">${escHtml(a.description)}</div>` : ""}
               ${dateStr ? `<div class="feed-card-date">${dateStr}</div>` : ""}
+            </div>
+            <div class="feed-card-footer">
+              <button class="feed-fav-btn${isFaved ? " active" : ""}" data-url="${escHtml(a.url)}"
+                onclick="event.preventDefault();event.stopPropagation();favs.toggle(${JSON.stringify(a)},this)">
+                ${favIcon}${isFaved ? "Favorited" : "Favorite"}
+              </button>
             </div>
           </a>`;
       }).join("");
@@ -8373,6 +8503,207 @@
 
   $("feed-add-btn").addEventListener("click", () => feeds.add());
   $("feed-url-input").addEventListener("keydown", e => { if (e.key === "Enter") feeds.add(); });
+
+  // ── Favorites ─────────────────────────────────────────────────────────────────
+
+  const favs = {
+    data:         [],   // full favorite objects from API
+    loaded:       false,
+    _byUrl:       new Map(),  // url → favorite object
+    _activeTag:   null,
+
+    has(url) { return this._byUrl.has(url); },
+    get(url)  { return this._byUrl.get(url); },
+
+    _index() {
+      this._byUrl = new Map(this.data.map(f => [f.url, f]));
+    },
+
+    async load() {
+      showLoader("favorites-loader");
+      try {
+        this.data   = await api.call("GET", "/favorites") || [];
+        this.loaded = true;
+        this._index();
+        this.render();
+      } catch (e) {
+        console.error("Failed to load favorites:", e);
+      } finally {
+        hideLoader("favorites-loader");
+      }
+    },
+
+    async toggle(article, btn) {
+      const existing = this.get(article.url);
+      if (existing) {
+        // unfavorite
+        try {
+          await api.call("DELETE", `/favorites/${existing.favorite_id}`);
+          this.data = this.data.filter(f => f.favorite_id !== existing.favorite_id);
+          this._index();
+          btn.classList.remove("active");
+          btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Favorite`;
+        } catch (e) { console.error("Failed to unfavorite:", e); }
+      } else {
+        // favorite
+        try {
+          const result = await api.call("POST", "/favorites", {
+            url:         article.url,
+            title:       article.title       || "",
+            feed_title:  article.feed_title  || "",
+            image:       article.image       || "",
+            description: article.description || "",
+            published:   article.published   || "",
+            tags:        [],
+          });
+          this.data.unshift(result);
+          this._index();
+          btn.classList.add("active");
+          btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Favorited`;
+        } catch (e) { console.error("Failed to favorite:", e); }
+      }
+    },
+
+    async addTag(favoriteId, tag) {
+      const fav = this.data.find(f => f.favorite_id === favoriteId);
+      if (!fav) return;
+      tag = tag.trim();
+      if (!tag || fav.tags.includes(tag)) return;
+      const newTags = [...fav.tags, tag];
+      try {
+        await api.call("PATCH", `/favorites/${favoriteId}`, { tags: newTags });
+        fav.tags = newTags;
+        this.render();
+      } catch (e) { console.error("Failed to add tag:", e); }
+    },
+
+    async removeTag(favoriteId, tag) {
+      const fav = this.data.find(f => f.favorite_id === favoriteId);
+      if (!fav) return;
+      const newTags = fav.tags.filter(t => t !== tag);
+      try {
+        await api.call("PATCH", `/favorites/${favoriteId}`, { tags: newTags });
+        fav.tags = newTags;
+        this.render();
+      } catch (e) { console.error("Failed to remove tag:", e); }
+    },
+
+    allTags() {
+      const set = new Set();
+      this.data.forEach(f => (f.tags || []).forEach(t => set.add(t)));
+      return [...set].sort();
+    },
+
+    renderTagBar() {
+      const bar = $("favorites-tag-bar");
+      const tags = this.allTags();
+      if (!tags.length) { bar.classList.add("hidden"); return; }
+      bar.classList.remove("hidden");
+      const activeTag = this._activeTag;
+      bar.innerHTML = [
+        `<button class="fav-tag-filter${!activeTag ? " active" : ""}" onclick="favs._activeTag=null;favs.render()">All</button>`,
+        ...tags.map(t => `<button class="fav-tag-filter${activeTag === t ? " active" : ""}" onclick="favs._activeTag=${JSON.stringify(t)};favs.render()">${escHtml(t)}</button>`)
+      ].join("");
+    },
+
+    render() {
+      const grid  = $("favorites-grid");
+      const empty = $("favorites-empty");
+      this.renderTagBar();
+
+      const visible = this._activeTag
+        ? this.data.filter(f => (f.tags || []).includes(this._activeTag))
+        : this.data;
+
+      if (!visible.length) {
+        empty.classList.remove("hidden");
+        grid.innerHTML = "";
+        return;
+      }
+      empty.classList.add("hidden");
+
+      const favIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+
+      grid.innerHTML = visible.map(f => {
+        const domain = (() => { try { return new URL(f.url).hostname; } catch { return ""; } })();
+        const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64` : "";
+        const initial = (f.feed_title || domain || "?")[0].toUpperCase();
+        const placeholder = `<div class="feed-card-img-placeholder">${
+          faviconUrl
+            ? `<img class="feed-card-favicon" src="${escHtml(faviconUrl)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="feed-card-favicon-fallback" style="display:none">${escHtml(initial)}</div>`
+            : `<div class="feed-card-favicon-fallback">${escHtml(initial)}</div>`
+        }</div>`;
+        const imgHtml = f.image
+          ? `<img class="feed-card-img" src="${escHtml(f.image)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">${placeholder.replace('class="feed-card-img-placeholder"', 'class="feed-card-img-placeholder" style="display:none"')}`
+          : placeholder;
+        const dateStr = f.published
+          ? new Date(f.published).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+          : "";
+        const tagsHtml = `
+          <div class="fav-card-tags">
+            ${(f.tags || []).map(t => `
+              <span class="fav-tag-pill">${escHtml(t)}<button class="fav-tag-remove" onclick="favs.removeTag('${f.favorite_id}','${escHtml(t)}')" title="Remove tag">&times;</button></span>`).join("")}
+            <button class="fav-tag-add-btn" onclick="favs.showTagInput('${f.favorite_id}',this)">+ tag</button>
+          </div>`;
+        return `
+          <a class="feed-card" href="${escHtml(f.url)}" target="_blank" rel="noopener noreferrer">
+            ${imgHtml}
+            <div class="feed-card-body">
+              <div class="feed-card-source">${escHtml(f.feed_title || "")}</div>
+              <div class="feed-card-title">${escHtml(f.title || "Untitled")}</div>
+              ${f.description ? `<div class="feed-card-desc">${escHtml(f.description)}</div>` : ""}
+              ${dateStr ? `<div class="feed-card-date">${dateStr}</div>` : ""}
+            </div>
+            ${tagsHtml}
+            <div class="feed-card-footer">
+              <button class="feed-fav-btn active" onclick="event.preventDefault();event.stopPropagation();favs.removeAndRefresh('${f.favorite_id}')">
+                ${favIcon} Remove
+              </button>
+            </div>
+          </a>`;
+      }).join("");
+    },
+
+    showTagInput(favoriteId, btn) {
+      btn.style.display = "none";
+      const wrap = document.createElement("span");
+      wrap.className = "fav-tag-input-wrap";
+      const input = document.createElement("input");
+      input.className = "fav-tag-input";
+      input.placeholder = "tag name";
+      input.maxLength = 50;
+      const confirm = async () => {
+        const val = input.value.trim();
+        if (val) await favs.addTag(favoriteId, val);
+        else favs.render();
+      };
+      input.addEventListener("keydown", e => {
+        if (e.key === "Enter") { e.preventDefault(); confirm(); }
+        if (e.key === "Escape") favs.render();
+      });
+      input.addEventListener("blur", () => setTimeout(confirm, 150));
+      wrap.appendChild(input);
+      btn.parentNode.insertBefore(wrap, btn.nextSibling);
+      input.focus();
+    },
+
+    async removeAndRefresh(favoriteId) {
+      try {
+        await api.call("DELETE", `/favorites/${favoriteId}`);
+        this.data = this.data.filter(f => f.favorite_id !== favoriteId);
+        this._index();
+        this.render();
+        // Update heart buttons on the feeds page if visible
+        document.querySelectorAll(".feed-fav-btn.active").forEach(btn => {
+          const fav = this.data.find(f => f.url === btn.dataset.url);
+          if (!fav) {
+            btn.classList.remove("active");
+            btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Favorite`;
+          }
+        });
+      } catch (e) { console.error("Failed to remove favorite:", e); }
+    },
+  };
 
   $("sb-toggle").addEventListener("click", () => sidebar.toggle());
   $("admin-refresh-btn").addEventListener("click", () => { admin.loaded = false; admin.load(); });
