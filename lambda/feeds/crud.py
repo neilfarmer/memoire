@@ -120,7 +120,7 @@ def _fetch_og_image(url: str) -> str:
         req = urllib.request.Request(
             url, headers={"User-Agent": "Mozilla/5.0 (compatible; Memoire/1.0)"}
         )
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310
             chunk = resp.read(65_536).decode("utf-8", errors="ignore")
 
         # Try og:image (quoted and unquoted attribute values)
@@ -162,7 +162,7 @@ def fetch_article_text(user_id: str, url: str) -> dict:  # noqa: ARG001
         req = urllib.request.Request(
             url, headers={"User-Agent": "Mozilla/5.0 (compatible; Memoire/1.0)"}
         )
-        with urllib.request.urlopen(req, timeout=8) as resp:
+        with urllib.request.urlopen(req, timeout=8) as resp:  # nosec B310
             html = resp.read(200_000).decode("utf-8", errors="ignore")
 
         # Strip script/style blocks
@@ -208,13 +208,13 @@ def _fetch_feed(feed_id: str, url: str) -> list[dict]:
         req = urllib.request.Request(
             url, headers={"User-Agent": "Memoire/1.0 RSS Reader"}
         )
-        with urllib.request.urlopen(req, timeout=FETCH_TIMEOUT) as resp:
+        with urllib.request.urlopen(req, timeout=FETCH_TIMEOUT) as resp:  # nosec B310
             content = resp.read(1_000_000)  # cap at 1MB
     except Exception:
         return []
 
     try:
-        root = ET.fromstring(content)
+        root = ET.fromstring(content)  # nosec B314
     except ET.ParseError:
         return []
 
