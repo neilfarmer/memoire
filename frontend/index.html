@@ -2026,73 +2026,134 @@
     }
 
     .day-view {
-      padding: 20px 24px;
+      padding: 32px 40px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 48px;
+      max-width: 860px;
     }
     .day-view-header {
       display: flex;
-      align-items: center;
+      align-items: baseline;
       justify-content: space-between;
-      padding-bottom: 12px;
+      padding-bottom: 20px;
       border-bottom: 1px solid var(--border);
     }
     .day-view-date {
-      font-size: 17px;
+      font-size: 22px;
       font-weight: 700;
       color: var(--text);
+      letter-spacing: -0.02em;
     }
     .day-section {
       border: 1px solid var(--border);
       border-radius: var(--radius);
       overflow: hidden;
+      transition: border-color .15s;
     }
+    .day-section:hover { border-color: rgba(255,255,255,.12); }
     .day-section-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 14px;
+      padding: 12px 18px;
       background: var(--bg);
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
       border-bottom: 1px solid var(--border);
     }
     .day-section-body {
-      padding: 12px 14px;
+      padding: 16px 18px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 10px;
     }
-    .day-view-empty { font-size: 13px; color: var(--muted); }
-    .day-view-mood  { font-size: 13px; color: var(--muted); }
-    .day-view-title { font-size: 14px; font-weight: 600; }
+    .day-view-empty { font-size: 13px; color: var(--muted); padding: 4px 0; }
+    .day-view-mood  {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(255,255,255,.07);
+      color: var(--text);
+      border: 1px solid var(--border);
+      align-self: flex-start;
+    }
+    .day-view-title { font-size: 15px; font-weight: 600; }
     .day-view-preview {
       font-size: 13px;
       color: var(--muted);
-      line-height: 1.5;
+      line-height: 1.6;
       display: -webkit-box;
-      -webkit-line-clamp: 3;
+      -webkit-line-clamp: 4;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
-    .day-view-exercise { font-size: 13px; }
+    .day-view-exercise { font-size: 13px; padding: 2px 0; }
     .day-view-ex-name  { font-weight: 500; }
-    .day-view-ex-detail { color: var(--muted); margin-left: 6px; }
-    .day-view-meal { display: flex; justify-content: space-between; font-size: 13px; }
+    .day-view-ex-detail { color: var(--muted); margin-left: 8px; font-size: 12px; }
+    .day-view-meal { display: flex; justify-content: space-between; font-size: 13px; padding: 2px 0; }
     .day-view-meal-cal { color: var(--muted); font-size: 12px; }
-    .day-view-totals { font-size: 12px; color: var(--muted); margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--border); }
+    .day-view-totals { font-size: 12px; color: var(--muted); margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--border); }
     .day-view-notes  { font-size: 12px; color: var(--muted); margin-top: 4px; font-style: italic; }
-    .day-section-loading { padding: 40px; display: flex; justify-content: center; }
+    .day-section-loading { padding: 48px; display: flex; justify-content: center; }
+    #day-view-sections { display: flex; flex-direction: column; gap: 20px; }
+    .day-view-task { display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; padding: 6px 10px; border-radius: 6px; transition: background .1s; }
+    .day-view-task:hover { background: var(--bg); color: var(--primary); }
+    .day-view-task-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .day-view-task-title.done-title { text-decoration: line-through; color: var(--muted); }
+    .day-view-habits-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .day-view-habit {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      background: var(--bg);
+    }
+    .day-view-habit-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+    .day-view-habit-done {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #06b6d4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      color: #000;
+      font-weight: 800;
+    }
+    .day-view-habit-done::after { content: "✓"; }
+    .day-view-habit-pending {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+    }
 
     .journal-cal-legend {
-      display: flex;
-      gap: 12px;
-      padding: 8px 12px 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 16px;
+      padding: 12px 16px 16px;
       font-size: 11px;
       color: var(--muted);
     }
-    .journal-cal-legend-item { display: flex; align-items: center; gap: 5px; }
+    .journal-cal-legend-item { display: flex; align-items: center; gap: 6px; }
 
     .journal-entry-item {
       padding: 10px 14px;
@@ -2465,6 +2526,8 @@
     .cal-dot-low       { background: var(--muted); }
     .cal-dot-exercise  { background: #22c55e; }
     .cal-dot-nutrition { background: #f97316; }
+    .cal-dot-task      { background: #8b5cf6; }
+    .cal-dot-habit     { background: #06b6d4; }
 
     .cal-day.cal-selected {
       background: rgba(79,70,229,.12);
@@ -2498,6 +2561,355 @@
     }
     .task-cal-item:hover { border-color: var(--primary); }
     .task-cal-item-title { flex: 1; font-size: 14px; }
+
+    /* ── RSS Feeds ── */
+    .feeds-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      padding: 4px 0 32px;
+    }
+    .feed-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      transition: border-color .15s, transform .1s;
+      text-decoration: none;
+      color: inherit;
+    }
+    .feed-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+    .feed-card-img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      background: var(--bg);
+      display: block;
+      flex-shrink: 0;
+    }
+    .feed-card-img-placeholder {
+      width: 100%;
+      height: 180px;
+      background: color-mix(in srgb, var(--primary) 8%, var(--bg));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .feed-card-favicon {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      object-fit: contain;
+      background: var(--surface);
+      padding: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+    .feed-card-favicon-fallback {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      box-shadow: 0 2px 8px rgba(0,0,0,.3);
+      letter-spacing: 0;
+    }
+    .feed-card-body {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+    .feed-card-source {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--primary);
+    }
+    .feed-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--text);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .feed-card--read { opacity: 0.45; }
+    .feed-card--read:hover { opacity: 0.85; }
+    .feed-card-unread-dot {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 0 2px var(--surface);
+      z-index: 1;
+      pointer-events: none;
+    }
+    .feeds-filter-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .feed-card-desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .feed-card-date {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: auto;
+      padding-top: 8px;
+    }
+    .feed-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 8px 12px 10px;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+    .feed-fav-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      transition: color .15s, background .15s;
+      line-height: 1;
+    }
+    .feed-fav-btn:hover { color: #ef4444; background: rgba(239,68,68,.08); }
+    .feed-fav-btn.active { color: #ef4444; }
+    .feed-fav-btn.active svg { fill: #ef4444; }
+    /* Tag bar */
+    .fav-tag-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 0 0 16px;
+    }
+    .fav-tag-filter {
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .fav-tag-filter:hover { border-color: var(--primary); color: var(--text); }
+    .fav-tag-filter.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    /* Tags on favorite cards */
+    .fav-card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px;
+      padding: 0 12px 10px;
+    }
+    .fav-tag-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--primary) 15%, transparent);
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .fav-tag-remove {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: inherit;
+      padding: 0;
+      font-size: 13px;
+      line-height: 1;
+      opacity: .7;
+    }
+    .fav-tag-remove:hover { opacity: 1; }
+    .fav-tag-add-btn {
+      background: none;
+      border: 1px dashed var(--border);
+      cursor: pointer;
+      padding: 2px 8px;
+      border-radius: 12px;
+      color: var(--muted);
+      font-size: 11px;
+      transition: border-color .15s, color .15s;
+    }
+    .fav-tag-add-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .fav-tag-input-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .fav-tag-input {
+      border: 1px solid var(--primary);
+      background: var(--bg);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 11px;
+      width: 90px;
+      outline: none;
+    }
+    /* ── Summary modal ── */
+    .sum-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      backdrop-filter: blur(3px);
+      z-index: 1100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: fadeIn .15s ease;
+    }
+    .sum-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) * 1.5);
+      width: 100%;
+      max-width: 540px;
+      display: flex;
+      flex-direction: column;
+      max-height: 80vh;
+      box-shadow: 0 24px 64px rgba(0,0,0,.5);
+      animation: slideUp .18s ease;
+    }
+    @keyframes slideUp {
+      from { opacity:0; transform:translateY(16px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .sum-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sum-source {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--primary);
+    }
+    .sum-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    .sum-body {
+      padding: 18px 20px;
+      overflow-y: auto;
+      flex: 1;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text);
+      min-height: 80px;
+    }
+    .sum-body p { margin: 0 0 10px; }
+    .sum-body p:last-child { margin: 0; }
+    .sum-thinking {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .sum-thinking-dots span {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+      animation: blink 1.2s infinite;
+    }
+    .sum-thinking-dots span:nth-child(2) { animation-delay: .2s; }
+    .sum-thinking-dots span:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink {
+      0%,80%,100% { opacity:.2; }
+      40% { opacity:1; }
+    }
+    .sum-footer {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .sum-footer .btn-sm { font-size: 13px; padding: 6px 14px; }
+    .sum-close-btn {
+      margin-left: auto;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 20px;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .sum-close-btn:hover { color: var(--text); background: var(--bg); }
+    .feed-sum-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      transition: color .15s, background .15s;
+      line-height: 1;
+    }
+    .feed-sum-btn:hover { color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); }
+    .feed-settings-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .feed-settings-item:last-child { border-bottom: none; }
+    .feed-settings-url { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
 
     /* Search results list */
     .journal-result {
@@ -3105,6 +3517,16 @@
             <button class="sb-sub-link" data-page="nutrition" onclick="pages.show('nutrition')">Nutrition</button>
           </div>
         </div>
+        <div class="sb-section" id="sb-feeds">
+          <div class="sb-section-hdr" onclick="sidebar.navigate('feeds')">
+            <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg></span>
+            <span class="sb-hdr-label">RSS Feeds</span>
+            <span class="sb-arrow"><svg viewBox="0 0 10 10" fill="currentColor"><polygon points="2,1 8,5 2,9"/></svg></span>
+          </div>
+          <div class="sb-section-body hidden" id="sb-feeds-body">
+            <button class="sb-sub-link" data-page="favorites" onclick="pages.show('favorites')">Favorited</button>
+          </div>
+        </div>
         <div class="sb-spacer"></div>
         <div class="sb-section" id="sb-settings">
           <div class="sb-section-hdr" onclick="sidebar.navigate('settings')">
@@ -3268,6 +3690,8 @@
       </div>
       <div class="journal-cal-legend">
         <div class="journal-cal-legend-item"><span class="cal-dot"></span> Journal</div>
+        <div class="journal-cal-legend-item"><span class="cal-dot cal-dot-task"></span> Tasks</div>
+        <div class="journal-cal-legend-item"><span class="cal-dot cal-dot-habit"></span> Habits</div>
         <div class="journal-cal-legend-item"><span class="cal-dot cal-dot-exercise"></span> Exercise</div>
         <div class="journal-cal-legend-item"><span class="cal-dot cal-dot-nutrition"></span> Nutrition</div>
       </div>
@@ -3498,6 +3922,50 @@
         </select>
       </div>
     </div>
+    <div class="settings-section">
+      <div class="settings-section-title">RSS Feeds</div>
+      <div class="settings-row" style="flex-direction:column; align-items:stretch; gap:10px;">
+        <div>
+          <div class="settings-label">Feed URLs</div>
+          <div class="settings-desc">Add RSS or Atom feed URLs to read in the RSS Feeds page (max 20)</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <input type="url" id="feed-url-input" placeholder="https://example.com/feed.xml" style="flex:1;" />
+          <button class="btn btn-secondary" id="feed-add-btn">Add feed</button>
+        </div>
+        <div id="feed-add-msg" class="hidden" style="font-size:13px;"></div>
+        <div id="feed-list-settings"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- RSS Feeds page -->
+  <main id="page-feeds" class="hidden">
+    <div class="toolbar">
+      <h2>RSS Feeds</h2>
+      <button class="btn btn-primary" onclick="feeds.refresh(true)">Refresh</button>
+    </div>
+    <div id="feeds-loader" class="page-loader hidden"><div class="spinner"></div></div>
+    <div id="feeds-empty" class="empty-state hidden">
+      <p>No feeds added yet.</p>
+      <p style="font-size:13px;color:var(--muted);">Add RSS feed URLs in Settings to get started.</p>
+    </div>
+    <div id="feeds-filter-bar" class="feeds-filter-bar hidden"></div>
+    <div id="feeds-grid" class="feeds-grid"></div>
+  </main>
+
+  <!-- Favorites page -->
+  <main id="page-favorites" class="hidden">
+    <div class="toolbar">
+      <h2>Favorited</h2>
+    </div>
+    <div id="favorites-tag-bar" class="fav-tag-bar hidden"></div>
+    <div id="favorites-loader" class="page-loader hidden"><div class="spinner"></div></div>
+    <div id="favorites-empty" class="empty-state hidden">
+      <p>No favorited articles yet.</p>
+      <p style="font-size:13px;color:var(--muted);">Heart articles on the RSS Feeds page to save them here.</p>
+    </div>
+    <div id="favorites-grid" class="feeds-grid"></div>
   </main>
 
   <!-- Admin page -->
@@ -3511,6 +3979,28 @@
       <div class="admin-grid" id="admin-grid"></div>
     </div>
   </main>
+    </div>
+  </div>
+</div>
+
+<!-- ── Article summary modal ── -->
+<div id="sum-overlay" class="sum-overlay hidden" onclick="if(event.target===this)summaryModal.close()">
+  <div class="sum-modal" role="dialog" aria-modal="true">
+    <div class="sum-header">
+      <div class="sum-source" id="sum-source"></div>
+      <div class="sum-title" id="sum-title"></div>
+    </div>
+    <div class="sum-body" id="sum-body">
+      <div class="sum-thinking">
+        <!-- djlint:off H020 --><div class="sum-thinking-dots"><span></span><span></span><span></span></div><!-- djlint:on -->
+        Summarizing...
+      </div>
+    </div>
+    <div class="sum-footer">
+      <button class="btn btn-primary btn-sm" id="sum-fav-btn">Favorite</button>
+      <a class="btn btn-secondary btn-sm" id="sum-open-btn" target="_blank" rel="noopener noreferrer">Open article</a>
+      <button class="btn btn-secondary btn-sm" id="sum-note-btn" disabled>Create Note</button>
+      <button class="sum-close-btn" onclick="summaryModal.close()" title="Close">&times;</button>
     </div>
   </div>
 </div>
@@ -4440,6 +4930,7 @@
       goals.load();      // preload so home dashboard shows active goals
       health.load();     // preload so journal calendar shows exercise dots
       nutrition.load();  // preload so journal calendar shows nutrition dots
+      favs.load();       // preload so heart buttons show correct state on feeds page
       pages.show("home");
     },
 
@@ -4470,6 +4961,7 @@
         state.tasks = await api.listTasks() || [];
         renderTasks();
         if (pages.current === "home") renderHomeDashboard();
+        if ($("journal-calendar") && journal.calMonth) journal.renderCalendar();
       } catch (e) {
         console.error("Failed to load tasks:", e);
       } finally {
@@ -5912,6 +6404,17 @@
       const monthNames     = ["January","February","March","April","May","June",
                               "July","August","September","October","November","December"];
 
+      // Build a set of dates that have tasks due
+      const taskDates = new Set((state.tasks || []).filter(t => t.due_date).map(t => t.due_date));
+
+      // Build a set of dates where any habit was completed
+      const habitDates = new Set();
+      (habits.data || []).forEach(h => {
+        (h.history || []).forEach(e => { if (e.done) habitDates.add(e.date); });
+        // last_completed may fall outside the 30-day history window
+        if (h.last_completed) habitDates.add(h.last_completed);
+      });
+
       const firstDay  = new Date(year, month, 1).getDay(); // 0=Sun
       const daysInMon = new Date(year, month + 1, 0).getDate();
       // Shift so week starts Monday
@@ -5924,15 +6427,19 @@
         const isToday      = dateStr === today;
         const isSelected   = dateStr === journal.selectedDate;
         const hasEntry     = dates.has(dateStr);
+        const hasTasks     = taskDates.has(dateStr);
+        const hasHabits    = habitDates.has(dateStr);
         const hasExercise  = healthDates.has(dateStr);
         const hasNutrition = nutritionDates.has(dateStr);
-        const hasDots      = hasEntry || hasExercise || hasNutrition;
+        const hasDots      = hasEntry || hasTasks || hasHabits || hasExercise || hasNutrition;
         cells += `
-          <div class="cal-day ${isToday ? "cal-today" : ""} ${hasEntry ? "cal-has-entry" : ""} ${isSelected ? "cal-selected" : ""}"
+          <div class="cal-day ${isToday ? "cal-today" : ""} ${hasEntry || hasTasks || hasHabits ? "cal-has-entry" : ""} ${isSelected ? "cal-selected" : ""}"
                onclick="journal.openDay('${dateStr}')">
             <span>${d}</span>
             ${hasDots ? `<div class="cal-day-dots">
               ${hasEntry     ? `<span class="cal-dot"></span>` : ""}
+              ${hasTasks     ? `<span class="cal-dot cal-dot-task"></span>` : ""}
+              ${hasHabits    ? `<span class="cal-dot cal-dot-habit"></span>` : ""}
               ${hasExercise  ? `<span class="cal-dot cal-dot-exercise"></span>` : ""}
               ${hasNutrition ? `<span class="cal-dot cal-dot-nutrition"></span>` : ""}
             </div>` : ""}
@@ -6033,6 +6540,16 @@
           </div>
         </div>`;
 
+      // Tasks due on this date (from already-loaded state)
+      const dayTasks = (state.tasks || []).filter(t => t.due_date === dateStr);
+
+      // Habits and their completion status on this date
+      const dayHabits = (habits.data || []).map(h => {
+        const histEntry = (h.history || []).find(e => e.date === dateStr);
+        const done = histEntry ? histEntry.done : (h.last_completed === dateStr);
+        return { ...h, doneOnDate: done };
+      });
+
       Promise.allSettled([
         api.call("GET", `/journal/${dateStr}`).catch(() => null),
         api.call("GET", `/health/${dateStr}`).catch(() => null),
@@ -6054,6 +6571,38 @@
             (entry.body ? `<div class="day-view-preview">${escHtml(entry.body)}</div>` : "");
         } else {
           journalBody = `<div class="day-view-empty">No entry for this day.</div>`;
+        }
+
+        // Tasks
+        let tasksBody;
+        if (dayTasks.length > 0) {
+          const dotClass = { high: "cal-dot-high", medium: "cal-dot-medium", low: "cal-dot-low" };
+          tasksBody = dayTasks.map(t => `
+            <div class="day-view-task" onclick="modal.open('${t.task_id}')">
+              <span class="cal-dot ${dotClass[t.priority] || "cal-dot-low"}" style="flex-shrink:0"></span>
+              <span class="day-view-task-title ${t.status === "done" ? "done-title" : ""}">${escHtml(t.title)}</span>
+              <span class="badge badge-${t.status}">${statusLabel(t.status)}</span>
+            </div>`).join("");
+        } else {
+          tasksBody = `<div class="day-view-empty">No tasks due.</div>`;
+        }
+
+        // Habits
+        let habitsBody;
+        if (dayHabits.length > 0) {
+          const doneCount = dayHabits.filter(h => h.doneOnDate).length;
+          const habitItems = dayHabits.map(h => `
+            <div class="day-view-habit">
+              <span class="day-view-habit-name">${escHtml(h.name || "Unnamed habit")}</span>
+              ${h.doneOnDate
+                ? `<span class="day-view-habit-done" title="Done"></span>`
+                : `<span class="day-view-habit-pending" title="Pending"></span>`}
+            </div>`).join("");
+          habitsBody = `
+            <div style="font-size:12px;color:var(--muted);margin-bottom:2px;">${doneCount} of ${dayHabits.length} completed</div>
+            <div class="day-view-habits-grid">${habitItems}</div>`;
+        } else {
+          habitsBody = `<div class="day-view-empty">No habits tracked.</div>`;
         }
 
         // Exercise
@@ -6103,6 +6652,19 @@
               </button>
             </div>
             <div class="day-section-body">${journalBody}</div>
+          </div>
+          <div class="day-section">
+            <div class="day-section-header">
+              <span>Tasks</span>
+              <button class="btn btn-secondary btn-sm" onclick="modal.open()">+ New</button>
+            </div>
+            <div class="day-section-body">${tasksBody}</div>
+          </div>
+          <div class="day-section">
+            <div class="day-section-header">
+              <span>Habits</span>
+            </div>
+            <div class="day-section-body">${habitsBody}</div>
           </div>
           <div class="day-section">
             <div class="day-section-header">
@@ -6269,7 +6831,7 @@
       const now = new Date();
       health.calMonth = { year: now.getFullYear(), month: now.getMonth() };
       health.renderCalendar();
-      if ($("journal-calendar")) journal.renderCalendar();
+      if ($("journal-calendar") && journal.calMonth) journal.renderCalendar();
       health.renderLogList();
     },
 
@@ -6532,7 +7094,7 @@
       nutrition.calMonth = { year: now.getFullYear(), month: now.getMonth() };
       nutrition.renderCalendar();
       nutrition.renderLogList();
-      if ($("journal-calendar")) journal.renderCalendar();
+      if ($("journal-calendar") && journal.calMonth) journal.renderCalendar();
     },
 
     logDates() {
@@ -6784,6 +7346,7 @@
         habits.data = await api.call("GET", "/habits") || [];
         habits.render();
         if (pages.current === "home") renderHomeDashboard();
+        if ($("journal-calendar") && journal.calMonth) journal.renderCalendar();
       } catch (e) {
         console.error("Failed to load habits:", e);
       } finally {
@@ -7905,7 +8468,7 @@
     },
 
     expand(name) {
-      const sections = ["home", "tasks", "notes", "habits", "goals", "journal", "settings", "admin"];
+      const sections = ["home", "tasks", "notes", "habits", "goals", "journal", "feeds", "settings", "admin"];
       sections.forEach(s => {
         const sect = $(`sb-${s}`);
         const body = $(`sb-${s}-body`);
@@ -7928,12 +8491,14 @@
 
   const pages = {
     current: "home",
-    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "settings", "admin"],
+    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "settings", "admin"],
 
     show(name) {
       pages.current = name;
-      // health and nutrition are sub-sections of journal
-      const sbSection = (name === "health" || name === "nutrition") ? "journal" : name;
+      // health and nutrition are sub-sections of journal; favorites is a sub-section of feeds
+      const sbSection = (name === "health" || name === "nutrition") ? "journal"
+                      : name === "favorites" ? "feeds"
+                      : name;
       sidebar.expand(sbSection);
       // highlight sub-links for health/nutrition
       document.querySelectorAll(".sb-sub-link").forEach(link => {
@@ -7942,7 +8507,7 @@
       pages.all.forEach(p => $(`page-${p}`).classList.toggle("hidden", p !== name));
       if (name === "home")     { renderHome(); }
       if (name === "admin")    { if (!admin.loaded) admin.load(); }
-      if (name === "settings") renderSettings();
+      if (name === "settings") { renderSettings(); if (!feeds.loaded) feeds.loadFeeds(); }
       if (name === "tasks") {
         if (taskFolders.data.length === 0) taskFolders.load();
         else {
@@ -7959,14 +8524,532 @@
       if (name === "journal") {
         if (journal.entries.length === 0) journal.load().then(renderJournalStreaks);
         else renderJournalStreaks();
+        if (state.tasks.length === 0) app.loadTasks();
+        if (habits.data.length === 0) habits.load();
       }
       if (name === "health"    && health.logs.length === 0)     health.load();
       if (name === "nutrition" && nutrition.logs.length === 0) nutrition.load();
+      if (name === "feeds")     feeds.refresh();
+      if (name === "favorites") { if (!favs.loaded) favs.load(); else favs.render(); }
+    },
+  };
+
+  // ── RSS Feeds ─────────────────────────────────────────────────────────────────
+
+  const reads = {
+    _set: new Set(),
+    has(url) { return this._set.has(url); },
+    async load() {
+      try {
+        const urls = await api.call("GET", "/feeds/read") || [];
+        this._set = new Set(urls);
+      } catch {}
+    },
+    mark(url) {
+      if (this._set.has(url)) return;
+      this._set.add(url);
+      api.call("POST", "/feeds/read", { url }).catch(() => {});
+    },
+  };
+
+  const feeds = {
+    data: [],        // feed URL records
+    articles: [],
+    loaded: false,
+    _byUrl: new Map(), // url → article object for onclick lookups
+    _filter: "all",  // "all" | "unread" | feed_title string
+
+    async loadFeeds() {
+      feeds.data = await api.call("GET", "/feeds").catch(() => []) || [];
+      feeds.renderSettingsList();
+    },
+
+    async refresh(force = false) {
+      showLoader("feeds-loader");
+      if (force) $("feeds-grid").innerHTML = "";
+      $("feeds-empty").classList.add("hidden");
+      try {
+        if (!feeds.loaded) {
+          await feeds.loadFeeds();
+          feeds.loaded = true;
+        }
+        if (feeds.data.length === 0) {
+          $("feeds-empty").classList.remove("hidden");
+          return;
+        }
+        const articlesUrl = force ? "/feeds/articles?force=true" : "/feeds/articles";
+        [feeds.articles] = await Promise.all([
+          api.call("GET", articlesUrl).then(r => r || []),
+          reads.load(),
+        ]);
+        feeds._byUrl = new Map(feeds.articles.map(a => [a.url, a]));
+        feeds.renderFilters();
+        feeds.renderGrid();
+      } catch (e) {
+        console.error("Failed to load feed articles:", e);
+      } finally {
+        hideLoader("feeds-loader");
+      }
+    },
+
+    renderFilters() {
+      const bar = $("feeds-filter-bar");
+      if (!feeds.articles.length) { bar.classList.add("hidden"); return; }
+      const sources = [...new Set(feeds.articles.map(a => a.feed_title).filter(Boolean))].sort();
+      const unreadCount = feeds.articles.filter(a => !reads.has(a.url)).length;
+      const btn = (label, value) => {
+        const active = feeds._filter === value ? " active" : "";
+        return `<button class="filter-btn${active}" onclick='feeds.setFilter(${JSON.stringify(value)})'>${escHtml(label)}</button>`;
+      };
+      bar.innerHTML = btn("All", "all") + btn(`Unread (${unreadCount})`, "unread") + sources.map(s => btn(s, s)).join("");
+      bar.classList.remove("hidden");
+    },
+
+    setFilter(value) {
+      feeds._filter = value;
+      feeds.renderFilters();
+      feeds.renderGrid();
+    },
+
+    renderGrid() {
+      const grid = $("feeds-grid");
+      if (!feeds.articles.length) {
+        $("feeds-empty").classList.remove("hidden");
+        grid.innerHTML = "";
+        return;
+      }
+      let articles = feeds.articles;
+      if (feeds._filter === "unread") {
+        articles = articles.filter(a => !reads.has(a.url));
+      } else if (feeds._filter !== "all") {
+        articles = articles.filter(a => a.feed_title === feeds._filter);
+      }
+      if (!articles.length) {
+        grid.innerHTML = `<div style="color:var(--muted);font-size:14px;padding:32px 0;">No articles match this filter.</div>`;
+        return;
+      }
+      grid.innerHTML = articles.map(a => {
+        const isRead = reads.has(a.url);
+        const domain = (() => { try { return new URL(a.url).hostname; } catch { return ""; } })();
+        const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64` : "";
+        const initial = (a.feed_title || domain || "?")[0].toUpperCase();
+        const placeholder = `<div class="feed-card-img-placeholder">${
+          faviconUrl
+            ? `<img class="feed-card-favicon" src="${escHtml(faviconUrl)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="feed-card-favicon-fallback" style="display:none">${escHtml(initial)}</div>`
+            : `<div class="feed-card-favicon-fallback">${escHtml(initial)}</div>`
+        }</div>`;
+        const unreadDot = isRead ? "" : `<div class="feed-card-unread-dot"></div>`;
+        const imgHtml = a.image
+          ? `<div style="position:relative">${unreadDot}<img class="feed-card-img" src="${escHtml(a.image)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">${placeholder.replace('class="feed-card-img-placeholder"', 'class="feed-card-img-placeholder" style="display:none"')}</div>`
+          : `<div style="position:relative">${unreadDot}${placeholder}</div>`;
+        const dateStr = a.published
+          ? new Date(a.published).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+          : "";
+        const isFaved = favs.has(a.url);
+        const favIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+        const sumIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20z"/><path d="M12 8v4l3 3"/></svg>`;
+        const encodedUrl = encodeURIComponent(a.url);
+        return `
+          <a class="feed-card${isRead ? " feed-card--read" : ""}" href="${escHtml(a.url)}" target="_blank" rel="noopener noreferrer"
+            onclick="reads.mark(decodeURIComponent('${encodedUrl}'));this.classList.add('feed-card--read');feeds.renderFilters()">
+            ${imgHtml}
+            <div class="feed-card-body">
+              <div class="feed-card-source">${escHtml(a.feed_title || "")}</div>
+              <div class="feed-card-title">${escHtml(a.title || "Untitled")}</div>
+              ${a.description ? `<div class="feed-card-desc">${escHtml(a.description)}</div>` : ""}
+              ${dateStr ? `<div class="feed-card-date">${dateStr}</div>` : ""}
+            </div>
+            <div class="feed-card-footer">
+              <button class="feed-sum-btn" onclick="event.preventDefault();event.stopPropagation();summaryModal.open(feeds._byUrl.get(decodeURIComponent('${encodedUrl}')))">
+                ${sumIcon} Preview
+              </button>
+              <button class="feed-fav-btn${isFaved ? " active" : ""}" data-url="${escHtml(a.url)}"
+                onclick="event.preventDefault();event.stopPropagation();favs.toggleByUrl(decodeURIComponent('${encodedUrl}'),this)">
+                ${favIcon}${isFaved ? "Favorited" : "Favorite"}
+              </button>
+            </div>
+          </a>`;
+      }).join("");
+    },
+
+    renderSettingsList() {
+      const el = $("feed-list-settings");
+      if (!el) return;
+      if (!feeds.data.length) {
+        el.innerHTML = `<div style="font-size:13px;color:var(--muted);padding:4px 0;">No feeds added yet.</div>`;
+        return;
+      }
+      el.innerHTML = feeds.data.map(f => `
+        <div class="feed-settings-item">
+          <span class="feed-settings-url" title="${escHtml(f.url)}">${escHtml(f.url)}</span>
+          <button class="btn btn-secondary btn-sm" onclick="feeds.remove('${f.feed_id}')">Remove</button>
+        </div>`).join("");
+    },
+
+    async add() {
+      const input = $("feed-url-input");
+      const msg   = $("feed-add-msg");
+      const url   = (input.value || "").trim();
+      if (!url) return;
+      msg.className = "hidden";
+      try {
+        const result = await api.call("POST", "/feeds", { url });
+        feeds.data.push(result);
+        feeds.renderSettingsList();
+        feeds.loaded = false; // force re-fetch articles next time
+        input.value = "";
+        msg.textContent = "Feed added.";
+        msg.className = "";
+        msg.style.color = "var(--primary)";
+      } catch (e) {
+        msg.textContent = e.message || "Failed to add feed.";
+        msg.className = "";
+        msg.style.color = "var(--danger)";
+      }
+    },
+
+    async remove(feedId) {
+      try {
+        await api.call("DELETE", `/feeds/${feedId}`);
+        feeds.data = feeds.data.filter(f => f.feed_id !== feedId);
+        feeds.renderSettingsList();
+        feeds.loaded = false;
+      } catch (e) {
+        console.error("Failed to remove feed:", e);
+      }
+    },
+  };
+
+  $("feed-add-btn").addEventListener("click", () => feeds.add());
+  $("feed-url-input").addEventListener("keydown", e => { if (e.key === "Enter") feeds.add(); });
+
+  // ── Favorites ─────────────────────────────────────────────────────────────────
+
+  const favs = {
+    data:         [],   // full favorite objects from API
+    loaded:       false,
+    _byUrl:       new Map(),  // url → favorite object
+    _activeTag:   null,
+
+    has(url) { return this._byUrl.has(url); },
+    get(url)  { return this._byUrl.get(url); },
+
+    _index() {
+      this._byUrl = new Map(this.data.map(f => [f.url, f]));
+    },
+
+    async load() {
+      showLoader("favorites-loader");
+      try {
+        this.data   = await api.call("GET", "/favorites") || [];
+        this.loaded = true;
+        this._index();
+        this.render();
+      } catch (e) {
+        console.error("Failed to load favorites:", e);
+      } finally {
+        hideLoader("favorites-loader");
+      }
+    },
+
+    async toggleByUrl(url, btn) {
+      const article = feeds._byUrl.get(url);
+      if (!article) return;
+      return this.toggle(article, btn);
+    },
+
+    async toggle(article, btn) {
+      const existing = this.get(article.url);
+      if (existing) {
+        // unfavorite
+        try {
+          await api.call("DELETE", `/favorites/${existing.favorite_id}`);
+          this.data = this.data.filter(f => f.favorite_id !== existing.favorite_id);
+          this._index();
+          btn.classList.remove("active");
+          btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Favorite`;
+        } catch (e) { console.error("Failed to unfavorite:", e); }
+      } else {
+        // favorite
+        try {
+          const result = await api.call("POST", "/favorites", {
+            url:         article.url,
+            title:       article.title       || "",
+            feed_title:  article.feed_title  || "",
+            image:       article.image       || "",
+            description: article.description || "",
+            published:   article.published   || "",
+            tags:        [],
+          });
+          this.data.unshift(result);
+          this._index();
+          btn.classList.add("active");
+          btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Favorited`;
+        } catch (e) { console.error("Failed to favorite:", e); }
+      }
+    },
+
+    async addTag(favoriteId, tag) {
+      const fav = this.data.find(f => f.favorite_id === favoriteId);
+      if (!fav) return;
+      tag = tag.trim();
+      if (!tag || fav.tags.includes(tag)) return;
+      const newTags = [...fav.tags, tag];
+      try {
+        await api.call("PATCH", `/favorites/${favoriteId}`, { tags: newTags });
+        fav.tags = newTags;
+        this.render();
+      } catch (e) { console.error("Failed to add tag:", e); }
+    },
+
+    async removeTag(favoriteId, tag) {
+      const fav = this.data.find(f => f.favorite_id === favoriteId);
+      if (!fav) return;
+      const newTags = fav.tags.filter(t => t !== tag);
+      try {
+        await api.call("PATCH", `/favorites/${favoriteId}`, { tags: newTags });
+        fav.tags = newTags;
+        this.render();
+      } catch (e) { console.error("Failed to remove tag:", e); }
+    },
+
+    allTags() {
+      const set = new Set();
+      this.data.forEach(f => (f.tags || []).forEach(t => set.add(t)));
+      return [...set].sort();
+    },
+
+    renderTagBar() {
+      const bar = $("favorites-tag-bar");
+      const tags = this.allTags();
+      if (!tags.length) { bar.classList.add("hidden"); return; }
+      bar.classList.remove("hidden");
+      const activeTag = this._activeTag;
+      bar.innerHTML = [
+        `<button class="fav-tag-filter${!activeTag ? " active" : ""}" onclick="favs._activeTag=null;favs.render()">All</button>`,
+        ...tags.map(t => `<button class="fav-tag-filter${activeTag === t ? " active" : ""}" onclick="favs._activeTag=${JSON.stringify(t)};favs.render()">${escHtml(t)}</button>`)
+      ].join("");
+    },
+
+    render() {
+      const grid  = $("favorites-grid");
+      const empty = $("favorites-empty");
+      this.renderTagBar();
+
+      const visible = this._activeTag
+        ? this.data.filter(f => (f.tags || []).includes(this._activeTag))
+        : this.data;
+
+      if (!visible.length) {
+        empty.classList.remove("hidden");
+        grid.innerHTML = "";
+        return;
+      }
+      empty.classList.add("hidden");
+
+      const favIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+
+      grid.innerHTML = visible.map(f => {
+        const domain = (() => { try { return new URL(f.url).hostname; } catch { return ""; } })();
+        const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64` : "";
+        const initial = (f.feed_title || domain || "?")[0].toUpperCase();
+        const placeholder = `<div class="feed-card-img-placeholder">${
+          faviconUrl
+            ? `<img class="feed-card-favicon" src="${escHtml(faviconUrl)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="feed-card-favicon-fallback" style="display:none">${escHtml(initial)}</div>`
+            : `<div class="feed-card-favicon-fallback">${escHtml(initial)}</div>`
+        }</div>`;
+        const imgHtml = f.image
+          ? `<img class="feed-card-img" src="${escHtml(f.image)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">${placeholder.replace('class="feed-card-img-placeholder"', 'class="feed-card-img-placeholder" style="display:none"')}`
+          : placeholder;
+        const dateStr = f.published
+          ? new Date(f.published).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+          : "";
+        const tagsHtml = `
+          <div class="fav-card-tags">
+            ${(f.tags || []).map(t => `
+              <span class="fav-tag-pill">${escHtml(t)}<button class="fav-tag-remove" onclick="favs.removeTag('${f.favorite_id}','${escHtml(t)}')" title="Remove tag">&times;</button></span>`).join("")}
+            <button class="fav-tag-add-btn" onclick="favs.showTagInput('${f.favorite_id}',this)">+ tag</button>
+          </div>`;
+        return `
+          <a class="feed-card" href="${escHtml(f.url)}" target="_blank" rel="noopener noreferrer">
+            ${imgHtml}
+            <div class="feed-card-body">
+              <div class="feed-card-source">${escHtml(f.feed_title || "")}</div>
+              <div class="feed-card-title">${escHtml(f.title || "Untitled")}</div>
+              ${f.description ? `<div class="feed-card-desc">${escHtml(f.description)}</div>` : ""}
+              ${dateStr ? `<div class="feed-card-date">${dateStr}</div>` : ""}
+            </div>
+            ${tagsHtml}
+            <div class="feed-card-footer">
+              <button class="feed-fav-btn active" onclick="event.preventDefault();event.stopPropagation();favs.removeAndRefresh('${f.favorite_id}')">
+                ${favIcon} Remove
+              </button>
+            </div>
+          </a>`;
+      }).join("");
+    },
+
+    showTagInput(favoriteId, btn) {
+      btn.style.display = "none";
+      const wrap = document.createElement("span");
+      wrap.className = "fav-tag-input-wrap";
+      const input = document.createElement("input");
+      input.className = "fav-tag-input";
+      input.placeholder = "tag name";
+      input.maxLength = 50;
+      const confirm = async () => {
+        const val = input.value.trim();
+        if (val) await favs.addTag(favoriteId, val);
+        else favs.render();
+      };
+      input.addEventListener("keydown", e => {
+        if (e.key === "Enter") { e.preventDefault(); confirm(); }
+        if (e.key === "Escape") favs.render();
+      });
+      input.addEventListener("blur", () => setTimeout(confirm, 150));
+      wrap.appendChild(input);
+      btn.parentNode.insertBefore(wrap, btn.nextSibling);
+      input.focus();
+    },
+
+    async removeAndRefresh(favoriteId) {
+      try {
+        await api.call("DELETE", `/favorites/${favoriteId}`);
+        this.data = this.data.filter(f => f.favorite_id !== favoriteId);
+        this._index();
+        this.render();
+        // Update heart buttons on the feeds page if visible
+        document.querySelectorAll(".feed-fav-btn.active").forEach(btn => {
+          const fav = this.data.find(f => f.url === btn.dataset.url);
+          if (!fav) {
+            btn.classList.remove("active");
+            btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Favorite`;
+          }
+        });
+      } catch (e) { console.error("Failed to remove favorite:", e); }
     },
   };
 
   $("sb-toggle").addEventListener("click", () => sidebar.toggle());
   $("admin-refresh-btn").addEventListener("click", () => { admin.loaded = false; admin.load(); });
+
+  // ── Article summary modal ────────────────────────────────────────────────────
+
+  const summaryModal = {
+    _article: null,
+
+    open(article) {
+      if (!article) return;
+      this._article = article;
+
+      $("sum-source").textContent = article.feed_title || "";
+      $("sum-title").textContent  = article.title || "Untitled";
+      $("sum-open-btn").href      = article.url || "#";
+      $("sum-open-btn").onclick   = () => { reads.mark(article.url); feeds.renderFilters(); };
+      $("sum-body").innerHTML = `
+        <div class="sum-thinking">
+          <div class="sum-thinking-dots"><span></span><span></span><span></span></div>
+          Summarizing...
+        </div>`;
+
+      // Wire up Favorite button
+      const favBtn = $("sum-fav-btn");
+      const isFaved = favs.has(article.url);
+      favBtn.textContent = isFaved ? "Favorited" : "Favorite";
+      favBtn.disabled = isFaved;
+      favBtn.onclick = async () => {
+        await favs.toggle(article, { classList: { add(){}, remove(){} }, innerHTML: "" });
+        favBtn.textContent = "Favorited";
+        favBtn.disabled = true;
+        // Refresh feed card button state
+        document.querySelectorAll(`.feed-fav-btn[data-url="${CSS.escape(article.url)}"]`).forEach(b => {
+          b.classList.add("active");
+          b.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Favorited`;
+        });
+      };
+
+      // Reset Create Note button until summary is ready
+      const noteBtn = $("sum-note-btn");
+      noteBtn.disabled = true;
+      noteBtn.textContent = "Create Note";
+      noteBtn.onclick = null;
+      this._summary = null;
+
+      $("sum-overlay").classList.remove("hidden");
+      this._fetch(article);
+    },
+
+    close() {
+      $("sum-overlay").classList.add("hidden");
+      this._article = null;
+    },
+
+    async _fetch(article) {
+      let articleText = "";
+      try {
+        const textRes = await api.call("GET", `/feeds/article-text?url=${encodeURIComponent(article.url)}`);
+        if (textRes && textRes.text) articleText = textRes.text;
+      } catch {}
+
+      const prompt = [
+        `Summarize the following article comprehensively. Target length: 250–750 words (1–3 minute read).`,
+        ``,
+        `Cover every key point, finding, technique, tool, or argument the article makes. Do not omit important details to save space — include anything a reader would need to understand the article's full value without reading it themselves.`,
+        ``,
+        `Format as flowing paragraphs. No bullet lists. No headers. No filler phrases like "In summary", "This article", or "The author explains".`,
+        `Be direct and specific — use actual names, numbers, and examples from the article when available.`,
+        ``,
+        `Title: ${article.title || ""}`,
+        `Source: ${article.feed_title || ""}`,
+        `URL: ${article.url || ""}`,
+        articleText ? `\nArticle content:\n${articleText}` : `Description: ${article.description || "(none provided)"}`,
+      ].join("\n");
+
+      try {
+        const res = await api.call("POST", "/assistant/chat", {
+          message:    prompt,
+          model:      "us.amazon.nova-pro-v1:0",
+          local_date: new Date().toLocaleDateString("en-CA"),
+          no_history: true,
+        });
+        if (!$("sum-overlay").classList.contains("hidden")) {
+          if (res && res.reply) {
+            let bodyText = res.reply
+              .replace(/\[[^\]]*\]\(pal-link:[^)]+\)/g, "")
+              .replace(/\[pal-link:[^\]]+\]/g, "")
+              .trim();
+            $("sum-body").innerHTML = escHtml(bodyText).replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>");
+            this._summary = bodyText;
+            const noteBtn = $("sum-note-btn");
+            noteBtn.disabled = false;
+            noteBtn.onclick = async () => {
+              noteBtn.disabled = true;
+              noteBtn.textContent = "Saving...";
+              try {
+                await api.call("POST", "/notes", {
+                  title:       this._article?.title || "Article Summary",
+                  content:     this._summary + "\n\n" + (this._article?.url || ""),
+                  folder_name: "Article Summaries",
+                });
+                noteBtn.textContent = "Note saved";
+              } catch {
+                noteBtn.disabled = false;
+                noteBtn.textContent = "Create Note";
+              }
+            };
+          } else {
+            $("sum-body").textContent = "Failed to get summary. Please try again.";
+          }
+        }
+      } catch (e) {
+        if (!$("sum-overlay").classList.contains("hidden")) {
+          $("sum-body").textContent = "Failed to get summary. Please try again.";
+        }
+      }
+    },
+  };
+
+  document.addEventListener("keydown", e => { if (e.key === "Escape") summaryModal.close(); });
 
   // ── Boot ──────────────────────────────────────────────────────────────────────
   colorTheme.init();
@@ -8242,7 +9325,7 @@
           const resp = await fetch(streamUrl, {
             method:      "POST",
             credentials: "include",
-            headers:     { "Content-Type": "application/json" },
+            headers:     { "Content-Type": "application/json", "Authorization": "Bearer " + (localStorage.getItem("access_token") || "") },
             body:        JSON.stringify({ message: msg, model: palModel, local_date: localDate }),
           });
 

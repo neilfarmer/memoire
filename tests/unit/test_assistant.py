@@ -802,74 +802,9 @@ class TestTokenAuthGetUserId:
         assert token_auth.get_user_id(event) is None
 
 
-# ── streaming handler ───���─────────────────────────────────────────────────────
-
-class TestStreamHandler:
-    """Tests for _stream_handler called directly (no awslambdaric wrapper needed)."""
-
-    def _collect(self, stream_mock):
-        chunks = []
-        for call in stream_mock.write.call_args_list:
-            line = call.args[0].rstrip(b"\n")
-            if line:
-                chunks.append(json.loads(line))
-        return chunks
-
-    def test_unauthorized_when_no_token(self, tbls):
-        from unittest.mock import MagicMock
-        stream = MagicMock()
-        handler._stream_handler({"headers": {}}, None, stream)
-        chunks = self._collect(stream)
-        assert chunks[0] == {"type": "error", "message": "Unauthorized"}
-
-    def test_invalid_json_body_returns_error(self, tbls, monkeypatch):
-        from unittest.mock import MagicMock
-        monkeypatch.setattr(token_auth, "get_user_id", lambda e: USER)
-        stream = MagicMock()
-        handler._stream_handler({"headers": {}, "body": "not-json"}, None, stream)
-        chunks = self._collect(stream)
-        assert chunks[0]["type"] == "error"
-        assert "JSON" in chunks[0]["message"]
-
-    def test_missing_message_returns_error(self, tbls, monkeypatch):
-        from unittest.mock import MagicMock
-        monkeypatch.setattr(token_auth, "get_user_id", lambda e: USER)
-        stream = MagicMock()
-        handler._stream_handler({"headers": {}, "body": "{}"}, None, stream)
-        chunks = self._collect(stream)
-        assert chunks[0]["type"] == "error"
-        assert "message" in chunks[0]["message"].lower()
-
-    def test_delegates_to_chat_stream(self, tbls, monkeypatch):
-        from unittest.mock import MagicMock
-        monkeypatch.setattr(token_auth, "get_user_id", lambda e: USER)
-        called_with = {}
-
-        def fake_chat_stream(user_id, message, emit, model=None, local_date=None):
-            called_with["user_id"] = user_id
-            called_with["message"] = message
-            emit(json.dumps({"type": "done", "tools_used": [], "reply": "hi"}).encode() + b"\n")
-
-        monkeypatch.setattr(chat, "chat_stream", fake_chat_stream)
-        stream = MagicMock()
-        body   = json.dumps({"message": "hello world"})
-        handler._stream_handler({"headers": {}, "body": body}, None, stream)
-
-        assert called_with["user_id"] == USER
-        assert called_with["message"] == "hello world"
-
-    def test_exception_in_chat_stream_emits_error(self, tbls, monkeypatch):
-        """Unhandled exception inside chat_stream writes an error event."""
-        from unittest.mock import MagicMock
-        monkeypatch.setattr(token_auth, "get_user_id", lambda e: USER)
-        monkeypatch.setattr(chat, "chat_stream", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("kaboom")))
-        stream = MagicMock()
-        handler._stream_handler({"headers": {}, "body": json.dumps({"message": "hi"})}, None, stream)
-        chunks = self._collect(stream)
-        assert any(c["type"] == "error" for c in chunks)
-
-
-# ── handler.lambda_handler ────────────────────────────────────────────────────
+# ── handler.lambda_handler ──────────────────────────────────────────────────
+# (TestStreamHandler removed — _stream_handler was removed when streaming Lambda
+#  was replaced with a standard API Gateway proxy handler)
 
 class TestLambdaHandler:
     def _event(self, route_key="POST /assistant/chat", body=None):

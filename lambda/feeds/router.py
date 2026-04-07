@@ -1,0 +1,37 @@
+"""Route dispatch for the feeds Lambda."""
+
+from response import error, not_found
+import crud
+
+
+def route(route_key: str, user_id: str, body: dict, path_params: dict) -> dict:
+    feed_id = path_params.get("id")
+
+    match route_key:
+        case "GET /feeds":
+            return crud.list_feeds(user_id)
+
+        case "POST /feeds":
+            return crud.add_feed(user_id, body)
+
+        case "DELETE /feeds/{id}":
+            if not feed_id:
+                return error("Missing feed id")
+            return crud.delete_feed(user_id, feed_id)
+
+        case "GET /feeds/articles":
+            force = path_params.get("force", "").lower() in ("1", "true")
+            return crud.get_articles(user_id, force=force)
+
+        case "GET /feeds/article-text":
+            url = path_params.get("url") or body.get("url") or ""
+            return crud.fetch_article_text(user_id, url)
+
+        case "GET /feeds/read":
+            return crud.get_read_urls(user_id)
+
+        case "POST /feeds/read":
+            return crud.mark_read(user_id, body)
+
+        case _:
+            return not_found("Route")

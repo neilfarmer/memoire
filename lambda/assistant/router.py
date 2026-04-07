@@ -12,7 +12,8 @@ def route(route_key: str, user_id: str, body: dict) -> dict:
             return error("message is required")
         model      = body.get("model") or None
         local_date = body.get("local_date") or None
-        return chat.chat(user_id, message, model=model, local_date=local_date)
+        no_history = bool(body.get("no_history"))
+        return chat.chat(user_id, message, model=model, local_date=local_date, no_history=no_history)
 
     if route_key == "GET /assistant/history":
         history = mem.load_history(user_id)

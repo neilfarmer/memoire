@@ -136,6 +136,18 @@ data "archive_file" "lambda_goals" {
   output_path = "${path.module}/../build/goals.zip"
 }
 
+data "archive_file" "lambda_feeds" {
+  type        = "zip"
+  source_dir  = "${path.module}/../lambda/feeds"
+  output_path = "${path.module}/../build/feeds.zip"
+}
+
+data "archive_file" "lambda_favorites" {
+  type        = "zip"
+  source_dir  = "${path.module}/../lambda/favorites"
+  output_path = "${path.module}/../build/favorites.zip"
+}
+
 data "archive_file" "lambda_authorizer" {
   type        = "zip"
   source_dir  = "${path.module}/../lambda/authorizer"

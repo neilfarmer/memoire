@@ -37,3 +37,43 @@ The Web Speech API silently fails in some browsers/environments — the mic butt
 S3 temporary storage: negligible (small audio files deleted immediately after transcription).
 
 **Note:** Amazon Transcribe Streaming would give real-time results but requires a WebSocket proxy through API Gateway — significantly more infrastructure for marginal UX gain.
+
+---
+
+## Integrated Diagramming Tool (Excalidraw)
+
+**Status:** Not implemented — planned  
+**Use case:** Architecture diagrams, editable over time
+
+### Plan
+
+Embed [Excalidraw](https://excalidraw.com) via CDN (React + `@excalidraw/excalidraw` UMD build) — no build step required, consistent with the existing vanilla JS app. Adds ~3MB of JS loaded only on the Diagrams page.
+
+**UX:**
+- "Diagrams" section in sidebar → dedicated page
+- Left panel: list of saved diagrams (name, last updated), "+ New Diagram" button
+- Right panel: full Excalidraw canvas
+- Manual save button (no auto-save) — user explicitly saves when ready
+- No export or sharing needed
+
+**Backend:**
+- New DynamoDB table: `diagrams` (`user_id` PK, `diagram_id` SK)
+- Attributes: `title`, `elements` (JSON), `app_state` (JSON), `created_at`, `updated_at`
+- New Lambda: `lambda/diagrams/` following standard handler/router/crud pattern
+- Routes: `GET /diagrams`, `POST /diagrams`, `PUT /diagrams/{id}`, `DELETE /diagrams/{id}`
+
+**Frontend integration:**
+```js
+// Load via CDN — only on the diagrams page
+React.createElement(ExcalidrawLib.Excalidraw, {
+  initialData: { elements, appState },
+  onChange: (elements, appState) => { /* store in memory until save */ },
+})
+```
+
+**Data size:** Excalidraw JSON for a typical architecture diagram is 10–100KB — well within DynamoDB's 400KB item limit.
+
+### Tradeoffs
+- ~3MB CDN payload (React + Excalidraw) on first load of the page, cached after
+- No offline support — requires network to load Excalidraw assets
+- No collaboration or sharing (intentional — personal tool only)
