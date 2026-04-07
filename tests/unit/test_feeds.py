@@ -1,6 +1,5 @@
 """Unit tests for lambda/feeds/crud.py and router.py."""
 
-import io
 import json
 import os
 from datetime import datetime, timezone, timedelta
