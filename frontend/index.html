@@ -3909,6 +3909,24 @@
         </div>
       </div>
     </div>
+    <div class="settings-section" id="ai-profile-section">
+      <div class="settings-section-title">AI Profile</div>
+      <div class="settings-row" style="flex-direction:column; align-items:stretch; gap:10px;">
+        <div>
+          <div class="settings-label">About me</div>
+          <div class="settings-desc">Tell the AI assistant who you are — your role, goals, preferences, and routines. This is injected into every conversation as context.</div>
+        </div>
+        <textarea id="ai-profile-context" rows="5" placeholder="e.g. I'm a software engineer working on a SaaS product. I track my fitness goals and try to run 3x per week. I prefer concise responses." style="width:100%;resize:vertical;font-family:inherit;font-size:14px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);"></textarea>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="btn btn-secondary" id="ai-profile-save-btn">Save</button>
+          <span id="ai-profile-msg" class="hidden" style="font-size:13px;"></span>
+        </div>
+      </div>
+      <div id="ai-profile-facts-section" class="hidden" style="margin-top:16px;">
+        <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--muted);">Remembered facts</div>
+        <div id="ai-profile-facts-list"></div>
+      </div>
+    </div>
     <div class="settings-section">
       <div class="settings-section-title">Appearance</div>
       <div class="settings-row">
@@ -4459,6 +4477,10 @@
     createDiagram(body)         { return api.call("POST",   "/diagrams", body); },
     updateDiagram(id, body)     { return api.call("PUT",    `/diagrams/${id}`, body); },
     deleteDiagram(id)           { return api.call("DELETE", `/diagrams/${id}`); },
+
+    getAssistantMemory()            { return api.call("GET",    "/assistant/memory"); },
+    updateAssistantMemory(body)     { return api.call("PUT",    "/assistant/memory", body); },
+    deleteAssistantMemoryFact(key)  { return api.call("DELETE", `/assistant/memory/${encodeURIComponent(key)}`); },
 
     async downloadExport() {
       const resp = await fetch(`${cfg.apiUrl.replace(/\/$/, "")}/export`, {
@@ -8336,7 +8358,67 @@
     $("display-name-input").value = state.settings?.display_name || "";
     $("pal-name-input").value = state.settings?.pal_name || "";
     loadPatList();
+    aiProfile.load();
   }
+
+  // ── AI Profile ───────────────────────────────────────────────────────────────
+
+  const aiProfile = {
+    async load() {
+      try {
+        const data = await api.getAssistantMemory();
+        if (!data) return;
+        $("ai-profile-context").value = data.master_context || "";
+        aiProfile.renderFacts(data.facts || {});
+      } catch { /* best-effort */ }
+    },
+
+    renderFacts(facts) {
+      const keys = Object.keys(facts);
+      const section = $("ai-profile-facts-section");
+      const list    = $("ai-profile-facts-list");
+      if (keys.length === 0) {
+        section.classList.add("hidden");
+        return;
+      }
+      section.classList.remove("hidden");
+      list.innerHTML = keys.map(k => `
+        <div class="settings-row" style="padding:6px 0; gap:10px;" data-fact-key="${escHtml(k)}">
+          <div style="flex:1; min-width:0;">
+            <div class="settings-label" style="font-size:13px;">${escHtml(k)}</div>
+            <div class="settings-desc" style="margin-top:2px;">${escHtml(facts[k])}</div>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="aiProfile.deleteFact(${JSON.stringify(k)})">Delete</button>
+        </div>
+      `).join("");
+    },
+
+    async save() {
+      const context = $("ai-profile-context").value.trim();
+      const msg     = $("ai-profile-msg");
+      try {
+        await api.updateAssistantMemory({ master_context: context });
+        msg.textContent = "Saved.";
+        msg.className   = "";
+        msg.style.color = "var(--primary)";
+      } catch {
+        msg.textContent = "Failed to save.";
+        msg.className   = "";
+        msg.style.color = "var(--danger, #e53e3e)";
+      }
+      msg.classList.remove("hidden");
+      setTimeout(() => msg.classList.add("hidden"), 3000);
+    },
+
+    async deleteFact(key) {
+      try {
+        await api.deleteAssistantMemoryFact(key);
+        await aiProfile.load();
+      } catch { /* best-effort */ }
+    },
+  };
+
+  document.getElementById("ai-profile-save-btn").addEventListener("click", () => aiProfile.save());
 
   // ── Global search ────────────────────────────────────────────────────────────
 

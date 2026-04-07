@@ -128,6 +128,9 @@ locals {
     "GET /assistant/history",
     "DELETE /assistant/history",
     "GET /assistant/usage",
+    "GET /assistant/memory",
+    "PUT /assistant/memory",
+    "DELETE /assistant/memory/{key}",
   ]
 }
 
