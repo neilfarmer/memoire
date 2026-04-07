@@ -8461,8 +8461,8 @@
             <div class="profile-fact-value" id="pfv-${escHtml(k)}">${escHtml(facts[k])}</div>
           </div>
           <div class="profile-fact-actions">
-            <button class="btn btn-secondary btn-sm" onclick="profilePage.editFact(${JSON.stringify(k)}, ${JSON.stringify(facts[k])})">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="profilePage.deleteFact(${JSON.stringify(k)})">Delete</button>
+            <button class="btn btn-secondary btn-sm" onclick="profilePage.editFact(this.closest('.profile-fact').dataset.key)">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="profilePage.deleteFact(this.closest('.profile-fact').dataset.key)">Delete</button>
           </div>
         </div>
       `).join("");
@@ -8483,9 +8483,10 @@
       setTimeout(() => msg.classList.add("hidden"), 3000);
     },
 
-    editFact(key, currentValue) {
+    editFact(key) {
       const valueEl = $(`pfv-${key}`);
       if (!valueEl) return;
+      const currentValue = valueEl.textContent;
       const originalHTML = valueEl.innerHTML;
       valueEl.innerHTML = `<input type="text" value="${escHtml(currentValue)}" />`;
       const input = valueEl.querySelector("input");
