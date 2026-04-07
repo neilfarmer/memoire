@@ -8660,7 +8660,7 @@
       this._excalidrawRoot = ReactDOM.createRoot(container);
       this._excalidrawRoot.render(
         React.createElement(ExcalidrawComponent, {
-          initialData: { elements, appState: { theme: "dark", ...appState } },
+          initialData: { elements, appState: { theme: "dark", ...appState, collaborators: new Map() } },
           onChange(els, state) {
             self._pendingElements = els;
             self._pendingAppState = state;
