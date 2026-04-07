@@ -8732,8 +8732,11 @@
       const name     = state.settings?.display_name || auth.getEmail()?.split("@")[0] || "?";
       const initials = name.trim().split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
       $("profile-avatar-large").textContent = initials;
-      $("profile-display-name").textContent = state.settings?.display_name || auth.getEmail() || "—";
-      $("profile-email").textContent = auth.getEmail() || "";
+      const displayName = state.settings?.display_name || "";
+      const email       = auth.getEmail() || "";
+      $("profile-display-name").textContent = displayName || email || "—";
+      // Only show email sub-line if there's a separate display name set
+      $("profile-email").textContent = displayName ? email : "";
 
       try {
         const data = await api.getAssistantMemory();
@@ -8754,7 +8757,7 @@
         // Occupation badge
         const occ = data.facts?.occupation || "";
         const occBadge = $("profile-occupation-badge");
-        if (occ) { occBadge.textContent = occ; occBadge.classList.remove("hidden"); }
+        if (occ) { occBadge.textContent = occ.replace(/_/g, " "); occBadge.classList.remove("hidden"); }
         else      { occBadge.classList.add("hidden"); }
 
         profilePage.renderFacts(data.facts || {});
