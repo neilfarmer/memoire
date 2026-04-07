@@ -1358,38 +1358,258 @@
     .home-widget-link:hover { text-decoration: underline; }
 
     /* ── Profile page ── */
-    .profile-fact {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
+    #page-profile { padding: 0; max-width: none; overflow: hidden; }
+
+    .profile-layout {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      min-height: calc(100vh - 56px);
     }
-    .profile-fact:last-child { border-bottom: none; }
-    .profile-fact-body { flex: 1; min-width: 0; }
-    .profile-fact-key {
-      font-size: 12px;
+
+    .profile-identity {
+      padding: 40px 20px 32px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 10px;
+      position: sticky;
+      top: 56px;
+      height: calc(100vh - 56px);
+      background: var(--surface);
+    }
+
+    .profile-avatar-large {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      font-family: 'Fraunces', serif;
+      font-size: 28px;
       font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .04em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 4px;
+      flex-shrink: 0;
+    }
+
+    .profile-display-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .profile-occupation-badge {
+      font-size: 11px;
       color: var(--muted);
-      margin-bottom: 3px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px 10px;
+    }
+
+    .profile-main {
+      padding: 36px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 36px;
+      overflow-y: auto;
+      max-height: calc(100vh - 56px);
+    }
+
+    .profile-section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .profile-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+    }
+
+    .ai-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px 8px;
+    }
+    .ai-pulse {
+      width: 6px; height: 6px; flex-shrink: 0;
+      border-radius: 50%;
+      background: var(--primary);
+      animation: ai-pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes ai-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .3; transform: scale(.7); }
+    }
+
+    .profile-refresh-icon-btn {
+      width: 26px; height: 26px;
+      border-radius: 6px;
+      border: none;
+      background: none;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: auto;
+      transition: color .15s, background .15s;
+      flex-shrink: 0;
+    }
+    .profile-refresh-icon-btn:hover { color: var(--text); background: var(--hover); }
+
+    /* Bio */
+    .profile-bio-display {
+      cursor: pointer;
+      padding: 16px 18px;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      transition: border-color .15s, background .15s;
+      position: relative;
+    }
+    .profile-bio-display:hover { border-color: var(--border); background: var(--hover); }
+
+    .profile-bio-text {
+      font-size: 15px;
+      line-height: 1.75;
+      color: var(--text);
+      font-style: italic;
+      font-family: 'Fraunces', serif;
+    }
+
+    .profile-bio-empty {
+      font-size: 14px;
+      color: var(--muted);
+      font-style: italic;
+      font-family: 'Fraunces', serif;
+    }
+
+    .profile-bio-hint {
+      position: absolute;
+      bottom: 9px;
+      right: 14px;
+      font-size: 11px;
+      color: var(--muted);
+      opacity: 0;
+      transition: opacity .15s;
+    }
+    .profile-bio-display:hover .profile-bio-hint { opacity: 1; }
+
+    #profile-context {
+      width: 100%;
+      min-height: 120px;
+      resize: vertical;
+      font-family: 'Fraunces', serif;
+      font-size: 15px;
+      line-height: 1.75;
+      font-style: italic;
+      padding: 14px 18px;
+      border: 1px solid var(--primary);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+    }
+
+    .profile-bio-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    /* Facts grid */
+    .profile-facts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+    }
+
+    .profile-fact {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px 12px 14px;
+      position: relative;
+      min-height: 66px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .profile-fact:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow);
+    }
+
+    .profile-fact-actions {
+      display: flex;
+      gap: 3px;
+      position: absolute;
+      top: 6px; right: 6px;
+      opacity: 0;
+      transition: opacity .15s;
+    }
+    .profile-fact:hover .profile-fact-actions { opacity: 1; }
+
+    .profile-fact-action-btn {
+      width: 22px; height: 22px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface);
+      color: var(--muted);
+      transition: color .15s, background .15s;
+    }
+    .profile-fact-action-btn:hover { color: var(--text); background: var(--hover); }
+    .profile-fact-action-btn.danger:hover { color: var(--danger); }
+
+    .profile-fact-key {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--muted);
+      margin-bottom: 5px;
     }
     .profile-fact-value {
-      font-size: 14px;
-      color: var(--text);
+      font-size: 13px;
       line-height: 1.4;
+      color: var(--text);
+      font-weight: 500;
+      word-break: break-word;
     }
     .profile-fact-value input {
       width: 100%;
-      font-size: 14px;
-      padding: 4px 6px;
-      border: 1px solid var(--primary);
-      border-radius: 4px;
-      background: var(--bg);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 0;
+      border: none;
+      border-bottom: 1px solid var(--primary);
+      background: transparent;
       color: var(--text);
+      outline: none;
+      font-family: inherit;
     }
-    .profile-fact-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    .profile-facts-empty-msg {
+      font-size: 13px;
+      color: var(--muted);
+      font-style: italic;
+    }
 
     /* ── Admin page ── */
     .admin-grid {
@@ -4122,28 +4342,53 @@
 
   <!-- Profile page -->
   <main id="page-profile" class="hidden">
-    <div class="toolbar">
-      <h2>Profile</h2>
-      <button class="btn btn-secondary" id="profile-refresh-btn">Refresh</button>
-    </div>
-    <div id="profile-loader" class="page-loader hidden"><div class="spinner"></div></div>
-    <div id="profile-content">
-      <div class="settings-section">
-        <div class="settings-section-title">About me</div>
-        <div class="settings-row" style="flex-direction:column; align-items:stretch; gap:10px;">
-          <div class="settings-desc">This summary is maintained automatically by the AI based on your conversations. You can also edit it directly — it's included in every chat as context about who you are.</div>
-          <textarea id="profile-context" rows="6" placeholder="e.g. I'm a software engineer working on a SaaS product. I track my fitness goals and try to run 3x per week. I prefer concise responses." style="width:100%;resize:vertical;font-family:inherit;font-size:14px;padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);line-height:1.5;"></textarea>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <button class="btn btn-primary" id="profile-context-save-btn">Save</button>
-            <span id="profile-context-msg" class="hidden" style="font-size:13px;"></span>
+    <div class="profile-layout">
+
+      <!-- Left: identity panel -->
+      <div class="profile-identity">
+        <div class="profile-avatar-large" id="profile-avatar-large">?</div>
+        <div class="profile-display-name" id="profile-display-name">—</div>
+        <div class="profile-occupation-badge hidden" id="profile-occupation-badge"></div>
+      </div>
+
+      <!-- Right: bio + facts -->
+      <div class="profile-main">
+        <div id="profile-loader" class="page-loader hidden"><div class="spinner"></div></div>
+
+        <!-- Bio section -->
+        <div>
+          <div class="profile-section-header">
+            <span class="profile-section-title">About me</span>
+            <span class="ai-badge"><span class="ai-pulse"></span>AI maintained</span>
+          </div>
+          <!-- Read mode -->
+          <div id="profile-bio-display" class="profile-bio-display" onclick="profilePage.enterEditMode()">
+            <p id="profile-bio-text" class="profile-bio-empty">No summary yet — start chatting and the AI will build one, or click to write your own.</p>
+            <span class="profile-bio-hint">Click to edit</span>
+          </div>
+          <!-- Edit mode -->
+          <div id="profile-bio-edit" class="hidden">
+            <textarea id="profile-context" placeholder="Write a few sentences about yourself — your role, goals, preferences, routines. The AI will also keep this updated from your conversations."></textarea>
+            <div class="profile-bio-actions">
+              <button class="btn btn-primary btn-sm" id="profile-context-save-btn">Save</button>
+              <button class="btn btn-secondary btn-sm" id="profile-context-cancel-btn">Cancel</button>
+              <span id="profile-context-msg" class="hidden" style="font-size:13px;"></span>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="settings-section">
-        <div class="settings-section-title">Remembered facts</div>
-        <div class="settings-desc" style="padding: 0 0 12px;">Individual facts the AI has picked up from your conversations. You can edit or remove any of them.</div>
-        <div id="profile-facts-empty" class="hidden" style="font-size:13px;color:var(--muted);padding:8px 0;">No facts remembered yet. Chat with the assistant and it will start building a picture of you.</div>
-        <div id="profile-facts-list"></div>
+
+        <!-- Facts section -->
+        <div>
+          <div class="profile-section-header">
+            <span class="profile-section-title">What the AI knows</span>
+            <button class="profile-refresh-icon-btn" id="profile-refresh-btn" title="Refresh">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </button>
+          </div>
+          <div id="profile-facts-empty" class="hidden profile-facts-empty-msg">No facts remembered yet. Chat with the assistant and it will start building a picture of you.</div>
+          <div id="profile-facts-list" class="profile-facts-grid"></div>
+        </div>
+
       </div>
     </div>
   </main>
@@ -8434,14 +8679,49 @@
 
     async load() {
       $("profile-loader").classList.remove("hidden");
+      // Populate identity panel from settings/auth
+      const name     = state.settings?.display_name || auth.getEmail()?.split("@")[0] || "?";
+      const initials = name.trim().split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+      $("profile-avatar-large").textContent = initials;
+      $("profile-display-name").textContent = state.settings?.display_name || auth.getEmail() || "—";
+
       try {
         const data = await api.getAssistantMemory();
         if (!data) return;
-        $("profile-context").value = data.master_context || "";
+
+        // Bio
+        const ctx = (data.master_context || "").trim();
+        $("profile-context").value = ctx;
+        const bioText = $("profile-bio-text");
+        if (ctx) {
+          bioText.className = "profile-bio-text";
+          bioText.textContent = ctx;
+        } else {
+          bioText.className = "profile-bio-empty";
+          bioText.textContent = "No summary yet — start chatting and the AI will build one, or click to write your own.";
+        }
+
+        // Occupation badge
+        const occ = data.facts?.occupation || "";
+        const occBadge = $("profile-occupation-badge");
+        if (occ) { occBadge.textContent = occ; occBadge.classList.remove("hidden"); }
+        else      { occBadge.classList.add("hidden"); }
+
         profilePage.renderFacts(data.facts || {});
         profilePage.loaded = true;
       } catch { /* best-effort */ }
       finally { $("profile-loader").classList.add("hidden"); }
+    },
+
+    enterEditMode() {
+      $("profile-bio-display").classList.add("hidden");
+      $("profile-bio-edit").classList.remove("hidden");
+      $("profile-context").focus();
+    },
+
+    exitEditMode() {
+      $("profile-bio-display").classList.remove("hidden");
+      $("profile-bio-edit").classList.add("hidden");
     },
 
     renderFacts(facts) {
@@ -8454,16 +8734,16 @@
         return;
       }
       empty.classList.add("hidden");
+      const pencilSvg = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+      const trashSvg  = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
       list.innerHTML = keys.map(k => `
         <div class="profile-fact" data-key="${escHtml(k)}">
-          <div class="profile-fact-body">
-            <div class="profile-fact-key">${escHtml(k)}</div>
-            <div class="profile-fact-value" id="pfv-${escHtml(k)}">${escHtml(facts[k])}</div>
-          </div>
           <div class="profile-fact-actions">
-            <button class="btn btn-secondary btn-sm" onclick="profilePage.editFact(this.closest('.profile-fact').dataset.key)">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="profilePage.deleteFact(this.closest('.profile-fact').dataset.key)">Delete</button>
+            <button class="profile-fact-action-btn" title="Edit" onclick="profilePage.editFact(this.closest('.profile-fact').dataset.key)">${pencilSvg}</button>
+            <button class="profile-fact-action-btn danger" title="Delete" onclick="profilePage.deleteFact(this.closest('.profile-fact').dataset.key)">${trashSvg}</button>
           </div>
+          <div class="profile-fact-key">${escHtml(k.replace(/_/g, " "))}</div>
+          <div class="profile-fact-value" id="pfv-${escHtml(k)}">${escHtml(facts[k])}</div>
         </div>
       `).join("");
     },
@@ -8473,6 +8753,16 @@
       const msg     = $("profile-context-msg");
       try {
         await api.updateAssistantMemory({ master_context: context });
+        // Update display
+        const bioText = $("profile-bio-text");
+        if (context) {
+          bioText.className = "profile-bio-text";
+          bioText.textContent = context;
+        } else {
+          bioText.className = "profile-bio-empty";
+          bioText.textContent = "No summary yet — start chatting and the AI will build one, or click to write your own.";
+        }
+        profilePage.exitEditMode();
         msg.textContent = "Saved.";
         msg.style.color = "var(--primary)";
       } catch {
@@ -8500,6 +8790,11 @@
         try {
           await api.updateAssistantMemoryFact(key, newVal);
           valueEl.textContent = newVal;
+          if (key === "occupation") {
+            const occBadge = $("profile-occupation-badge");
+            occBadge.textContent = newVal;
+            occBadge.classList.remove("hidden");
+          }
         } catch { valueEl.innerHTML = originalHTML; }
       };
 
@@ -8517,11 +8812,13 @@
         if (row) row.remove();
         const remaining = $("profile-facts-list").querySelectorAll(".profile-fact");
         if (remaining.length === 0) $("profile-facts-empty").classList.remove("hidden");
+        if (key === "occupation") $("profile-occupation-badge").classList.add("hidden");
       } catch { /* best-effort */ }
     },
   };
 
   document.getElementById("profile-context-save-btn").addEventListener("click", () => profilePage.saveContext());
+  document.getElementById("profile-context-cancel-btn").addEventListener("click", () => profilePage.exitEditMode());
   document.getElementById("profile-refresh-btn").addEventListener("click", () => profilePage.load());
 
   // ── Global search ────────────────────────────────────────────────────────────
