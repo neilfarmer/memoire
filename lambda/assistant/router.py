@@ -45,6 +45,16 @@ def route(route_key: str, user_id: str, body: dict, path_params: dict | None = N
         mem.save_master_context(user_id, context)
         return ok({"updated": True})
 
+    if route_key == "PUT /assistant/memory/facts/{key}":
+        key   = path_params.get("key", "").strip()
+        value = (body.get("value") or "").strip()
+        if not key or key.startswith("__"):
+            return error("Invalid key")
+        if not value:
+            return error("value is required")
+        mem.save_memory(user_id, key, value)
+        return ok({"updated": True})
+
     if route_key == "DELETE /assistant/memory/{key}":
         key = path_params.get("key", "").strip()
         if not key or key.startswith("__"):

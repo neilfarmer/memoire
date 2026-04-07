@@ -892,6 +892,26 @@ class TestMemoryRoutes:
         body = json.loads(resp["body"])
         assert not any(k.startswith("__") for k in body["facts"])
 
+    def test_put_fact_updates_value(self, tbls):
+        memory.save_memory(USER, "fav_food", "tacos")
+        resp = router.route("PUT /assistant/memory/facts/{key}", USER, {"value": "sushi"}, {"key": "fav_food"})
+        assert resp["statusCode"] == 200
+        facts, _ = memory.load_memory(USER)
+        assert facts["fav_food"] == "sushi"
+
+    def test_put_fact_rejects_internal_key(self, tbls):
+        resp = router.route("PUT /assistant/memory/facts/{key}", USER, {"value": "x"}, {"key": "__master_context__"})
+        assert resp["statusCode"] == 400
+
+    def test_put_fact_rejects_empty_value(self, tbls):
+        memory.save_memory(USER, "fav_food", "tacos")
+        resp = router.route("PUT /assistant/memory/facts/{key}", USER, {"value": ""}, {"key": "fav_food"})
+        assert resp["statusCode"] == 400
+
+    def test_put_fact_rejects_empty_key(self, tbls):
+        resp = router.route("PUT /assistant/memory/facts/{key}", USER, {"value": "v"}, {"key": ""})
+        assert resp["statusCode"] == 400
+
 
 # ── token_auth: JWKS fetch and RSA paths ─────────────────────────────────────
 
