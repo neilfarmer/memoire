@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.9.0] (2026-04-06)
+
+### Features
+
+* **diagrams:** Excalidraw integration — create, rename, and delete diagrams; full canvas with dark mode default; lazy-loaded from CDN
+* **diagrams:** DynamoDB-backed persistence (title, elements, app_state) with 100-diagram cap per user
+* **diagrams:** inline naming inputs replace browser prompts for new diagram and rename flows
+
+### Bug Fixes
+
+* **diagrams:** hide AI pal FAB on diagrams page to avoid covering Excalidraw help button
+* **csp:** add unpkg.com to script-src and font-src for Excalidraw 0.17.6 lazy-loaded chunks and fonts
+* **tests:** fix cross-feature sys.modules collision in conftest — bare stem always overwritten before exec_module
+
+---
+
 ## [0.8.0](https://github.com/neilfarmer/memoire/compare/v0.7.0...v0.8.0) (2026-04-05)
 
 

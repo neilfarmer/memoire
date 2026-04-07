@@ -493,3 +493,32 @@ resource "aws_dynamodb_table" "feeds_read" {
     enabled = true
   }
 }
+
+# ── Diagrams table ────────────────────────────────────────────────────────────
+#
+# PK: user_id     (String) — Cognito sub claim
+# SK: diagram_id  (String) — UUID generated at creation
+#
+# Attributes: title, elements (JSON string), app_state (JSON string),
+#             created_at, updated_at
+
+resource "aws_dynamodb_table" "diagrams" {
+  name         = "${local.name_prefix}-diagrams"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "diagram_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "diagram_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}

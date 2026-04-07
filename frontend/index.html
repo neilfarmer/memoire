@@ -524,6 +524,79 @@
     /* ── Main content ── */
     main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
 
+    /* ── Diagrams page ── */
+    #page-diagrams {
+      max-width: none;
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    #page-diagrams .toolbar {
+      padding: 16px 24px;
+      margin-bottom: 0;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      gap: 8px;
+    }
+    #page-diagrams .toolbar h2 { flex: 1; }
+    .diagrams-body {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .diagrams-list-panel {
+      width: 220px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 8px 0;
+      background: var(--surface);
+    }
+    .diagram-list-item {
+      padding: 9px 14px;
+      cursor: pointer;
+      border-radius: 0;
+      font-size: 13px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-left: 3px solid transparent;
+    }
+    .diagram-list-item:hover { background: var(--hover); }
+    .diagram-list-item.active {
+      background: var(--hover);
+      border-left-color: var(--primary);
+      color: var(--primary);
+      font-weight: 500;
+    }
+    .diagram-list-meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .diagrams-canvas-panel {
+      flex: 1;
+      min-width: 0;
+      position: relative;
+      background: var(--bg);
+    }
+    .diagrams-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    #diagrams-canvas {
+      position: absolute;
+      inset: 0;
+    }
+
     .toolbar {
       display: flex;
       align-items: center;
@@ -3527,6 +3600,12 @@
             <button class="sb-sub-link" data-page="favorites" onclick="pages.show('favorites')">Favorited</button>
           </div>
         </div>
+        <div class="sb-section" id="sb-diagrams">
+          <div class="sb-section-hdr" onclick="sidebar.navigate('diagrams')">
+            <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+            <span class="sb-hdr-label">Diagrams</span>
+          </div>
+        </div>
         <div class="sb-spacer"></div>
         <div class="sb-section" id="sb-settings">
           <div class="sb-section-hdr" onclick="sidebar.navigate('settings')">
@@ -3968,6 +4047,27 @@
     <div id="favorites-grid" class="feeds-grid"></div>
   </main>
 
+  <!-- Diagrams page -->
+  <main id="page-diagrams" class="hidden">
+    <div class="toolbar">
+      <h2>Diagrams</h2>
+      <button class="btn btn-secondary hidden" id="diagram-rename-btn">Rename</button>
+      <button class="btn btn-danger hidden" id="diagram-delete-btn">Delete</button>
+      <button class="btn btn-secondary hidden" id="diagram-save-btn">Save</button>
+      <button class="btn btn-primary" id="diagram-new-btn">New Diagram</button>
+    </div>
+    <div class="diagrams-body">
+      <div class="diagrams-list-panel">
+        <div id="diagrams-list"></div>
+        <div id="diagrams-list-empty" class="hidden" style="padding:20px 14px;font-size:13px;color:var(--muted);">No diagrams yet.<br>Click "New Diagram" to start.</div>
+      </div>
+      <div class="diagrams-canvas-panel">
+        <div id="diagrams-placeholder" class="diagrams-placeholder">Select a diagram or create a new one.</div>
+        <div id="diagrams-canvas"></div>
+      </div>
+    </div>
+  </main>
+
   <!-- Admin page -->
   <main id="page-admin" class="hidden">
     <div class="toolbar">
@@ -4353,6 +4453,12 @@
     getSettings()              { return api.call("GET",  "/settings"); },
     updateSettings(body)       { return api.call("PUT",  "/settings", body); },
     testNotification(url)      { return api.call("POST", "/settings/test-notification", { ntfy_url: url }); },
+
+    listDiagrams()              { return api.call("GET",    "/diagrams"); },
+    getDiagram(id)              { return api.call("GET",    `/diagrams/${id}`); },
+    createDiagram(body)         { return api.call("POST",   "/diagrams", body); },
+    updateDiagram(id, body)     { return api.call("PUT",    `/diagrams/${id}`, body); },
+    deleteDiagram(id)           { return api.call("DELETE", `/diagrams/${id}`); },
 
     async downloadExport() {
       const resp = await fetch(`${cfg.apiUrl.replace(/\/$/, "")}/export`, {
@@ -8453,6 +8559,252 @@
   }
 
   // ── Sidebar ───────────────────────────────────────────────────────────────────
+  // ── Diagrams (Excalidraw) ─────────────────────────────────────────────────────
+
+  const diagrams = {
+    data:    [],     // list summaries from API
+    loaded:  false,
+    _current: null,  // diagram_id of selected diagram
+    _pendingElements: [],
+    _pendingAppState: {},
+    _excalidrawReady: false,
+    _excalidrawRoot: null,
+    _unsaved: false,
+
+    async load() {
+      $("diagrams-list").innerHTML = "";
+      $("diagrams-list-empty").classList.add("hidden");
+      try {
+        this.data = await api.listDiagrams() || [];
+        this.loaded = true;
+      } catch {
+        this.data = [];
+        // Don't mark as loaded on failure so navigation retries the fetch
+      }
+      this.render();
+    },
+
+    render() {
+      const list = $("diagrams-list");
+      list.innerHTML = "";
+      if (this.data.length === 0) {
+        $("diagrams-list-empty").classList.remove("hidden");
+      } else {
+        $("diagrams-list-empty").classList.add("hidden");
+        this.data.forEach(d => {
+          const item = document.createElement("div");
+          item.className = "diagram-list-item" + (d.diagram_id === this._current ? " active" : "");
+          item.dataset.id = d.diagram_id;
+          const updated = d.updated_at ? new Date(d.updated_at).toLocaleDateString() : "";
+          item.innerHTML = `<div>${escHtml(d.title)}</div><div class="diagram-list-meta">${escHtml(updated)}</div>`;
+          item.addEventListener("click", () => this.select(d.diagram_id));
+          list.appendChild(item);
+        });
+      }
+      const hasSelection = !!this._current;
+      $("diagram-save-btn").classList.toggle("hidden", !hasSelection);
+      $("diagram-rename-btn").classList.toggle("hidden", !hasSelection);
+      $("diagram-delete-btn").classList.toggle("hidden", !hasSelection);
+    },
+
+    async select(diagram_id) {
+      // Track the intended selection so concurrent fetches don't race
+      this._current = diagram_id;
+      this.render();
+      let fullDiagram;
+      try {
+        fullDiagram = await api.call("GET", `/diagrams/${diagram_id}`);
+      } catch {
+        // If the user has already moved on, don't overwrite their new selection
+        if (this._current !== diagram_id) return;
+        fullDiagram = { diagram_id, elements: [], app_state: {} };
+      }
+      if (this._current !== diagram_id) return;
+      this._pendingElements = fullDiagram.elements || [];
+      this._pendingAppState = fullDiagram.app_state || {};
+      this._unsaved = false;
+      $("diagrams-placeholder").style.display = "none";
+      await this._mountCanvas(this._pendingElements, this._pendingAppState);
+    },
+
+    async _ensureExcalidraw() {
+      if (this._excalidrawReady) return;
+
+      const load = (src) => new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+
+      // Load React, ReactDOM, then Excalidraw UMD bundle
+      if (!window.React) {
+        await load("https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js");
+      }
+      if (!window.ReactDOM) {
+        await load("https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js");
+      }
+      if (!window.ExcalidrawLib) {
+        await load("https://cdn.jsdelivr.net/npm/@excalidraw/excalidraw@0.17.6/dist/excalidraw.production.min.js");
+      }
+      this._excalidrawReady = true;
+    },
+
+    async _mountCanvas(elements, appState) {
+      await this._ensureExcalidraw();
+      const container = $("diagrams-canvas");
+      if (this._excalidrawRoot) {
+        this._excalidrawRoot.unmount();
+        this._excalidrawRoot = null;
+      }
+      container.innerHTML = "";
+      const self = this;
+      const ExcalidrawComponent = window.ExcalidrawLib.Excalidraw;
+      this._excalidrawRoot = ReactDOM.createRoot(container);
+      this._excalidrawRoot.render(
+        React.createElement(ExcalidrawComponent, {
+          initialData: { elements, appState: { theme: "dark", ...appState, collaborators: new Map() } },
+          onChange(els, state) {
+            self._pendingElements = els;
+            self._pendingAppState = state;
+            self._unsaved = true;
+          },
+        })
+      );
+    },
+
+    newDiagram() {
+      // Prevent double-adding if already pending
+      if ($("diagrams-new-input")) return;
+
+      $("diagrams-list-empty").classList.add("hidden");
+      const wrap = document.createElement("div");
+      wrap.style.cssText = "padding:6px 10px;";
+      const input = document.createElement("input");
+      input.id = "diagrams-new-input";
+      input.type = "text";
+      input.className = "tree-inline-input";
+      input.style.cssText = "width:100%;box-sizing:border-box;";
+      input.placeholder = "Diagram name";
+      wrap.appendChild(input);
+      $("diagrams-list").prepend(wrap);
+      input.focus();
+
+      const commit = async () => {
+        const title = input.value.trim() || "Untitled";
+        wrap.remove();
+        try {
+          const created = await api.createDiagram({ title, elements: [], app_state: {} });
+          this.data.unshift(created);
+          this._current = created.diagram_id;
+          this._pendingElements = [];
+          this._pendingAppState = {};
+          this._unsaved = false;
+          this.render();
+          $("diagrams-placeholder").style.display = "none";
+          await this._mountCanvas([], {});
+        } catch {
+          this.render();
+        }
+      };
+
+      const cancel = () => { wrap.remove(); this.render(); };
+
+      input.addEventListener("keydown", e => {
+        if (e.key === "Enter")  { e.preventDefault(); commit(); }
+        if (e.key === "Escape") { e.preventDefault(); cancel(); }
+      });
+      input.addEventListener("blur", () => setTimeout(() => { if ($("diagrams-new-input")) cancel(); }, 150));
+    },
+
+    async save() {
+      if (!this._current) return;
+      const btn = $("diagram-save-btn");
+      btn.textContent = "Saving...";
+      btn.disabled = true;
+      try {
+        const updated = await api.updateDiagram(this._current, {
+          elements:  this._pendingElements,
+          app_state: this._pendingAppState,
+        });
+        // Update local summary
+        const idx = this.data.findIndex(d => d.diagram_id === this._current);
+        if (idx !== -1) this.data[idx].updated_at = updated.updated_at;
+        this._unsaved = false;
+        this.render();
+      } catch (e) {
+        alert("Failed to save: " + (e.message || e));
+      } finally {
+        btn.textContent = "Save";
+        btn.disabled = false;
+      }
+    },
+
+    rename() {
+      if (!this._current) return;
+      const current = this.data.find(d => d.diagram_id === this._current);
+      const item = $("diagrams-list").querySelector(`[data-id="${this._current}"]`);
+      if (!item) return;
+
+      const originalHTML = item.innerHTML;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "tree-inline-input";
+      input.style.cssText = "width:100%;box-sizing:border-box;";
+      input.value = current?.title || "";
+      item.innerHTML = "";
+      item.appendChild(input);
+      input.focus();
+      input.select();
+
+      const commit = async () => {
+        const newTitle = input.value.trim();
+        if (!newTitle) { item.innerHTML = originalHTML; return; }
+        item.innerHTML = originalHTML;
+        try {
+          const updated = await api.updateDiagram(this._current, { title: newTitle });
+          const idx = this.data.findIndex(d => d.diagram_id === this._current);
+          if (idx !== -1) {
+            this.data[idx].title = updated.title;
+            this.data[idx].updated_at = updated.updated_at;
+          }
+          this.render();
+        } catch { this.render(); }
+      };
+
+      const cancel = () => { item.innerHTML = originalHTML; };
+
+      input.addEventListener("keydown", e => {
+        if (e.key === "Enter")  { e.preventDefault(); commit(); }
+        if (e.key === "Escape") { e.preventDefault(); cancel(); }
+      });
+      input.addEventListener("blur", () => setTimeout(commit, 150));
+    },
+
+    async deleteCurrent() {
+      if (!this._current) return;
+      const current = this.data.find(d => d.diagram_id === this._current);
+      if (!await confirmDialog(`Delete "${current?.title || "this diagram"}"?`)) return;
+      try {
+        await api.deleteDiagram(this._current);
+        this.data = this.data.filter(d => d.diagram_id !== this._current);
+        this._current = null;
+        this._pendingElements = [];
+        this._pendingAppState = {};
+        if (this._excalidrawRoot) {
+          this._excalidrawRoot.unmount();
+          this._excalidrawRoot = null;
+        }
+        $("diagrams-canvas").innerHTML = "";
+        $("diagrams-placeholder").style.display = "";
+        this.render();
+      } catch (e) {
+        alert("Failed to delete: " + (e.message || e));
+      }
+    },
+  };
+
   const sidebar = {
     open: null,
 
@@ -8468,7 +8820,7 @@
     },
 
     expand(name) {
-      const sections = ["home", "tasks", "notes", "habits", "goals", "journal", "feeds", "settings", "admin"];
+      const sections = ["home", "tasks", "notes", "habits", "goals", "journal", "feeds", "diagrams", "settings", "admin"];
       sections.forEach(s => {
         const sect = $(`sb-${s}`);
         const body = $(`sb-${s}-body`);
@@ -8491,7 +8843,7 @@
 
   const pages = {
     current: "home",
-    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "settings", "admin"],
+    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "diagrams", "settings", "admin"],
 
     show(name) {
       pages.current = name;
@@ -8531,6 +8883,10 @@
       if (name === "nutrition" && nutrition.logs.length === 0) nutrition.load();
       if (name === "feeds")     feeds.refresh();
       if (name === "favorites") { if (!favs.loaded) favs.load(); else favs.render(); }
+      if (name === "diagrams")  { if (!diagrams.loaded) diagrams.load(); else diagrams.render(); }
+      // Hide the AI pal FAB on the diagrams page — Excalidraw's help button occupies the same corner
+      const palBtn = document.getElementById("pal-btn");
+      if (palBtn) palBtn.classList.toggle("hidden", name === "diagrams");
     },
   };
 
@@ -8932,6 +9288,10 @@
 
   $("sb-toggle").addEventListener("click", () => sidebar.toggle());
   $("admin-refresh-btn").addEventListener("click", () => { admin.loaded = false; admin.load(); });
+  $("diagram-new-btn").addEventListener("click", () => diagrams.newDiagram());
+  $("diagram-save-btn").addEventListener("click", () => diagrams.save());
+  $("diagram-rename-btn").addEventListener("click", () => diagrams.rename());
+  $("diagram-delete-btn").addEventListener("click", () => diagrams.deleteCurrent());
 
   // ── Article summary modal ────────────────────────────────────────────────────
 

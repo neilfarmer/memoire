@@ -3,7 +3,7 @@
 [![CI](https://github.com/neilfarmer/memoire/actions/workflows/ci.yml/badge.svg)](https://github.com/neilfarmer/memoire/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/neilfarmer/memoire/branch/main/graph/badge.svg)](https://codecov.io/gh/neilfarmer/memoire)
 
-A self-hosted personal productivity app — tasks, habits, goals, journal, notes, nutrition, exercise, and an AI assistant. Deployed entirely on AWS serverless infrastructure via a single Terraform module.
+A self-hosted personal productivity app — tasks, habits, goals, journal, notes, diagrams, nutrition, exercise, and an AI assistant. Deployed entirely on AWS serverless infrastructure via a single Terraform module.
 
 **~$0.30/month** at daily personal use. ~$0 at idle.
 
@@ -11,7 +11,7 @@ A self-hosted personal productivity app — tasks, habits, goals, journal, notes
 
 ## What it does
 
-Memoire gives you one place to manage your daily life: track tasks with Pomodoro focus sessions, build habits with streak history, write a daily journal with mood tracking, take notes in a folder tree, log meals and workouts, and set long-term goals. An AI assistant (powered by Amazon Bedrock) can create, read, update, and delete data across every feature using plain language.
+Memoire gives you one place to manage your daily life: track tasks with Pomodoro focus sessions, build habits with streak history, write a daily journal with mood tracking, take notes in a folder tree, draw diagrams with Excalidraw, log meals and workouts, and set long-term goals. An AI assistant (powered by Amazon Bedrock) can create, read, update, and delete data across every feature using plain language.
 
 Everything is multi-tenant by design — each user's data is isolated by Cognito `user_id` at the database level.
 
@@ -26,6 +26,7 @@ Everything is multi-tenant by design — each user's data is isolated by Cognito
 | Goals | Title, description, target date, progress tracking |
 | Journal | One entry/day, mood, markdown, calendar view, full-text search |
 | Notes | Folder hierarchy, markdown editor, image and file attachments, search |
+| Diagrams | Excalidraw-powered canvas with list of saved diagrams, inline naming, dark mode |
 | Nutrition | Meal logging with USDA-sourced macros, daily totals, calendar view |
 | Exercise | Workout logging with sets/reps/weight, calendar view |
 | AI Assistant | Conversational Bedrock-powered assistant that acts on all features via tools |
