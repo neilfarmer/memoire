@@ -108,6 +108,21 @@ The first screen after login. Shows:
 
 ---
 
+## Diagrams
+
+Create and edit diagrams using [Excalidraw](https://excalidraw.com), embedded directly in the app.
+
+- **Diagram list** — sidebar panel showing all saved diagrams, sorted by last updated
+- **Inline naming** — new diagrams and renames use an inline input; no browser popups
+- **Full Excalidraw canvas** — all Excalidraw tools, shapes, text, arrows, and freehand drawing
+- **Dark mode by default** — canvas opens in dark theme
+- **Manual save** — explicit save button; unsaved changes are tracked and discarded on navigation only after confirmation
+- **Diagrams are per-user** — no sharing or collaboration (intentional for a personal tool)
+
+Excalidraw (~3MB of React and library assets) is loaded lazily from CDN only when the Diagrams page is first visited, then cached by the browser.
+
+---
+
 ## AI Assistant (Pip)
 
 A conversational assistant powered by Amazon Bedrock (Nova Lite by default, switchable to Nova Pro). Pip can create, read, update, and delete data across every feature using natural language.

@@ -1,6 +1,6 @@
 # Architecture Overview
 
-Memoire is a serverless, multi-tenant personal productivity app (tasks, notes, habits, journal).
+Memoire is a serverless, multi-tenant personal productivity app (tasks, notes, habits, journal, diagrams).
 
 ## System Diagram
 

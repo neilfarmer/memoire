@@ -42,7 +42,7 @@ S3 temporary storage: negligible (small audio files deleted immediately after tr
 
 ## Integrated Diagramming Tool (Excalidraw)
 
-**Status:** Not implemented — planned  
+**Status:** Implemented in v0.9.0  
 **Use case:** Architecture diagrams, editable over time
 
 ### Plan
