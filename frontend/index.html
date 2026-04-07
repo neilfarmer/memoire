@@ -3943,7 +3943,7 @@
   <main id="page-feeds" class="hidden">
     <div class="toolbar">
       <h2>RSS Feeds</h2>
-      <button class="btn btn-primary" onclick="feeds.refresh()">Refresh</button>
+      <button class="btn btn-primary" onclick="feeds.refresh(true)">Refresh</button>
     </div>
     <div id="feeds-loader" class="page-loader hidden"><div class="spinner"></div></div>
     <div id="feeds-empty" class="empty-state hidden">
@@ -8564,9 +8564,9 @@
       feeds.renderSettingsList();
     },
 
-    async refresh() {
+    async refresh(force = false) {
       showLoader("feeds-loader");
-      $("feeds-grid").innerHTML = "";
+      if (force) $("feeds-grid").innerHTML = "";
       $("feeds-empty").classList.add("hidden");
       try {
         if (!feeds.loaded) {
@@ -8577,8 +8577,9 @@
           $("feeds-empty").classList.remove("hidden");
           return;
         }
+        const articlesUrl = force ? "/feeds/articles?force=true" : "/feeds/articles";
         [feeds.articles] = await Promise.all([
-          api.call("GET", "/feeds/articles").then(r => r || []),
+          api.call("GET", articlesUrl).then(r => r || []),
           reads.load(),
         ]);
         feeds._byUrl = new Map(feeds.articles.map(a => [a.url, a]));

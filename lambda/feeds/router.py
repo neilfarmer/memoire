@@ -20,7 +20,8 @@ def route(route_key: str, user_id: str, body: dict, path_params: dict) -> dict:
             return crud.delete_feed(user_id, feed_id)
 
         case "GET /feeds/articles":
-            return crud.get_articles(user_id)
+            force = path_params.get("force", "").lower() in ("1", "true")
+            return crud.get_articles(user_id, force=force)
 
         case "GET /feeds/article-text":
             url = path_params.get("url") or body.get("url") or ""

@@ -1,5 +1,6 @@
 """RSS Feeds CRUD and article fetching."""
 
+import json
 import os
 import re
 import uuid
@@ -22,11 +23,13 @@ MEDIA_NS   = "http://search.yahoo.com/mrss/"
 CONTENT_NS = "http://purl.org/rss/1.0/modules/content/"
 ATOM_NS    = "http://www.w3.org/2005/Atom"
 
-MAX_FEEDS       = 20
-MAX_ARTICLES    = 100
-FETCH_TIMEOUT   = 8
-MAX_WORKERS     = 5
-MAX_DESCRIPTION = 300
+MAX_FEEDS        = 20
+MAX_ARTICLES     = 100
+FETCH_TIMEOUT    = 8
+MAX_WORKERS      = 5
+MAX_DESCRIPTION  = 300
+CACHE_TTL_SECS   = 1800  # 30 minutes
+CACHE_ITEM_KEY   = "__articles_cache__"
 
 
 def _table():
@@ -275,9 +278,43 @@ def _fetch_feed(feed_id: str, url: str) -> list[dict]:
     return articles
 
 
-def get_articles(user_id: str) -> dict:
+def _get_cache(user_id: str):
+    """Return cached articles if still fresh, otherwise None."""
+    try:
+        item = db.get_item(_table(), user_id, "feed_id", CACHE_ITEM_KEY)
+        if not item:
+            return None
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(item["refreshed_at"])).total_seconds()
+        if age > CACHE_TTL_SECS:
+            return None
+        return json.loads(item["articles"])
+    except Exception:
+        return None
+
+
+def _set_cache(user_id: str, articles: list) -> None:
+    try:
+        _table().put_item(Item={
+            "user_id":      user_id,
+            "feed_id":      CACHE_ITEM_KEY,
+            "articles":     json.dumps(articles),
+            "refreshed_at": datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception:
+        pass
+
+
+def get_articles(user_id: str, force: bool = False) -> dict:
+    if not force:
+        cached = _get_cache(user_id)
+        if cached is not None:
+            return ok(cached)
+
     feeds = db.query_by_user(_table(), user_id)
+    # Exclude the cache item from the feeds list
+    feeds = [f for f in feeds if f.get("feed_id") != CACHE_ITEM_KEY]
     if not feeds:
+        _set_cache(user_id, [])
         return ok([])
 
     cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
@@ -311,6 +348,7 @@ def get_articles(user_id: str) -> dict:
                 except Exception:
                     pass
 
+    _set_cache(user_id, recent)
     return ok(recent)
 
 
