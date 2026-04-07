@@ -100,9 +100,12 @@ def load_lambda(feature: str, filename: str):
     mod = importlib.util.module_from_spec(spec)
     sys.modules[alias] = mod
 
-    # Also claim bare stem so sibling modules can ``import note_crud`` etc.
-    if stem not in sys.modules:
-        sys.modules[stem] = mod
+    # Always update the bare stem before exec so that intra-feature imports
+    # (e.g. ``import crud`` inside router.py) resolve to the correct feature's
+    # module.  The conditional guard caused cross-feature contamination when
+    # tests ran alphabetically: diagrams loaded first and left its crud.py
+    # registered as ``crud``, so feeds/router.py imported the wrong module.
+    sys.modules[stem] = mod
 
     spec.loader.exec_module(mod)
     return mod
