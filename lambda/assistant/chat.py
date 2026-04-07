@@ -99,7 +99,14 @@ Exercise (workouts, physical activity):
   get_exercise_log(date?)                           → view today's workout
 
 Memory:
-  remember_fact(key, value)                               → remember something about the user\
+  remember_fact(key, value)  → remember something about the user
+  - Call this whenever the user reveals something personal — even in passing
+    while making a different request (e.g. "I love building gaming PCs" said
+    while creating a task → create the task AND call remember_fact).
+  - Use a short, stable key (snake_case): interests, occupation, pets,
+    favorite_food, workout_style, sleep_schedule, etc.
+  - If a fact key already exists, OVERWRITE it with the updated/expanded value.
+    Never create a duplicate key.\
 """
 
 _SYSTEM_PROMPT_TEMPLATE = os.environ.get("ASSISTANT_SYSTEM_PROMPT") or _DEFAULT_SYSTEM_PROMPT
@@ -150,6 +157,42 @@ def _update_master_context(user_id: str, existing_context: str, facts: dict, use
         mem.save_master_context(user_id, context)
     except Exception:
         logger.warning("Failed to update master context", exc_info=True)
+
+
+def _extract_facts(user_id: str, existing_facts: dict, user_message: str, reply: str, model_id: str = MODEL_ID) -> None:
+    """Extract new or updated personal facts from the latest exchange and persist them."""
+    existing_text = "\n".join(f"- {k}: {v}" for k, v in existing_facts.items()) if existing_facts else "None"
+
+    prompt = (
+        "You are a fact-extraction assistant. Read the conversation exchange below and identify "
+        "any NEW or UPDATED personal facts about the user — things like their interests, hobbies, "
+        "occupation, preferences, routines, pets, diet, etc. Only extract durable personal facts, "
+        "not one-off task requests.\n\n"
+        f"Existing known facts:\n{existing_text}\n\n"
+        f"Latest exchange:\nUser: {user_message[:600]}\nAssistant: {reply[:400]}\n\n"
+        "Output ONLY the facts that are new or changed compared to the existing list. "
+        "Format: one fact per line as `key: value` using short snake_case keys. "
+        "If there is nothing new or changed, output exactly: NONE"
+    )
+    try:
+        resp = _bedrock.converse(
+            modelId=model_id,
+            messages=[{"role": "user", "content": [{"text": prompt}]}],
+            inferenceConfig={"maxTokens": 200},
+        )
+        raw = _clean_reply(resp["output"]["message"]["content"][0]["text"].strip())
+        if raw.upper() == "NONE" or not raw:
+            return
+        for line in raw.splitlines():
+            if ":" not in line:
+                continue
+            key, _, value = line.partition(":")
+            key   = key.strip().lower().replace(" ", "_").replace("-", "_")
+            value = value.strip()
+            if key and value and not key.startswith("__"):
+                mem.save_memory(user_id, key, value)
+    except Exception:
+        logger.warning("Failed to extract facts", exc_info=True)
 
 
 def chat_stream(
@@ -321,6 +364,7 @@ def chat_stream(
             mem.save_message(user_id, "user",      user_message)
             mem.save_message(user_id, "assistant", reply)
             _update_master_context(user_id, master, facts, user_message, reply, model_id)
+            _extract_facts(user_id, facts, user_message, reply, model_id)
         mem.update_model_usage(user_id, model_id, total_in, total_out)
 
         emit(json.dumps({"type": "done", "tools_used": tools_used, "reply": reply}).encode() + b"\n")
@@ -422,6 +466,7 @@ def chat(user_id: str, user_message: str, model: str | None = None, local_date: 
             mem.save_message(user_id, "user",      user_message)
             mem.save_message(user_id, "assistant", reply)
             _update_master_context(user_id, master, facts, user_message, reply, model_id)
+            _extract_facts(user_id, facts, user_message, reply, model_id)
         mem.update_model_usage(user_id, model_id, total_in, total_out)
 
         return ok({"reply": reply, "tools_used": tools_used})
