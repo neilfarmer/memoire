@@ -8670,22 +8670,48 @@
       );
     },
 
-    async newDiagram() {
-      const title = prompt("Diagram name:", "Untitled");
-      if (title === null) return;
-      try {
-        const created = await api.createDiagram({ title: title.trim() || "Untitled", elements: [], app_state: {} });
-        this.data.unshift(created);
-        this._current = created.diagram_id;
-        this._pendingElements = [];
-        this._pendingAppState = {};
-        this._unsaved = false;
-        this.render();
-        $("diagrams-placeholder").style.display = "none";
-        await this._mountCanvas([], {});
-      } catch (e) {
-        alert("Failed to create diagram: " + (e.message || e));
-      }
+    newDiagram() {
+      // Prevent double-adding if already pending
+      if ($("diagrams-new-input")) return;
+
+      $("diagrams-list-empty").classList.add("hidden");
+      const wrap = document.createElement("div");
+      wrap.style.cssText = "padding:6px 10px;";
+      const input = document.createElement("input");
+      input.id = "diagrams-new-input";
+      input.type = "text";
+      input.className = "tree-inline-input";
+      input.style.cssText = "width:100%;box-sizing:border-box;";
+      input.placeholder = "Diagram name";
+      wrap.appendChild(input);
+      $("diagrams-list").prepend(wrap);
+      input.focus();
+
+      const commit = async () => {
+        const title = input.value.trim() || "Untitled";
+        wrap.remove();
+        try {
+          const created = await api.createDiagram({ title, elements: [], app_state: {} });
+          this.data.unshift(created);
+          this._current = created.diagram_id;
+          this._pendingElements = [];
+          this._pendingAppState = {};
+          this._unsaved = false;
+          this.render();
+          $("diagrams-placeholder").style.display = "none";
+          await this._mountCanvas([], {});
+        } catch {
+          this.render();
+        }
+      };
+
+      const cancel = () => { wrap.remove(); this.render(); };
+
+      input.addEventListener("keydown", e => {
+        if (e.key === "Enter")  { e.preventDefault(); commit(); }
+        if (e.key === "Escape") { e.preventDefault(); cancel(); }
+      });
+      input.addEventListener("blur", () => setTimeout(() => { if ($("diagrams-new-input")) cancel(); }, 150));
     },
 
     async save() {
@@ -8711,28 +8737,51 @@
       }
     },
 
-    async rename() {
+    rename() {
       if (!this._current) return;
       const current = this.data.find(d => d.diagram_id === this._current);
-      const newTitle = prompt("New name:", current?.title || "");
-      if (newTitle === null || !newTitle.trim()) return;
-      try {
-        const updated = await api.updateDiagram(this._current, { title: newTitle.trim() });
-        const idx = this.data.findIndex(d => d.diagram_id === this._current);
-        if (idx !== -1) {
-          this.data[idx].title = updated.title;
-          this.data[idx].updated_at = updated.updated_at;
-        }
-        this.render();
-      } catch (e) {
-        alert("Failed to rename: " + (e.message || e));
-      }
+      const item = $("diagrams-list").querySelector(`[data-id="${this._current}"]`);
+      if (!item) return;
+
+      const originalHTML = item.innerHTML;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "tree-inline-input";
+      input.style.cssText = "width:100%;box-sizing:border-box;";
+      input.value = current?.title || "";
+      item.innerHTML = "";
+      item.appendChild(input);
+      input.focus();
+      input.select();
+
+      const commit = async () => {
+        const newTitle = input.value.trim();
+        if (!newTitle) { item.innerHTML = originalHTML; return; }
+        item.innerHTML = originalHTML;
+        try {
+          const updated = await api.updateDiagram(this._current, { title: newTitle });
+          const idx = this.data.findIndex(d => d.diagram_id === this._current);
+          if (idx !== -1) {
+            this.data[idx].title = updated.title;
+            this.data[idx].updated_at = updated.updated_at;
+          }
+          this.render();
+        } catch { this.render(); }
+      };
+
+      const cancel = () => { item.innerHTML = originalHTML; };
+
+      input.addEventListener("keydown", e => {
+        if (e.key === "Enter")  { e.preventDefault(); commit(); }
+        if (e.key === "Escape") { e.preventDefault(); cancel(); }
+      });
+      input.addEventListener("blur", () => setTimeout(commit, 150));
     },
 
     async deleteCurrent() {
       if (!this._current) return;
       const current = this.data.find(d => d.diagram_id === this._current);
-      if (!confirm(`Delete "${current?.title || "this diagram"}"?`)) return;
+      if (!await confirmDialog(`Delete "${current?.title || "this diagram"}"?`)) return;
       try {
         await api.deleteDiagram(this._current);
         this.data = this.data.filter(d => d.diagram_id !== this._current);
