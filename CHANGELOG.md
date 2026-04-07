@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.9.0](https://github.com/neilfarmer/memoire/compare/v0.8.0...v0.9.0) (2026-04-07)
+
+
+### Features
+
+* **assistant:** stream Bedrock response tokens via Lambda Function URL ([#80](https://github.com/neilfarmer/memoire/issues/80)) ([97f4b27](https://github.com/neilfarmer/memoire/commit/97f4b278e35b039b187e3ecc35ace6d698004a25))
+* **diagrams:** Excalidraw diagramming feature ([#82](https://github.com/neilfarmer/memoire/issues/82)) ([1ea87a7](https://github.com/neilfarmer/memoire/commit/1ea87a785859c45697786ada76863bba018135d1))
+
+
+### Bug Fixes
+
+* **lambda:** redact headers from CloudWatch event logs ([#78](https://github.com/neilfarmer/memoire/issues/78)) ([6800282](https://github.com/neilfarmer/memoire/commit/6800282072c5f77a4badd70a3845fa0852371e64))
+
 ## [0.9.0] (2026-04-06)
 
 ### Features
