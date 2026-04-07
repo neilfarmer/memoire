@@ -24,7 +24,8 @@ resource "aws_lambda_function" "feeds" {
 
   environment {
     variables = {
-      FEEDS_TABLE = aws_dynamodb_table.feeds.name
+      FEEDS_TABLE      = aws_dynamodb_table.feeds.name
+      FEEDS_READ_TABLE = aws_dynamodb_table.feeds_read.name
     }
   }
 }
@@ -50,6 +51,14 @@ resource "aws_iam_role_policy" "feeds_dynamodb" {
           "dynamodb:Query",
         ]
         Resource = aws_dynamodb_table.feeds.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:Query",
+        ]
+        Resource = aws_dynamodb_table.feeds_read.arn
       },
     ]
   })
@@ -79,6 +88,8 @@ locals {
     "DELETE /feeds/{id}",
     "GET /feeds/articles",
     "GET /feeds/article-text",
+    "GET /feeds/read",
+    "POST /feeds/read",
   ]
 }
 

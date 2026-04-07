@@ -15,7 +15,8 @@ import urllib.parse
 import db
 from response import ok, created, no_content, error, not_found
 
-FEEDS_TABLE = os.environ["FEEDS_TABLE"]
+FEEDS_TABLE      = os.environ["FEEDS_TABLE"]
+FEEDS_READ_TABLE = os.environ["FEEDS_READ_TABLE"]
 
 MEDIA_NS   = "http://search.yahoo.com/mrss/"
 CONTENT_NS = "http://purl.org/rss/1.0/modules/content/"
@@ -30,6 +31,10 @@ MAX_DESCRIPTION = 300
 
 def _table():
     return db.get_table(FEEDS_TABLE)
+
+
+def _read_table():
+    return db.get_table(FEEDS_READ_TABLE)
 
 
 # ── Feed management ───────────────────────────────────────────────────────────
@@ -307,3 +312,22 @@ def get_articles(user_id: str) -> dict:
                     pass
 
     return ok(recent)
+
+
+# ── Read tracking ─────────────────────────────────────────────────────────────
+
+def get_read_urls(user_id: str) -> dict:
+    items = db.query_by_user(_read_table(), user_id)
+    return ok([item["article_url"] for item in items])
+
+
+def mark_read(user_id: str, body: dict) -> dict:
+    url = (body.get("url") or "").strip()
+    if not url:
+        return error("url is required")
+    _read_table().put_item(Item={
+        "user_id":     user_id,
+        "article_url": url,
+        "read_at":     datetime.now(timezone.utc).isoformat(),
+    })
+    return ok({"url": url})

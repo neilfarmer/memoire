@@ -2650,8 +2650,20 @@
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
-    .feed-card--read { opacity: 0.55; }
-    .feed-card--read:hover { opacity: 1; }
+    .feed-card--read { opacity: 0.45; }
+    .feed-card--read:hover { opacity: 0.85; }
+    .feed-card-unread-dot {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 0 2px var(--surface);
+      z-index: 1;
+      pointer-events: none;
+    }
     .feeds-filter-bar {
       display: flex;
       gap: 8px;
@@ -8525,13 +8537,18 @@
   // ── RSS Feeds ─────────────────────────────────────────────────────────────────
 
   const reads = {
-    _key: "memoire_feed_read",
-    _set: new Set(JSON.parse(localStorage.getItem("memoire_feed_read") || "[]")),
+    _set: new Set(),
     has(url) { return this._set.has(url); },
+    async load() {
+      try {
+        const urls = await api.call("GET", "/feeds/read") || [];
+        this._set = new Set(urls);
+      } catch {}
+    },
     mark(url) {
       if (this._set.has(url)) return;
       this._set.add(url);
-      localStorage.setItem(this._key, JSON.stringify([...this._set]));
+      api.call("POST", "/feeds/read", { url }).catch(() => {});
     },
   };
 
@@ -8560,7 +8577,10 @@
           $("feeds-empty").classList.remove("hidden");
           return;
         }
-        feeds.articles = await api.call("GET", "/feeds/articles") || [];
+        [feeds.articles] = await Promise.all([
+          api.call("GET", "/feeds/articles").then(r => r || []),
+          reads.load(),
+        ]);
         feeds._byUrl = new Map(feeds.articles.map(a => [a.url, a]));
         feeds.renderFilters();
         feeds.renderGrid();
@@ -8578,7 +8598,7 @@
       const unreadCount = feeds.articles.filter(a => !reads.has(a.url)).length;
       const btn = (label, value) => {
         const active = feeds._filter === value ? " active" : "";
-        return `<button class="filter-btn${active}" onclick="feeds.setFilter(${JSON.stringify(value)})">${escHtml(label)}</button>`;
+        return `<button class="filter-btn${active}" onclick='feeds.setFilter(${JSON.stringify(value)})'>${escHtml(label)}</button>`;
       };
       bar.innerHTML = btn("All", "all") + btn(`Unread (${unreadCount})`, "unread") + sources.map(s => btn(s, s)).join("");
       bar.classList.remove("hidden");
@@ -8617,9 +8637,10 @@
             ? `<img class="feed-card-favicon" src="${escHtml(faviconUrl)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="feed-card-favicon-fallback" style="display:none">${escHtml(initial)}</div>`
             : `<div class="feed-card-favicon-fallback">${escHtml(initial)}</div>`
         }</div>`;
+        const unreadDot = isRead ? "" : `<div class="feed-card-unread-dot"></div>`;
         const imgHtml = a.image
-          ? `<img class="feed-card-img" src="${escHtml(a.image)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">${placeholder.replace('class="feed-card-img-placeholder"', 'class="feed-card-img-placeholder" style="display:none"')}`
-          : placeholder;
+          ? `<div style="position:relative">${unreadDot}<img class="feed-card-img" src="${escHtml(a.image)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">${placeholder.replace('class="feed-card-img-placeholder"', 'class="feed-card-img-placeholder" style="display:none"')}</div>`
+          : `<div style="position:relative">${unreadDot}${placeholder}</div>`;
         const dateStr = a.published
           ? new Date(a.published).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
           : "";

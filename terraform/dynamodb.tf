@@ -472,3 +472,24 @@ resource "aws_dynamodb_table" "feeds" {
     enabled = true
   }
 }
+
+resource "aws_dynamodb_table" "feeds_read" {
+  name         = "${local.name_prefix}-feeds-read"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "article_url"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "article_url"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
