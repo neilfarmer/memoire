@@ -32,10 +32,15 @@ resource "aws_lambda_function" "watcher" {
 
   environment {
     variables = {
-      TASKS_TABLE      = aws_dynamodb_table.tasks.name
-      SETTINGS_TABLE   = aws_dynamodb_table.settings.name
-      HABITS_TABLE     = aws_dynamodb_table.habits.name
-      HABIT_LOGS_TABLE = aws_dynamodb_table.habit_logs_v2.name
+      TASKS_TABLE        = aws_dynamodb_table.tasks.name
+      SETTINGS_TABLE     = aws_dynamodb_table.settings.name
+      HABITS_TABLE       = aws_dynamodb_table.habits.name
+      HABIT_LOGS_TABLE   = aws_dynamodb_table.habit_logs_v2.name
+      MEMORY_TABLE       = aws_dynamodb_table.assistant_memory.name
+      JOURNAL_TABLE      = aws_dynamodb_table.journal.name
+      GOALS_TABLE        = aws_dynamodb_table.goals.name
+      NOTES_TABLE        = aws_dynamodb_table.notes.name
+      INFERENCE_MODEL_ID = "us.amazon.nova-lite-v1:0"
     }
   }
 }
@@ -54,17 +59,17 @@ resource "aws_iam_role_policy" "watcher_dynamodb" {
     Statement = [
       {
         Effect   = "Allow"
-        Action   = ["dynamodb:Scan", "dynamodb:UpdateItem"]
+        Action   = ["dynamodb:Scan", "dynamodb:UpdateItem", "dynamodb:Query"]
         Resource = aws_dynamodb_table.tasks.arn
       },
       {
         Effect   = "Allow"
-        Action   = ["dynamodb:GetItem"]
+        Action   = ["dynamodb:Scan"]
         Resource = aws_dynamodb_table.settings.arn
       },
       {
         Effect   = "Allow"
-        Action   = ["dynamodb:Scan", "dynamodb:UpdateItem"]
+        Action   = ["dynamodb:Scan", "dynamodb:UpdateItem", "dynamodb:Query"]
         Resource = aws_dynamodb_table.habits.arn
       },
       {
@@ -72,7 +77,40 @@ resource "aws_iam_role_policy" "watcher_dynamodb" {
         Action   = ["dynamodb:GetItem"]
         Resource = aws_dynamodb_table.habit_logs_v2.arn
       },
+      {
+        Effect = "Allow"
+        Action = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:Query"]
+        Resource = aws_dynamodb_table.assistant_memory.arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["dynamodb:Query"]
+        Resource = [
+          aws_dynamodb_table.journal.arn,
+          aws_dynamodb_table.goals.arn,
+          aws_dynamodb_table.notes.arn,
+        ]
+      },
     ]
+  })
+}
+
+resource "aws_iam_role_policy" "watcher_bedrock" {
+  name = "${local.name_prefix}-watcher-bedrock"
+  role = aws_iam_role.watcher.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"]
+      Resource = [
+        "arn:aws:bedrock:*::foundation-model/amazon.nova-lite-v1:0",
+        "arn:aws:bedrock:*::foundation-model/amazon.nova-pro-v1:0",
+        "arn:aws:bedrock:${var.aws_region}:*:inference-profile/us.amazon.nova-lite-v1:0",
+        "arn:aws:bedrock:${var.aws_region}:*:inference-profile/us.amazon.nova-pro-v1:0",
+      ]
+    }]
   })
 }
 

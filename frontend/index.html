@@ -4175,6 +4175,18 @@
           <button class="btn btn-secondary" id="pal-name-save-btn">Save</button>
         </div>
       </div>
+      <div class="settings-row">
+        <div style="flex:1;">
+          <div class="settings-label">Profile inference</div>
+          <div class="settings-desc">How often the AI scans your tasks, habits, journal, and notes to automatically update your profile</div>
+        </div>
+        <select id="profile-inference-select" style="min-width:140px;">
+          <option value="12">Every 12 hours</option>
+          <option value="24" selected>Every 24 hours</option>
+          <option value="48">Every 48 hours</option>
+          <option value="0">Disabled</option>
+        </select>
+      </div>
     </div>
     <div class="settings-section">
       <div class="settings-section-title">Appearance</div>
@@ -5376,6 +5388,7 @@
           $("pal-name-input").value = settings.pal_name || "";
           applyPalName(settings.pal_name || "");
           $("ntfy-url").value = settings.ntfy_url || "";
+          $("profile-inference-select").value = String(settings.profile_inference_hours ?? 24);
           const secs = settings.autosave_seconds ?? 300;
           $("autosave-select").value = String(secs);
           autoSave.start(secs);
@@ -5665,6 +5678,15 @@
       $("pat-copy-btn").textContent = "Copied!";
       setTimeout(() => { $("pat-copy-btn").textContent = "Copy"; }, 2000);
     });
+  });
+
+  $("profile-inference-select").addEventListener("change", async () => {
+    const hours = parseInt($("profile-inference-select").value, 10);
+    try {
+      await api.updateSettings({ profile_inference_hours: hours });
+    } catch (e) {
+      console.error("Failed to save profile inference setting:", e);
+    }
   });
 
   $("autosave-select").addEventListener("change", async () => {

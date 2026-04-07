@@ -13,12 +13,13 @@ from utils import build_update_expression
 TABLE_NAME = os.environ["TABLE_NAME"]
 
 DEFAULTS = {
-    "dark_mode":        False,
-    "ntfy_url":         "",
-    "autosave_seconds": 300,
-    "timezone":         "",
-    "display_name":     "",
-    "pal_name":         "",
+    "dark_mode":               False,
+    "ntfy_url":                "",
+    "autosave_seconds":        300,
+    "timezone":                "",
+    "display_name":            "",
+    "pal_name":                "",
+    "profile_inference_hours": 24,
 }
 
 ALLOWED_KEYS = set(DEFAULTS.keys())
