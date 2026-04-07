@@ -19,7 +19,11 @@ def lambda_handler(event: dict, context) -> dict:
         body = {}
         if event.get("body"):
             try:
-                body = json.loads(event["body"])
+                parsed = json.loads(event["body"])
+                if not isinstance(parsed, dict):
+                    from response import error
+                    return error("Invalid JSON body")
+                body = parsed
             except (json.JSONDecodeError, TypeError):
                 from response import error
                 return error("Invalid JSON body")
@@ -28,7 +32,8 @@ def lambda_handler(event: dict, context) -> dict:
         query_params = event.get("queryStringParameters") or {}
         route_key    = event["routeKey"]
 
-        return route(route_key, user_id, body, {**path_params, **query_params})
+        # Path parameters take precedence over query string parameters
+        return route(route_key, user_id, body, {**query_params, **path_params})
     except Exception:
         logger.exception("Unhandled exception in lambda_handler")
         from response import server_error

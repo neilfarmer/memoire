@@ -8579,7 +8579,7 @@
         this.loaded = true;
       } catch {
         this.data = [];
-        this.loaded = true;
+        // Don't mark as loaded on failure so navigation retries the fetch
       }
       this.render();
     },
@@ -8608,17 +8608,21 @@
     },
 
     async select(diagram_id) {
+      // Track the intended selection so concurrent fetches don't race
+      this._current = diagram_id;
+      this.render();
       let fullDiagram;
       try {
         fullDiagram = await api.call("GET", `/diagrams/${diagram_id}`);
       } catch {
+        // If the user has already moved on, don't overwrite their new selection
+        if (this._current !== diagram_id) return;
         fullDiagram = { diagram_id, elements: [], app_state: {} };
       }
-      this._current = diagram_id;
+      if (this._current !== diagram_id) return;
       this._pendingElements = fullDiagram.elements || [];
       this._pendingAppState = fullDiagram.app_state || {};
       this._unsaved = false;
-      this.render();
       $("diagrams-placeholder").style.display = "none";
       await this._mountCanvas(this._pendingElements, this._pendingAppState);
     },
@@ -8881,7 +8885,8 @@
       if (name === "favorites") { if (!favs.loaded) favs.load(); else favs.render(); }
       if (name === "diagrams")  { if (!diagrams.loaded) diagrams.load(); else diagrams.render(); }
       // Hide the AI pal FAB on the diagrams page — Excalidraw's help button occupies the same corner
-      document.getElementById("pal-btn").classList.toggle("hidden", name === "diagrams");
+      const palBtn = document.getElementById("pal-btn");
+      if (palBtn) palBtn.classList.toggle("hidden", name === "diagrams");
     },
   };
 

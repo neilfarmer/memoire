@@ -5,6 +5,7 @@ import os
 
 import boto3
 import pytest
+from freezegun import freeze_time
 from moto import mock_aws
 
 from conftest import USER, load_lambda, make_table
@@ -50,8 +51,10 @@ class TestListDiagrams:
         assert "elements" not in item
 
     def test_sorted_by_updated_at_desc(self, tbl):
-        crud.create_diagram(USER, {"title": "First"})
-        crud.create_diagram(USER, {"title": "Second"})
+        with freeze_time("2024-01-01T00:00:00Z"):
+            crud.create_diagram(USER, {"title": "First"})
+        with freeze_time("2024-01-01T00:00:01Z"):
+            crud.create_diagram(USER, {"title": "Second"})
         items = json.loads(crud.list_diagrams(USER)["body"])
         # Most recently created should appear first
         assert items[0]["title"] == "Second"
@@ -93,6 +96,14 @@ class TestCreateDiagram:
         result = crud.create_diagram(USER, {"title": long_title})
         body = json.loads(result["body"])
         assert len(body["title"]) == 200
+
+    def test_quota_enforced_at_100(self, tbl):
+        for i in range(100):
+            r = crud.create_diagram(USER, {"title": f"D{i}"})
+            assert r["statusCode"] == 201
+        result = crud.create_diagram(USER, {"title": "One too many"})
+        assert result["statusCode"] == 400
+        assert "Maximum" in json.loads(result["body"]).get("error", "")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
