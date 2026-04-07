@@ -8636,13 +8636,13 @@
 
       // Load React, ReactDOM, then Excalidraw UMD bundle
       if (!window.React) {
-        await load("https://unpkg.com/react@18/umd/react.production.min.js");
+        await load("https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js");
       }
       if (!window.ReactDOM) {
-        await load("https://unpkg.com/react-dom@18/umd/react-dom.production.min.js");
+        await load("https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js");
       }
       if (!window.ExcalidrawLib) {
-        await load("https://unpkg.com/@excalidraw/excalidraw/dist/excalidraw.production.min.js");
+        await load("https://cdn.jsdelivr.net/npm/@excalidraw/excalidraw@0.18.0/dist/excalidraw.production.min.js");
       }
       this._excalidrawReady = true;
     },
