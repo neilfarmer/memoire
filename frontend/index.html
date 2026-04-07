@@ -8880,6 +8880,8 @@
       if (name === "feeds")     feeds.refresh();
       if (name === "favorites") { if (!favs.loaded) favs.load(); else favs.render(); }
       if (name === "diagrams")  { if (!diagrams.loaded) diagrams.load(); else diagrams.render(); }
+      // Hide the AI pal FAB on the diagrams page — Excalidraw's help button occupies the same corner
+      document.getElementById("pal-btn").classList.toggle("hidden", name === "diagrams");
     },
   };
 
