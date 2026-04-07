@@ -5,6 +5,7 @@ import ipaddress
 import json
 import logging
 import os
+import re
 import socket
 from datetime import datetime, date, timezone, timedelta
 from urllib.parse import urlparse
@@ -175,7 +176,8 @@ def _run_profile_inference(settings_table, now: datetime) -> None:
         new_facts = _infer_facts_from_activity(existing_facts, context)
 
         for key, value in new_facts.items():
-            _save_raw_memory(memory_table, user_id, key, value)
+            merged = _merge_fact(existing_facts.get(key, ""), value)
+            _save_raw_memory(memory_table, user_id, key, merged)
 
         _save_raw_memory(memory_table, user_id, PROFILE_INFERRED_AT_KEY, now.isoformat())
         logger.info("Profile inference done for user %s — %d fact(s) upserted", user_id, len(new_facts))
@@ -289,9 +291,11 @@ def _infer_facts_from_activity(existing_facts: dict, activity_context: str) -> d
         "- Values must be natural language phrases, not IDs or slugs. "
         "BAD: 'save_5000_emergency_fund'. GOOD: 'building an emergency fund'.\n"
         "- Only include facts clearly supported by patterns in the data — not one-off tasks or temporary items.\n"
-        "- If a fact already exists and the data provides a richer or updated value, include it.\n"
+        "- For list-type facts (foods, hobbies, interests), output ONLY the new items not already in existing facts — "
+        "they will be appended automatically. Do not repeat values already listed.\n"
+        "- Do NOT use markdown formatting, backticks, asterisks, or underscores in your output.\n"
         "- If there are no new or updated facts worth recording, output exactly: NONE\n\n"
-        "Output one fact per line as 'key: value' using snake_case keys. Nothing else."
+        "Output one fact per line as 'key: value' using snake_case keys. Plain text only, nothing else."
     )
 
     try:
@@ -313,8 +317,10 @@ def _infer_facts_from_activity(existing_facts: dict, activity_context: str) -> d
         if ":" not in line:
             continue
         key, _, value = line.partition(":")
-        key   = key.strip().lower().replace(" ", "_")
-        value = value.strip().replace("_", " ")
+        # Normalise key: strip markdown, lowercase, spaces→underscores, only [a-z0-9_]
+        key = re.sub(r"[^a-z0-9_]", "", key.strip().lower().replace(" ", "_"))
+        # Normalise value: strip markdown backticks/asterisks, underscores→spaces
+        value = re.sub(r"[`*]", "", value.strip()).replace("_", " ").strip()
         if not key or not value:
             continue
         if key.startswith("__"):
@@ -322,6 +328,20 @@ def _infer_facts_from_activity(existing_facts: dict, activity_context: str) -> d
         facts[key] = value
 
     return facts
+
+
+def _merge_fact(existing: str, new: str) -> str:
+    """Merge a new fact value into an existing one, deduplicating by case-insensitive match."""
+    if not existing:
+        return new
+    existing_items = [v.strip() for v in existing.split(",") if v.strip()]
+    new_items      = [v.strip() for v in new.split(",")      if v.strip()]
+    existing_lower = {v.lower() for v in existing_items}
+    for item in new_items:
+        if item.lower() not in existing_lower:
+            existing_items.append(item)
+            existing_lower.add(item.lower())
+    return ", ".join(existing_items)
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────

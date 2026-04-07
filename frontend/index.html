@@ -1360,63 +1360,73 @@
     /* ── Profile page ── */
     #page-profile { padding: 0; max-width: none; overflow: hidden; }
 
-    .profile-layout {
-      display: grid;
-      grid-template-columns: 200px 1fr;
-      min-height: calc(100vh - 56px);
+    #page-profile {
+      overflow-y: auto;
     }
 
-    .profile-identity {
-      padding: 40px 20px 32px;
-      border-right: 1px solid var(--border);
+    .profile-layout {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 36px 32px 60px;
       display: flex;
       flex-direction: column;
+      gap: 32px;
+    }
+
+    /* Header: avatar + identity info side by side */
+    .profile-header {
+      display: flex;
       align-items: center;
-      text-align: center;
-      gap: 10px;
-      position: sticky;
-      top: 56px;
-      height: calc(100vh - 56px);
-      background: var(--surface);
+      gap: 20px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--border);
     }
 
     .profile-avatar-large {
-      width: 72px; height: 72px;
+      width: 64px; height: 64px;
       border-radius: 50%;
       background: var(--primary);
       color: #fff;
-      font-family: 'Fraunces', serif;
-      font-size: 28px;
+      font-size: 24px;
       font-weight: 600;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 4px;
       flex-shrink: 0;
     }
 
+    .profile-identity {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
     .profile-display-name {
-      font-size: 15px;
-      font-weight: 600;
+      font-size: 18px;
+      font-weight: 700;
       color: var(--text);
-      line-height: 1.3;
+      line-height: 1.2;
+    }
+
+    .profile-email {
+      font-size: 13px;
+      color: var(--muted);
     }
 
     .profile-occupation-badge {
+      display: inline-block;
       font-size: 11px;
       color: var(--muted);
       border: 1px solid var(--border);
       border-radius: 20px;
       padding: 2px 10px;
+      width: fit-content;
     }
 
     .profile-main {
-      padding: 36px 40px;
       display: flex;
       flex-direction: column;
-      gap: 36px;
-      overflow-y: auto;
-      max-height: calc(100vh - 56px);
+      gap: 32px;
     }
 
     .profile-section-header {
@@ -1529,7 +1539,7 @@
     /* Facts grid */
     .profile-facts-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
       gap: 10px;
     }
 
@@ -1586,6 +1596,19 @@
       color: var(--text);
       font-weight: 500;
       word-break: break-word;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .fact-tag {
+      display: inline-block;
+      background: var(--hover);
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
     }
     .profile-fact-value input {
       width: 100%;
@@ -4351,14 +4374,17 @@
   <main id="page-profile" class="hidden">
     <div class="profile-layout">
 
-      <!-- Left: identity panel -->
-      <div class="profile-identity">
+      <!-- Header: avatar + identity -->
+      <div class="profile-header">
         <div class="profile-avatar-large" id="profile-avatar-large">?</div>
-        <div class="profile-display-name" id="profile-display-name">—</div>
-        <div class="profile-occupation-badge hidden" id="profile-occupation-badge"></div>
+        <div class="profile-identity">
+          <div class="profile-display-name" id="profile-display-name">—</div>
+          <div class="profile-email" id="profile-email"></div>
+          <div class="profile-occupation-badge hidden" id="profile-occupation-badge"></div>
+        </div>
       </div>
 
-      <!-- Right: bio + facts -->
+      <!-- Bio + facts -->
       <div class="profile-main">
         <div id="profile-loader" class="page-loader hidden"><div class="spinner"></div></div>
 
@@ -8691,6 +8717,12 @@
 
   // ── Profile page ─────────────────────────────────────────────────────────────
 
+  function renderFactValue(value) {
+    const items = value.split(",").map(v => v.trim()).filter(Boolean);
+    if (items.length <= 1) return escHtml(value);
+    return items.map(item => `<span class="fact-tag">${escHtml(item)}</span>`).join("");
+  }
+
   const profilePage = {
     loaded: false,
 
@@ -8701,6 +8733,7 @@
       const initials = name.trim().split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
       $("profile-avatar-large").textContent = initials;
       $("profile-display-name").textContent = state.settings?.display_name || auth.getEmail() || "—";
+      $("profile-email").textContent = auth.getEmail() || "";
 
       try {
         const data = await api.getAssistantMemory();
@@ -8760,7 +8793,7 @@
             <button class="profile-fact-action-btn danger" title="Delete" onclick="profilePage.deleteFact(this.closest('.profile-fact').dataset.key)">${trashSvg}</button>
           </div>
           <div class="profile-fact-key">${escHtml(k.replace(/_/g, " "))}</div>
-          <div class="profile-fact-value" id="pfv-${escHtml(k)}">${escHtml(facts[k])}</div>
+          <div class="profile-fact-value" id="pfv-${escHtml(k)}">${renderFactValue(facts[k])}</div>
         </div>
       `).join("");
     },
