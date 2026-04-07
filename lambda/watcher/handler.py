@@ -314,7 +314,7 @@ def _infer_facts_from_activity(existing_facts: dict, activity_context: str) -> d
             continue
         key, _, value = line.partition(":")
         key   = key.strip().lower().replace(" ", "_")
-        value = value.strip()
+        value = value.strip().replace("_", " ")
         if not key or not value:
             continue
         if key.startswith("__"):
