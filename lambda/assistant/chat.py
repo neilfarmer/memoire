@@ -190,6 +190,16 @@ def _extract_facts(user_id: str, existing_facts: dict, user_message: str, reply:
             key   = key.strip().lower().replace(" ", "_").replace("-", "_")
             value = value.strip()
             if key and value and not key.startswith("__"):
+                existing = existing_facts.get(key, "")
+                if existing:
+                    existing_items = [v.strip() for v in existing.split(",") if v.strip()]
+                    new_items      = [v.strip() for v in value.split(",")    if v.strip()]
+                    existing_lower = {v.lower() for v in existing_items}
+                    for item in new_items:
+                        if item.lower() not in existing_lower:
+                            existing_items.append(item)
+                            existing_lower.add(item.lower())
+                    value = ", ".join(existing_items)
                 mem.save_memory(user_id, key, value)
     except Exception:
         logger.warning("Failed to extract facts", exc_info=True)
