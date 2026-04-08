@@ -78,13 +78,13 @@ resource "aws_iam_role_policy" "watcher_dynamodb" {
         Resource = aws_dynamodb_table.habit_logs_v2.arn
       },
       {
-        Effect = "Allow"
-        Action = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:Query"]
+        Effect   = "Allow"
+        Action   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:Query"]
         Resource = aws_dynamodb_table.assistant_memory.arn
       },
       {
-        Effect   = "Allow"
-        Action   = ["dynamodb:Query"]
+        Effect = "Allow"
+        Action = ["dynamodb:Query"]
         Resource = [
           aws_dynamodb_table.journal.arn,
           aws_dynamodb_table.goals.arn,

@@ -1,6 +1,5 @@
 """Unit tests for lambda/assistant/chat.py — _clean_reply, _system_prompt, _extract_facts."""
 
-import json
 import os
 from unittest.mock import patch
 

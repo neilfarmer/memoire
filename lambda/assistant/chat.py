@@ -188,7 +188,7 @@ def _extract_facts(user_id: str, existing_facts: dict, user_message: str, reply:
                 continue
             key, _, value = line.partition(":")
             key   = key.strip().lower().replace(" ", "_").replace("-", "_")
-            value = value.strip()
+            value = value.strip().replace("_", " ")
             if key and value and not key.startswith("__"):
                 existing = existing_facts.get(key, "")
                 if existing:

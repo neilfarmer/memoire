@@ -5419,10 +5419,7 @@
           $("autosave-select").value = String(secs);
           autoSave.start(secs);
           $("timezone-select").value = settings.timezone || "";
-          // Avatar initials: prefer display name, fall back to email
-          const name = settings.display_name || auth.getEmail() || "?";
-          const initials = name.trim().split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
-          $("avatar-btn").textContent = initials;
+          refreshAvatarInitials();
         }
       } catch (e) {
         console.error("Failed to load settings:", e);
@@ -5569,6 +5566,7 @@
     try {
       const updated = await api.updateSettings({ display_name: name });
       state.settings = { ...state.settings, ...updated };
+      refreshAvatarInitials();
       $("display-name-save-btn").textContent = "Saved";
       setTimeout(() => { $("display-name-save-btn").textContent = "Save"; }, 1500);
     } catch (e) {
@@ -5577,6 +5575,12 @@
       $("display-name-save-btn").disabled = false;
     }
   });
+
+  function refreshAvatarInitials() {
+    const name = state.settings?.display_name || auth.getEmail() || "?";
+    const initials = name.trim().split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+    $("avatar-btn").textContent = initials || "?";
+  }
 
   function applyPalName(name) {
     const label = name.trim() || "AI Pal";
@@ -8737,6 +8741,10 @@
       // Only show email sub-line if there's a separate display name set
       $("profile-email").textContent = displayName ? email : "";
 
+      const saveBtn = $("profile-context-save-btn");
+      saveBtn.disabled = true;
+      $("profile-context-msg").classList.add("hidden");
+
       try {
         const data = await api.getAssistantMemory();
         if (!data) return;
@@ -8761,8 +8769,16 @@
 
         profilePage.renderFacts(data.facts || {});
         profilePage.loaded = true;
-      } catch { /* best-effort */ }
-      finally { $("profile-loader").classList.add("hidden"); }
+        saveBtn.disabled = false;
+      } catch (e) {
+        console.error("Failed to load profile:", e);
+        const msg = $("profile-context-msg");
+        msg.textContent = "Failed to load profile data. Refresh to try again.";
+        msg.style.color = "var(--danger)";
+        msg.classList.remove("hidden");
+      } finally {
+        $("profile-loader").classList.add("hidden");
+      }
     },
 
     enterEditMode() {
@@ -8835,26 +8851,39 @@
       input.focus();
       input.select();
 
+      let finalized = false;
+      let blurTimer  = null;
+
       const commit = async () => {
+        if (finalized) return;
+        finalized = true;
+        clearTimeout(blurTimer);
         const newVal = input.value.trim();
         if (!newVal || newVal === currentValue) { valueEl.innerHTML = originalHTML; return; }
         valueEl.innerHTML = originalHTML;
         try {
           await api.updateAssistantMemoryFact(key, newVal);
-          valueEl.textContent = newVal;
+          valueEl.innerHTML = renderFactValue(newVal);
           if (key === "occupation") {
             const occBadge = $("profile-occupation-badge");
-            occBadge.textContent = newVal;
+            occBadge.textContent = newVal.replace(/_/g, " ");
             occBadge.classList.remove("hidden");
           }
         } catch { valueEl.innerHTML = originalHTML; }
       };
 
+      const cancel = () => {
+        if (finalized) return;
+        finalized = true;
+        clearTimeout(blurTimer);
+        valueEl.innerHTML = originalHTML;
+      };
+
       input.addEventListener("keydown", e => {
         if (e.key === "Enter")  { e.preventDefault(); commit(); }
-        if (e.key === "Escape") { e.preventDefault(); valueEl.innerHTML = originalHTML; }
+        if (e.key === "Escape") { e.preventDefault(); cancel(); }
       });
-      input.addEventListener("blur", () => setTimeout(commit, 150));
+      input.addEventListener("blur", () => { blurTimer = setTimeout(commit, 150); });
     },
 
     async deleteFact(key) {
@@ -8865,7 +8894,14 @@
         const remaining = $("profile-facts-list").querySelectorAll(".profile-fact");
         if (remaining.length === 0) $("profile-facts-empty").classList.remove("hidden");
         if (key === "occupation") $("profile-occupation-badge").classList.add("hidden");
-      } catch { /* best-effort */ }
+      } catch (e) {
+        console.error("Failed to delete fact:", e);
+        const msg = $("profile-context-msg");
+        msg.textContent = "Failed to delete fact. Please try again.";
+        msg.style.color = "var(--danger)";
+        msg.classList.remove("hidden");
+        setTimeout(() => msg.classList.add("hidden"), 3000);
+      }
     },
   };
 

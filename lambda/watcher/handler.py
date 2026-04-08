@@ -2,7 +2,6 @@
 and runs periodic AI profile inference for all users."""
 
 import ipaddress
-import json
 import logging
 import os
 import re
@@ -219,8 +218,7 @@ def _get_raw_memory(memory_table, user_id: str, key: str) -> str:
 
 def _save_raw_memory(memory_table, user_id: str, key: str, value: str) -> None:
     """Upsert a single memory item."""
-    from datetime import datetime, timezone as _tz
-    now = datetime.now(_tz.utc).isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     memory_table.put_item(Item={
         "user_id":    user_id,
         "memory_key": key,
@@ -317,8 +315,8 @@ def _infer_facts_from_activity(existing_facts: dict, activity_context: str) -> d
         if ":" not in line:
             continue
         key, _, value = line.partition(":")
-        # Normalise key: strip markdown, lowercase, spaces→underscores, only [a-z0-9_]
-        key = re.sub(r"[^a-z0-9_]", "", key.strip().lower().replace(" ", "_"))
+        # Normalise key: strip markdown, lowercase, spaces/hyphens→underscores, only [a-z0-9_]
+        key = re.sub(r"[^a-z0-9_]", "", key.strip().lower().replace(" ", "_").replace("-", "_"))
         # Normalise value: strip markdown backticks/asterisks, underscores→spaces
         value = re.sub(r"[`*]", "", value.strip()).replace("_", " ").strip()
         if not key or not value:
