@@ -1693,6 +1693,7 @@
       font-size: 14px;
       color: var(--text);
       line-height: 1.7;
+      white-space: pre-line;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -8842,14 +8843,16 @@
         const data = await api.getAssistantMemory();
         if (!data) return;
 
-        // About Me tab — profile fields
-        const p = data.profile || {};
-        $("profile-field-name").value       = p.name       || "";
-        $("profile-field-occupation").value = p.occupation || "";
-        $("profile-field-summary").value    = p.summary    || "";
+        // About Me tab — only populate fields on first load to avoid overwriting unsaved edits
+        if (!profilePage.loaded) {
+          const p = data.profile || {};
+          $("profile-field-name").value       = p.name       || "";
+          $("profile-field-occupation").value = p.occupation || "";
+          $("profile-field-summary").value    = p.summary    || "";
+        }
 
         // Occupation badge in header
-        const occ      = p.occupation || data.facts?.occupation || "";
+        const occ      = (data.profile || {}).occupation || data.facts?.occupation || "";
         const occBadge = $("profile-occupation-badge");
         if (occ) { occBadge.textContent = occ; occBadge.classList.remove("hidden"); }
         else      { occBadge.classList.add("hidden"); }
@@ -8932,6 +8935,8 @@
             dateEl.textContent = "Generated " + d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
             dateEl.classList.remove("hidden");
           } catch { dateEl.classList.add("hidden"); }
+        } else {
+          dateEl.classList.add("hidden");
         }
       } else {
         textEl.classList.add("hidden");

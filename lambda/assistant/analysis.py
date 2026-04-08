@@ -79,12 +79,17 @@ def generate_analysis(user_id: str) -> dict:
         f"Be personal and specific to this data. Plain text only — no headings or bullet points."
     )
 
-    resp = _bedrock.converse(
-        modelId=MODEL_ID,
-        messages=[{"role": "user", "content": [{"text": prompt}]}],
-        inferenceConfig={"maxTokens": 500},
-    )
-    analysis     = _clean_reply(resp["output"]["message"]["content"][0]["text"].strip())
+    try:
+        resp = _bedrock.converse(
+            modelId=MODEL_ID,
+            messages=[{"role": "user", "content": [{"text": prompt}]}],
+            inferenceConfig={"maxTokens": 500},
+        )
+        analysis = _clean_reply(resp["output"]["message"]["content"][0]["text"].strip())
+    except Exception:
+        logger.exception("Bedrock call failed during profile analysis generation")
+        raise
+
     generated_at = datetime.now(timezone.utc).isoformat()
     mem.save_ai_analysis(user_id, analysis)
     return {"analysis": analysis, "generated_at": generated_at}
