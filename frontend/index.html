@@ -10094,7 +10094,7 @@
     },
 
     expand(name) {
-      const sections = ["home", "tasks", "notes", "journal", "feeds", "diagrams", "settings", "admin", "profile"];
+      const sections = ["home", "tasks", "notes", "journal", "feeds", "diagrams", "budget", "settings", "admin", "profile"];
       sections.forEach(s => {
         const sect = $(`sb-${s}`);
         const body = $(`sb-${s}-body`);
@@ -10117,7 +10117,7 @@
 
   const pages = {
     current: "home",
-    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "diagrams", "settings", "admin", "profile"],
+    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "diagrams", "budget", "settings", "admin", "profile"],
 
     show(name) {
       pages.current = name;
