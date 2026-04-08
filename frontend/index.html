@@ -4083,6 +4083,7 @@
             <div class="sb-sub-label">Tracking</div>
             <button class="sb-sub-link" data-page="habits" onclick="pages.show('habits')">Habits</button>
             <button class="sb-sub-link" data-page="goals" onclick="pages.show('goals')">Goals</button>
+            <button class="sb-sub-link" data-page="finances" onclick="pages.show('finances')">Finances</button>
             <div class="sb-sub-label">Health</div>
             <button class="sb-sub-link" data-page="health" onclick="pages.show('health')">Exercise</button>
             <button class="sb-sub-link" data-page="nutrition" onclick="pages.show('nutrition')">Nutrition</button>
@@ -4102,12 +4103,6 @@
           <div class="sb-section-hdr" onclick="sidebar.navigate('diagrams')">
             <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
             <span class="sb-hdr-label">Diagrams</span>
-          </div>
-        </div>
-        <div class="sb-section" id="sb-finances">
-          <div class="sb-section-hdr" onclick="sidebar.navigate('finances')">
-            <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
-            <span class="sb-hdr-label">Finances</span>
           </div>
         </div>
         <div class="sb-spacer"></div>
@@ -10184,7 +10179,7 @@
     },
 
     expand(name) {
-      const sections = ["home", "tasks", "notes", "journal", "feeds", "diagrams", "finances", "settings", "admin", "profile"];
+      const sections = ["home", "tasks", "notes", "journal", "feeds", "diagrams", "settings", "admin", "profile"];
       sections.forEach(s => {
         const sect = $(`sb-${s}`);
         const body = $(`sb-${s}-body`);
@@ -10211,8 +10206,8 @@
 
     show(name) {
       pages.current = name;
-      // habits, goals, health, nutrition are sub-sections of journal; favorites is a sub-section of feeds
-      const sbSection = (name === "habits" || name === "goals" || name === "health" || name === "nutrition") ? "journal"
+      // habits, goals, health, nutrition, finances are sub-sections of journal; favorites is a sub-section of feeds
+      const sbSection = (name === "habits" || name === "goals" || name === "health" || name === "nutrition" || name === "finances") ? "journal"
                       : name === "favorites" ? "feeds"
                       : name;
       sidebar.expand(sbSection);
