@@ -1,8 +1,10 @@
-"""Watcher Lambda — runs hourly, sends ntfy notifications for tasks and habits."""
+"""Watcher Lambda — runs hourly, sends ntfy notifications for tasks and habits,
+and runs periodic AI profile inference for all users."""
 
 import ipaddress
 import logging
 import os
+import re
 import socket
 from datetime import datetime, date, timezone, timedelta
 from urllib.parse import urlparse
@@ -18,8 +20,16 @@ TASKS_TABLE      = os.environ["TASKS_TABLE"]
 SETTINGS_TABLE   = os.environ["SETTINGS_TABLE"]
 HABITS_TABLE     = os.environ["HABITS_TABLE"]
 HABIT_LOGS_TABLE = os.environ["HABIT_LOGS_TABLE"]
+MEMORY_TABLE     = os.environ.get("MEMORY_TABLE", "")
+JOURNAL_TABLE    = os.environ.get("JOURNAL_TABLE", "")
+GOALS_TABLE      = os.environ.get("GOALS_TABLE", "")
+NOTES_TABLE      = os.environ.get("NOTES_TABLE", "")
+INFERENCE_MODEL_ID = os.environ.get("INFERENCE_MODEL_ID", "us.amazon.nova-lite-v1:0")
+
+PROFILE_INFERRED_AT_KEY = "__profile_inferred_at__"
 
 _dynamodb = boto3.resource("dynamodb")
+_bedrock  = boto3.client("bedrock-runtime")
 
 BEFORE_OFFSETS = {
     "1h": timedelta(hours=1),
@@ -55,6 +65,13 @@ def lambda_handler(event, context):
     settings_table = _dynamodb.Table(SETTINGS_TABLE)
     habits_table   = _dynamodb.Table(HABITS_TABLE)
     logs_table     = _dynamodb.Table(HABIT_LOGS_TABLE)
+
+    # ── Profile inference (runs for all users, checks per-user interval) ───────
+    if MEMORY_TABLE:
+        try:
+            _run_profile_inference(settings_table, now)
+        except Exception as e:
+            logger.error("Profile inference run failed: %s", e)
 
     # Scan only the settings table (one row per user) to find users who have
     # ntfy_url configured.  Then query tasks/habits per user by PK instead of
@@ -101,6 +118,228 @@ def lambda_handler(event, context):
                     UpdateExpression="SET last_notified_date = :d",
                     ExpressionAttributeValues={":d": today_str},
                 )
+
+
+# ── Profile inference ─────────────────────────────────────────────────────────
+
+def _run_profile_inference(settings_table, now: datetime) -> None:
+    """Check each user's inference interval and run Bedrock fact extraction if due."""
+    if not all([MEMORY_TABLE, JOURNAL_TABLE, GOALS_TABLE, NOTES_TABLE]):
+        logger.warning("Profile inference skipped — one or more table env vars not set")
+        return
+
+    memory_table  = _dynamodb.Table(MEMORY_TABLE)
+    journal_table = _dynamodb.Table(JOURNAL_TABLE)
+    goals_table   = _dynamodb.Table(GOALS_TABLE)
+    notes_table   = _dynamodb.Table(NOTES_TABLE)
+    tasks_table_  = _dynamodb.Table(TASKS_TABLE)
+    habits_table_ = _dynamodb.Table(HABITS_TABLE)
+
+    all_settings = _all_user_settings(settings_table)
+    logger.info("Profile inference: evaluating %d users", len(all_settings))
+
+    for user_id, settings in all_settings:
+        try:
+            interval_hours = int(settings.get("profile_inference_hours", 24))
+        except (ValueError, TypeError):
+            interval_hours = 24
+
+        if interval_hours == 0:
+            continue  # inference disabled for this user
+
+        # Check when inference last ran for this user
+        last_at = _get_raw_memory(memory_table, user_id, PROFILE_INFERRED_AT_KEY)
+        if last_at:
+            try:
+                last_dt = _parse_iso(last_at)
+                if now < last_dt + timedelta(hours=interval_hours):
+                    continue  # not due yet
+            except Exception:
+                pass  # bad timestamp — run anyway
+
+        logger.info("Profile inference running for user %s", user_id)
+
+        tasks   = _query_user(tasks_table_,  user_id)
+        habits  = _query_user(habits_table_, user_id)
+        journal = _query_user(journal_table, user_id)
+        goals   = _query_user(goals_table,   user_id)
+        notes   = _query_user(notes_table,   user_id)
+
+        context = _build_activity_context(tasks, habits, journal, goals, notes)
+        if not context.strip():
+            logger.info("User %s has no activity data — skipping", user_id)
+            _save_raw_memory(memory_table, user_id, PROFILE_INFERRED_AT_KEY, now.isoformat())
+            continue
+
+        existing_facts = _load_user_facts(memory_table, user_id)
+        new_facts = _infer_facts_from_activity(existing_facts, context)
+
+        for key, value in new_facts.items():
+            merged = _merge_fact(existing_facts.get(key, ""), value)
+            _save_raw_memory(memory_table, user_id, key, merged)
+
+        _save_raw_memory(memory_table, user_id, PROFILE_INFERRED_AT_KEY, now.isoformat())
+        logger.info("Profile inference done for user %s — %d fact(s) upserted", user_id, len(new_facts))
+
+
+def _all_user_settings(settings_table) -> list[tuple[str, dict]]:
+    """Return (user_id, settings_dict) for every user in the settings table."""
+    users: list[tuple[str, dict]] = []
+    resp = settings_table.scan()
+    for item in resp.get("Items", []):
+        uid = item.get("user_id")
+        if uid:
+            users.append((uid, item))
+    while "LastEvaluatedKey" in resp:
+        resp = settings_table.scan(ExclusiveStartKey=resp["LastEvaluatedKey"])
+        for item in resp.get("Items", []):
+            uid = item.get("user_id")
+            if uid:
+                users.append((uid, item))
+    return users
+
+
+def _load_user_facts(memory_table, user_id: str) -> dict:
+    """Return the user's non-internal memory facts."""
+    facts: dict = {}
+    items = _query_user(memory_table, user_id)
+    for item in items:
+        key = item.get("memory_key", "")
+        if key and not key.startswith("__"):
+            facts[key] = item.get("value", "")
+    return facts
+
+
+def _get_raw_memory(memory_table, user_id: str, key: str) -> str:
+    """Fetch a single memory item value (including internal __ keys)."""
+    item = memory_table.get_item(Key={"user_id": user_id, "memory_key": key}).get("Item")
+    return item.get("value", "") if item else ""
+
+
+def _save_raw_memory(memory_table, user_id: str, key: str, value: str) -> None:
+    """Upsert a single memory item."""
+    now = datetime.now(timezone.utc).isoformat()
+    memory_table.put_item(Item={
+        "user_id":    user_id,
+        "memory_key": key,
+        "value":      value,
+        "updated_at": now,
+    })
+
+
+def _build_activity_context(tasks, habits, journal, goals, notes) -> str:
+    """Summarise user data into a text block for the Bedrock prompt."""
+    lines: list[str] = []
+
+    if tasks:
+        lines.append("=== Tasks ===")
+        for t in tasks[:30]:
+            status = t.get("status", "")
+            title  = t.get("title", "")
+            desc   = t.get("description", "")
+            lines.append(f"- [{status}] {title}" + (f": {desc}" if desc else ""))
+
+    if habits:
+        lines.append("=== Habits ===")
+        for h in habits[:20]:
+            lines.append(f"- {h.get('name', '')}" + (f": {h.get('description', '')}" if h.get("description") else ""))
+
+    if journal:
+        lines.append("=== Journal entries (recent) ===")
+        sorted_journal = sorted(journal, key=lambda x: x.get("created_at", ""), reverse=True)
+        for j in sorted_journal[:10]:
+            content = j.get("content", "")[:300]
+            if content:
+                lines.append(f"- {content}")
+
+    if goals:
+        lines.append("=== Goals ===")
+        for g in goals[:20]:
+            lines.append(f"- {g.get('title', '')}" + (f": {g.get('description', '')}" if g.get("description") else ""))
+
+    if notes:
+        lines.append("=== Notes (recent) ===")
+        sorted_notes = sorted(notes, key=lambda x: x.get("updated_at", ""), reverse=True)
+        for n in sorted_notes[:10]:
+            content = n.get("content", "")[:300]
+            title   = n.get("title", "")
+            if title or content:
+                lines.append(f"- {title}: {content}" if title else f"- {content}")
+
+    return "\n".join(lines)
+
+
+def _infer_facts_from_activity(existing_facts: dict, activity_context: str) -> dict:
+    """Call Bedrock to extract/update personal facts from the user's activity data."""
+    existing_str = "\n".join(f"{k}: {v}" for k, v in existing_facts.items()) or "None"
+
+    prompt = (
+        "You are analyzing a user's personal productivity data to infer stable facts about them.\n\n"
+        "Existing known facts:\n"
+        f"{existing_str}\n\n"
+        "User's recent activity:\n"
+        f"{activity_context}\n\n"
+        "From this activity data, identify NEW or UPDATED personal facts about this user. "
+        "Focus on stable personal attributes: personality, lifestyle, occupation, specific interests/hobbies, "
+        "recurring habits, long-term goals and aspirations, preferences, and values.\n\n"
+        "Rules:\n"
+        "- Infer themes and meaning — do NOT copy raw titles or task names verbatim.\n"
+        "- Use SPECIFIC descriptive keys, not generic ones. BAD: 'goals', 'habits', 'interests'. "
+        "GOOD: 'fitness_goal', 'morning_routine', 'creative_hobby'.\n"
+        "- Values must be natural language phrases, not IDs or slugs. "
+        "BAD: 'save_5000_emergency_fund'. GOOD: 'building an emergency fund'.\n"
+        "- Only include facts clearly supported by patterns in the data — not one-off tasks or temporary items.\n"
+        "- For list-type facts (foods, hobbies, interests), output ONLY the new items not already in existing facts — "
+        "they will be appended automatically. Do not repeat values already listed.\n"
+        "- Do NOT use markdown formatting, backticks, asterisks, or underscores in your output.\n"
+        "- If there are no new or updated facts worth recording, output exactly: NONE\n\n"
+        "Output one fact per line as 'key: value' using snake_case keys. Plain text only, nothing else."
+    )
+
+    try:
+        resp = _bedrock.converse(
+            modelId=INFERENCE_MODEL_ID,
+            messages=[{"role": "user", "content": [{"text": prompt}]}],
+            inferenceConfig={"maxTokens": 512, "temperature": 0.1},
+        )
+        text = resp["output"]["message"]["content"][0]["text"].strip()
+    except Exception as e:
+        logger.error("Bedrock inference call failed: %s", e)
+        return {}
+
+    if text.upper() == "NONE" or not text:
+        return {}
+
+    facts: dict = {}
+    for line in text.splitlines():
+        if ":" not in line:
+            continue
+        key, _, value = line.partition(":")
+        # Normalise key: strip markdown, lowercase, spaces/hyphens→underscores, only [a-z0-9_]
+        key = re.sub(r"[^a-z0-9_]", "", key.strip().lower().replace(" ", "_").replace("-", "_"))
+        # Normalise value: strip markdown backticks/asterisks, underscores→spaces
+        value = re.sub(r"[`*]", "", value.strip()).replace("_", " ").strip()
+        if not key or not value:
+            continue
+        if key.startswith("__"):
+            continue  # reject internal key attempts
+        facts[key] = value
+
+    return facts
+
+
+def _merge_fact(existing: str, new: str) -> str:
+    """Merge a new fact value into an existing one, deduplicating by case-insensitive match."""
+    if not existing:
+        return new
+    existing_items = [v.strip() for v in existing.split(",") if v.strip()]
+    new_items      = [v.strip() for v in new.split(",")      if v.strip()]
+    existing_lower = {v.lower() for v in existing_items}
+    for item in new_items:
+        if item.lower() not in existing_lower:
+            existing_items.append(item)
+            existing_lower.add(item.lower())
+    return ", ".join(existing_items)
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────

@@ -807,16 +807,17 @@ class TestTokenAuthGetUserId:
 #  was replaced with a standard API Gateway proxy handler)
 
 class TestLambdaHandler:
-    def _event(self, route_key="POST /assistant/chat", body=None):
+    def _event(self, route_key="POST /assistant/chat", body=None, path_params=None):
         return {
             "requestContext": {"authorizer": {"lambda": {"user_id": USER}}},
             "routeKey": route_key,
             "headers": {},
             "body": json.dumps(body) if body is not None else None,
+            "pathParameters": path_params or {},
         }
 
     def test_routes_chat_request(self, tbls, monkeypatch):
-        monkeypatch.setattr(handler, "route", lambda rk, uid, b: {"statusCode": 200, "body": json.dumps({"reply": "ok", "tools_used": []})})
+        monkeypatch.setattr(handler, "route", lambda rk, uid, b, pp: {"statusCode": 200, "body": json.dumps({"reply": "ok", "tools_used": []})})
         result = handler.lambda_handler(self._event(body={"message": "hi"}), None)
         assert result["statusCode"] == 200
 
@@ -830,6 +831,86 @@ class TestLambdaHandler:
         monkeypatch.setattr(handler, "route", lambda *a: (_ for _ in ()).throw(RuntimeError("oops")))
         result = handler.lambda_handler(self._event(body={"message": "hi"}), None)
         assert result["statusCode"] == 500
+
+
+# ── router: memory routes ─────────────────────────────────────────────────────
+
+from conftest import load_lambda as _load
+router = _load("assistant", "router.py")
+
+class TestMemoryRoutes:
+    def test_get_memory_empty(self, tbls):
+        resp = router.route("GET /assistant/memory", USER, {})
+        body = json.loads(resp["body"])
+        assert body["master_context"] == ""
+        assert body["facts"] == {}
+
+    def test_get_memory_with_data(self, tbls):
+        memory.save_master_context(USER, "I love cycling.")
+        memory.save_memory(USER, "wake_time", "6am")
+        resp = router.route("GET /assistant/memory", USER, {})
+        body = json.loads(resp["body"])
+        assert body["master_context"] == "I love cycling."
+        assert body["facts"]["wake_time"] == "6am"
+
+    def test_put_memory_updates_context(self, tbls):
+        resp = router.route("PUT /assistant/memory", USER, {"master_context": "Engineer who runs."})
+        assert resp["statusCode"] == 200
+        _, master = memory.load_memory(USER)
+        assert master == "Engineer who runs."
+
+    def test_put_memory_strips_whitespace(self, tbls):
+        router.route("PUT /assistant/memory", USER, {"master_context": "  padded  "})
+        _, master = memory.load_memory(USER)
+        assert master == "padded"
+
+    def test_put_memory_empty_string_clears_context(self, tbls):
+        memory.save_master_context(USER, "Old context.")
+        router.route("PUT /assistant/memory", USER, {"master_context": ""})
+        _, master = memory.load_memory(USER)
+        assert master == ""
+
+    def test_delete_memory_fact(self, tbls):
+        memory.save_memory(USER, "fav_food", "tacos")
+        resp = router.route("DELETE /assistant/memory/{key}", USER, {}, {"key": "fav_food"})
+        assert resp["statusCode"] == 200
+        facts, _ = memory.load_memory(USER)
+        assert "fav_food" not in facts
+
+    def test_delete_memory_rejects_internal_key(self, tbls):
+        resp = router.route("DELETE /assistant/memory/{key}", USER, {}, {"key": "__master_context__"})
+        assert resp["statusCode"] == 400
+
+    def test_delete_memory_rejects_empty_key(self, tbls):
+        resp = router.route("DELETE /assistant/memory/{key}", USER, {}, {"key": ""})
+        assert resp["statusCode"] == 400
+
+    def test_get_memory_excludes_internal_keys_from_facts(self, tbls):
+        memory.update_model_usage(USER, "nova-lite", 10, 5)
+        memory.save_master_context(USER, "Some context.")
+        resp = router.route("GET /assistant/memory", USER, {})
+        body = json.loads(resp["body"])
+        assert not any(k.startswith("__") for k in body["facts"])
+
+    def test_put_fact_updates_value(self, tbls):
+        memory.save_memory(USER, "fav_food", "tacos")
+        resp = router.route("PUT /assistant/memory/facts/{key}", USER, {"value": "sushi"}, {"key": "fav_food"})
+        assert resp["statusCode"] == 200
+        facts, _ = memory.load_memory(USER)
+        assert facts["fav_food"] == "sushi"
+
+    def test_put_fact_rejects_internal_key(self, tbls):
+        resp = router.route("PUT /assistant/memory/facts/{key}", USER, {"value": "x"}, {"key": "__master_context__"})
+        assert resp["statusCode"] == 400
+
+    def test_put_fact_rejects_empty_value(self, tbls):
+        memory.save_memory(USER, "fav_food", "tacos")
+        resp = router.route("PUT /assistant/memory/facts/{key}", USER, {"value": ""}, {"key": "fav_food"})
+        assert resp["statusCode"] == 400
+
+    def test_put_fact_rejects_empty_key(self, tbls):
+        resp = router.route("PUT /assistant/memory/facts/{key}", USER, {"value": "v"}, {"key": ""})
+        assert resp["statusCode"] == 400
 
 
 # ── token_auth: JWKS fetch and RSA paths ─────────────────────────────────────

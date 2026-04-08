@@ -5,7 +5,9 @@ import chat
 import memory as mem
 
 
-def route(route_key: str, user_id: str, body: dict) -> dict:
+def route(route_key: str, user_id: str, body: dict, path_params: dict | None = None) -> dict:
+    if path_params is None:
+        path_params = {}
     if route_key == "POST /assistant/chat":
         message = (body.get("message") or "").strip()
         if not message:
@@ -33,5 +35,31 @@ def route(route_key: str, user_id: str, body: dict) -> dict:
 
     if route_key == "GET /assistant/usage":
         return ok(mem.load_model_usage(user_id))
+
+    if route_key == "GET /assistant/memory":
+        facts, master = mem.load_memory(user_id)
+        return ok({"master_context": master, "facts": facts})
+
+    if route_key == "PUT /assistant/memory":
+        context = (body.get("master_context") or "").strip()
+        mem.save_master_context(user_id, context)
+        return ok({"updated": True})
+
+    if route_key == "PUT /assistant/memory/facts/{key}":
+        key   = path_params.get("key", "").strip()
+        value = (body.get("value") or "").strip()
+        if not key or key.startswith("__"):
+            return error("Invalid key")
+        if not value:
+            return error("value is required")
+        mem.save_memory(user_id, key, value)
+        return ok({"updated": True})
+
+    if route_key == "DELETE /assistant/memory/{key}":
+        key = path_params.get("key", "").strip()
+        if not key or key.startswith("__"):
+            return error("Invalid key")
+        mem.delete_memory(user_id, key)
+        return ok({"deleted": True})
 
     return error("Not found", status=404)

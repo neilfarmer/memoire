@@ -1,6 +1,7 @@
 """Unit tests for lambda/watcher/handler.py."""
 
 import os
+from datetime import datetime, timezone, timedelta
 from unittest.mock import patch
 
 import boto3
@@ -13,6 +14,10 @@ os.environ["TASKS_TABLE"]       = "test-tasks"
 os.environ["SETTINGS_TABLE"]    = "test-settings"
 os.environ["HABITS_TABLE"]      = "test-habits"
 os.environ["HABIT_LOGS_TABLE"]  = "test-habit-logs"
+os.environ["MEMORY_TABLE"]      = "test-memory-watcher"
+os.environ["JOURNAL_TABLE"]     = "test-journal-watcher"
+os.environ["GOALS_TABLE"]       = "test-goals-watcher"
+os.environ["NOTES_TABLE"]       = "test-notes-watcher"
 
 watcher = load_lambda("watcher", "handler.py")
 
@@ -20,6 +25,10 @@ TASKS_TABLE      = "test-tasks"
 SETTINGS_TABLE   = "test-settings"
 HABITS_TABLE     = "test-habits"
 LOGS_TABLE       = "test-habit-logs"
+MEMORY_TABLE     = "test-memory-watcher"
+JOURNAL_TABLE    = "test-journal-watcher"
+GOALS_TABLE      = "test-goals-watcher"
+NOTES_TABLE      = "test-notes-watcher"
 
 
 @pytest.fixture
@@ -30,6 +39,21 @@ def tbls():
         make_table(ddb, SETTINGS_TABLE, "user_id")
         make_table(ddb, HABITS_TABLE,   "user_id", "habit_id")
         make_table(ddb, LOGS_TABLE,     "user_id", "log_id")
+        yield ddb
+
+
+@pytest.fixture
+def inference_tbls():
+    with mock_aws():
+        ddb = boto3.resource("dynamodb", region_name="us-east-1")
+        make_table(ddb, TASKS_TABLE,    "user_id", "task_id")
+        make_table(ddb, SETTINGS_TABLE, "user_id")
+        make_table(ddb, HABITS_TABLE,   "user_id", "habit_id")
+        make_table(ddb, LOGS_TABLE,     "user_id", "log_id")
+        make_table(ddb, MEMORY_TABLE,   "user_id", "memory_key")
+        make_table(ddb, JOURNAL_TABLE,  "user_id", "journal_id")
+        make_table(ddb, GOALS_TABLE,    "user_id", "goal_id")
+        make_table(ddb, NOTES_TABLE,    "user_id", "note_id")
         yield ddb
 
 
@@ -114,3 +138,145 @@ class TestLambdaHandler:
             mock_process.assert_called_once()
             _, _, called_url, _ = mock_process.call_args[0]
             assert called_url == ntfy_url
+
+
+# ── _build_activity_context ───────────────────────────────────────────────────
+
+class TestBuildActivityContext:
+    def test_empty_returns_empty_string(self):
+        result = watcher._build_activity_context([], [], [], [], [])
+        assert result == ""
+
+    def test_includes_tasks(self):
+        tasks = [{"title": "Go for a run", "status": "todo", "description": "5k route"}]
+        result = watcher._build_activity_context(tasks, [], [], [], [])
+        assert "Go for a run" in result
+        assert "5k route" in result
+
+    def test_includes_habits(self):
+        habits = [{"name": "Morning meditation", "description": "10 minutes"}]
+        result = watcher._build_activity_context([], habits, [], [], [])
+        assert "Morning meditation" in result
+
+    def test_includes_journal(self):
+        journal = [{"content": "Today I went hiking", "created_at": "2026-01-01"}]
+        result = watcher._build_activity_context([], [], journal, [], [])
+        assert "Today I went hiking" in result
+
+    def test_includes_goals(self):
+        goals = [{"title": "Run a marathon", "description": "by end of year"}]
+        result = watcher._build_activity_context([], [], [], goals, [])
+        assert "Run a marathon" in result
+
+    def test_includes_notes(self):
+        notes = [{"title": "Recipe ideas", "content": "pasta bolognese", "updated_at": "2026-01-01"}]
+        result = watcher._build_activity_context([], [], [], [], notes)
+        assert "Recipe ideas" in result
+
+
+# ── _infer_facts_from_activity ────────────────────────────────────────────────
+
+def _mock_bedrock_text(text: str):
+    return {
+        "output": {"message": {"content": [{"text": text}]}},
+        "usage": {"inputTokens": 10, "outputTokens": 10},
+    }
+
+
+class TestInferFactsFromActivity:
+    def test_returns_parsed_facts(self):
+        with patch.object(watcher._bedrock, "converse", return_value=_mock_bedrock_text("interests: hiking\ncity: Toronto")):
+            facts = watcher._infer_facts_from_activity({}, "some activity")
+        assert facts == {"interests": "hiking", "city": "Toronto"}
+
+    def test_none_response_returns_empty(self):
+        with patch.object(watcher._bedrock, "converse", return_value=_mock_bedrock_text("NONE")):
+            facts = watcher._infer_facts_from_activity({}, "create a task")
+        assert facts == {}
+
+    def test_bedrock_failure_returns_empty(self):
+        with patch.object(watcher._bedrock, "converse", side_effect=Exception("timeout")):
+            facts = watcher._infer_facts_from_activity({}, "some activity")
+        assert facts == {}
+
+    def test_skips_internal_keys(self):
+        with patch.object(watcher._bedrock, "converse", return_value=_mock_bedrock_text("__secret__: bad\noccupation: developer")):
+            facts = watcher._infer_facts_from_activity({}, "some activity")
+        assert "__secret__" not in facts
+        assert facts.get("occupation") == "developer"
+
+    def test_malformed_lines_skipped(self):
+        with patch.object(watcher._bedrock, "converse", return_value=_mock_bedrock_text("no colon here\noccupation: engineer")):
+            facts = watcher._infer_facts_from_activity({}, "some activity")
+        assert facts.get("occupation") == "engineer"
+        assert len(facts) == 1
+
+
+# ── _run_profile_inference ────────────────────────────────────────────────────
+
+class TestRunProfileInference:
+    def test_skips_user_with_inference_disabled(self, inference_tbls):
+        inference_tbls.Table(SETTINGS_TABLE).put_item(Item={
+            "user_id": USER, "profile_inference_hours": 0,
+        })
+        with patch.object(watcher._bedrock, "converse") as mock_converse:
+            watcher._run_profile_inference(inference_tbls.Table(SETTINGS_TABLE), datetime.now(timezone.utc))
+            mock_converse.assert_not_called()
+
+    def test_skips_user_not_due(self, inference_tbls):
+        recent_ts = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+        inference_tbls.Table(SETTINGS_TABLE).put_item(Item={
+            "user_id": USER, "profile_inference_hours": 24,
+        })
+        inference_tbls.Table(MEMORY_TABLE).put_item(Item={
+            "user_id": USER, "memory_key": "__profile_inferred_at__", "value": recent_ts,
+        })
+        with patch.object(watcher._bedrock, "converse") as mock_converse:
+            watcher._run_profile_inference(inference_tbls.Table(SETTINGS_TABLE), datetime.now(timezone.utc))
+            mock_converse.assert_not_called()
+
+    def test_runs_when_due(self, inference_tbls):
+        old_ts = (datetime.now(timezone.utc) - timedelta(hours=25)).isoformat()
+        inference_tbls.Table(SETTINGS_TABLE).put_item(Item={
+            "user_id": USER, "profile_inference_hours": 24,
+        })
+        inference_tbls.Table(MEMORY_TABLE).put_item(Item={
+            "user_id": USER, "memory_key": "__profile_inferred_at__", "value": old_ts,
+        })
+        inference_tbls.Table(TASKS_TABLE).put_item(Item={
+            "user_id": USER, "task_id": "t1", "title": "Train for marathon", "status": "todo",
+        })
+        with patch.object(watcher._bedrock, "converse", return_value=_mock_bedrock_text("fitness_goal: marathon training")):
+            watcher._run_profile_inference(inference_tbls.Table(SETTINGS_TABLE), datetime.now(timezone.utc))
+        memory = inference_tbls.Table(MEMORY_TABLE)
+        item = memory.get_item(Key={"user_id": USER, "memory_key": "fitness_goal"}).get("Item")
+        assert item is not None
+        assert item["value"] == "marathon training"
+
+    def test_runs_first_time_no_timestamp(self, inference_tbls):
+        inference_tbls.Table(SETTINGS_TABLE).put_item(Item={
+            "user_id": USER, "profile_inference_hours": 24,
+        })
+        inference_tbls.Table(HABITS_TABLE).put_item(Item={
+            "user_id": USER, "habit_id": "h1", "name": "Daily yoga",
+        })
+        with patch.object(watcher._bedrock, "converse", return_value=_mock_bedrock_text("workout_style: yoga")):
+            watcher._run_profile_inference(inference_tbls.Table(SETTINGS_TABLE), datetime.now(timezone.utc))
+        memory = inference_tbls.Table(MEMORY_TABLE)
+        item = memory.get_item(Key={"user_id": USER, "memory_key": "workout_style"}).get("Item")
+        assert item is not None
+        # timestamp was also written
+        ts_item = memory.get_item(Key={"user_id": USER, "memory_key": "__profile_inferred_at__"}).get("Item")
+        assert ts_item is not None
+
+    def test_updates_timestamp_even_with_no_activity(self, inference_tbls):
+        inference_tbls.Table(SETTINGS_TABLE).put_item(Item={
+            "user_id": USER, "profile_inference_hours": 24,
+        })
+        with patch.object(watcher._bedrock, "converse") as mock_converse:
+            watcher._run_profile_inference(inference_tbls.Table(SETTINGS_TABLE), datetime.now(timezone.utc))
+            mock_converse.assert_not_called()  # no activity data, skips Bedrock
+        # timestamp still written
+        memory = inference_tbls.Table(MEMORY_TABLE)
+        ts_item = memory.get_item(Key={"user_id": USER, "memory_key": "__profile_inferred_at__"}).get("Item")
+        assert ts_item is not None

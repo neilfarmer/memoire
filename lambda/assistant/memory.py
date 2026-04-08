@@ -94,6 +94,12 @@ def save_master_context(user_id: str, context: str) -> None:
     save_memory(user_id, MASTER_CONTEXT_KEY, context)
 
 
+def delete_memory(user_id: str, key: str) -> None:
+    """Delete a single memory fact by key."""
+    table = db.get_table(MEMORY_TABLE)
+    db.delete_item(table, user_id, "memory_key", key)
+
+
 USAGE_KEY_PREFIX = "__usage__"
 
 

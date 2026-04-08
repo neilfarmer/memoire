@@ -356,6 +356,23 @@
     .logo { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; letter-spacing: -0.2px; }
     .logo img { width: 28px; height: 28px; display: block; filter: drop-shadow(0 0 8px rgba(217,119,6,.5)); }
 
+    .avatar-btn {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: opacity .15s;
+    }
+    .avatar-btn:hover { opacity: .85; }
+
     /* ── Sidebar toggle ── */
     .sb-toggle {
       background: none;
@@ -1339,6 +1356,278 @@
       cursor: pointer;
     }
     .home-widget-link:hover { text-decoration: underline; }
+
+    /* ── Profile page ── */
+    #page-profile { padding: 0; max-width: none; overflow: hidden; }
+
+    #page-profile {
+      overflow-y: auto;
+    }
+
+    .profile-layout {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 36px 32px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    /* Header: avatar + identity info side by side */
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .profile-avatar-large {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      font-size: 24px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .profile-identity {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .profile-display-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .profile-email {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .profile-occupation-badge {
+      display: inline-block;
+      font-size: 11px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px 10px;
+      width: fit-content;
+    }
+
+    .profile-main {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .profile-section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .profile-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+    }
+
+    .ai-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px 8px;
+    }
+    .ai-pulse {
+      width: 6px; height: 6px; flex-shrink: 0;
+      border-radius: 50%;
+      background: var(--primary);
+      animation: ai-pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes ai-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .3; transform: scale(.7); }
+    }
+
+    .profile-refresh-icon-btn {
+      width: 26px; height: 26px;
+      border-radius: 6px;
+      border: none;
+      background: none;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: auto;
+      transition: color .15s, background .15s;
+      flex-shrink: 0;
+    }
+    .profile-refresh-icon-btn:hover { color: var(--text); background: var(--hover); }
+
+    /* Bio */
+    .profile-bio-display {
+      cursor: pointer;
+      padding: 16px 18px;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      transition: border-color .15s, background .15s;
+      position: relative;
+    }
+    .profile-bio-display:hover { border-color: var(--border); background: var(--hover); }
+
+    .profile-bio-text {
+      font-size: 15px;
+      line-height: 1.75;
+      color: var(--text);
+    }
+
+    .profile-bio-empty {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .profile-bio-hint {
+      position: absolute;
+      bottom: 9px;
+      right: 14px;
+      font-size: 11px;
+      color: var(--muted);
+      opacity: 0;
+      transition: opacity .15s;
+    }
+    .profile-bio-display:hover .profile-bio-hint { opacity: 1; }
+
+    #profile-context {
+      width: 100%;
+      min-height: 120px;
+      resize: vertical;
+      font-family: inherit;
+      font-size: 15px;
+      line-height: 1.6;
+      padding: 14px 18px;
+      border: 1px solid var(--primary);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+    }
+
+    .profile-bio-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    /* Facts grid */
+    .profile-facts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 10px;
+    }
+
+    .profile-fact {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px 12px 14px;
+      position: relative;
+      min-height: 66px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .profile-fact:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow);
+    }
+
+    .profile-fact-actions {
+      display: flex;
+      gap: 3px;
+      position: absolute;
+      top: 6px; right: 6px;
+      opacity: 0;
+      transition: opacity .15s;
+    }
+    .profile-fact:hover .profile-fact-actions { opacity: 1; }
+
+    .profile-fact-action-btn {
+      width: 22px; height: 22px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface);
+      color: var(--muted);
+      transition: color .15s, background .15s;
+    }
+    .profile-fact-action-btn:hover { color: var(--text); background: var(--hover); }
+    .profile-fact-action-btn.danger:hover { color: var(--danger); }
+
+    .profile-fact-key {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .profile-fact-value {
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--text);
+      font-weight: 500;
+      word-break: break-word;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .fact-tag {
+      display: inline-block;
+      background: var(--hover);
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .profile-fact-value input {
+      width: 100%;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 0;
+      border: none;
+      border-bottom: 1px solid var(--primary);
+      background: transparent;
+      color: var(--text);
+      outline: none;
+      font-family: inherit;
+    }
+
+    .profile-facts-empty-msg {
+      font-size: 13px;
+      color: var(--muted);
+      font-style: italic;
+    }
 
     /* ── Admin page ── */
     .admin-grid {
@@ -3513,6 +3802,7 @@
       Search
       <span class="search-btn-hint">/</span>
     </button>
+    <button class="avatar-btn" id="avatar-btn" title="Profile" onclick="pages.show('profile')">?</button>
     <button class="btn btn-ghost btn-sm" id="logout-btn" title="Sign out" style="color:var(--muted);gap:5px;">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       Sign out
@@ -3908,6 +4198,18 @@
           <button class="btn btn-secondary" id="pal-name-save-btn">Save</button>
         </div>
       </div>
+      <div class="settings-row">
+        <div style="flex:1;">
+          <div class="settings-label">Profile inference</div>
+          <div class="settings-desc">How often the AI scans your tasks, habits, journal, and notes to automatically update your profile</div>
+        </div>
+        <select id="profile-inference-select" style="min-width:140px;">
+          <option value="12">Every 12 hours</option>
+          <option value="24" selected>Every 24 hours</option>
+          <option value="48">Every 48 hours</option>
+          <option value="0">Disabled</option>
+        </select>
+      </div>
     </div>
     <div class="settings-section">
       <div class="settings-section-title">Appearance</div>
@@ -4064,6 +4366,62 @@
       <div class="diagrams-canvas-panel">
         <div id="diagrams-placeholder" class="diagrams-placeholder">Select a diagram or create a new one.</div>
         <div id="diagrams-canvas"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Profile page -->
+  <main id="page-profile" class="hidden">
+    <div class="profile-layout">
+
+      <!-- Header: avatar + identity -->
+      <div class="profile-header">
+        <div class="profile-avatar-large" id="profile-avatar-large">?</div>
+        <div class="profile-identity">
+          <div class="profile-display-name" id="profile-display-name">—</div>
+          <div class="profile-email" id="profile-email"></div>
+          <div class="profile-occupation-badge hidden" id="profile-occupation-badge"></div>
+        </div>
+      </div>
+
+      <!-- Bio + facts -->
+      <div class="profile-main">
+        <div id="profile-loader" class="page-loader hidden"><div class="spinner"></div></div>
+
+        <!-- Bio section -->
+        <div>
+          <div class="profile-section-header">
+            <span class="profile-section-title">About me</span>
+            <span class="ai-badge"><span class="ai-pulse"></span>AI maintained</span>
+          </div>
+          <!-- Read mode -->
+          <div id="profile-bio-display" class="profile-bio-display" onclick="profilePage.enterEditMode()">
+            <p id="profile-bio-text" class="profile-bio-empty">No summary yet — start chatting and the AI will build one, or click to write your own.</p>
+            <span class="profile-bio-hint">Click to edit</span>
+          </div>
+          <!-- Edit mode -->
+          <div id="profile-bio-edit" class="hidden">
+            <textarea id="profile-context" placeholder="Write a few sentences about yourself — your role, goals, preferences, routines. The AI will also keep this updated from your conversations."></textarea>
+            <div class="profile-bio-actions">
+              <button class="btn btn-primary btn-sm" id="profile-context-save-btn">Save</button>
+              <button class="btn btn-secondary btn-sm" id="profile-context-cancel-btn">Cancel</button>
+              <span id="profile-context-msg" class="hidden" style="font-size:13px;"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Facts section -->
+        <div>
+          <div class="profile-section-header">
+            <span class="profile-section-title">What the AI knows</span>
+            <button class="profile-refresh-icon-btn" id="profile-refresh-btn" title="Refresh">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </button>
+          </div>
+          <div id="profile-facts-empty" class="hidden profile-facts-empty-msg">No facts remembered yet. Chat with the assistant and it will start building a picture of you.</div>
+          <div id="profile-facts-list" class="profile-facts-grid"></div>
+        </div>
+
       </div>
     </div>
   </main>
@@ -4459,6 +4817,11 @@
     createDiagram(body)         { return api.call("POST",   "/diagrams", body); },
     updateDiagram(id, body)     { return api.call("PUT",    `/diagrams/${id}`, body); },
     deleteDiagram(id)           { return api.call("DELETE", `/diagrams/${id}`); },
+
+    getAssistantMemory()              { return api.call("GET",    "/assistant/memory"); },
+    updateAssistantMemory(body)       { return api.call("PUT",    "/assistant/memory", body); },
+    updateAssistantMemoryFact(k, v)   { return api.call("PUT",    `/assistant/memory/facts/${encodeURIComponent(k)}`, { value: v }); },
+    deleteAssistantMemoryFact(key)    { return api.call("DELETE", `/assistant/memory/${encodeURIComponent(key)}`); },
 
     async downloadExport() {
       const resp = await fetch(`${cfg.apiUrl.replace(/\/$/, "")}/export`, {
@@ -5051,10 +5414,12 @@
           $("pal-name-input").value = settings.pal_name || "";
           applyPalName(settings.pal_name || "");
           $("ntfy-url").value = settings.ntfy_url || "";
+          $("profile-inference-select").value = String(settings.profile_inference_hours ?? 24);
           const secs = settings.autosave_seconds ?? 300;
           $("autosave-select").value = String(secs);
           autoSave.start(secs);
           $("timezone-select").value = settings.timezone || "";
+          refreshAvatarInitials();
         }
       } catch (e) {
         console.error("Failed to load settings:", e);
@@ -5201,6 +5566,7 @@
     try {
       const updated = await api.updateSettings({ display_name: name });
       state.settings = { ...state.settings, ...updated };
+      refreshAvatarInitials();
       $("display-name-save-btn").textContent = "Saved";
       setTimeout(() => { $("display-name-save-btn").textContent = "Save"; }, 1500);
     } catch (e) {
@@ -5209,6 +5575,12 @@
       $("display-name-save-btn").disabled = false;
     }
   });
+
+  function refreshAvatarInitials() {
+    const name = state.settings?.display_name || auth.getEmail() || "?";
+    const initials = name.trim().split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+    $("avatar-btn").textContent = initials || "?";
+  }
 
   function applyPalName(name) {
     const label = name.trim() || "AI Pal";
@@ -5336,6 +5708,15 @@
       $("pat-copy-btn").textContent = "Copied!";
       setTimeout(() => { $("pat-copy-btn").textContent = "Copy"; }, 2000);
     });
+  });
+
+  $("profile-inference-select").addEventListener("change", async () => {
+    const hours = parseInt($("profile-inference-select").value, 10);
+    try {
+      await api.updateSettings({ profile_inference_hours: hours });
+    } catch (e) {
+      console.error("Failed to save profile inference setting:", e);
+    }
   });
 
   $("autosave-select").addEventListener("change", async () => {
@@ -8338,6 +8719,196 @@
     loadPatList();
   }
 
+  // ── Profile page ─────────────────────────────────────────────────────────────
+
+  function renderFactValue(value) {
+    const items = value.split(",").map(v => v.trim().replace(/_/g, " ")).filter(Boolean);
+    return items.map(item => `<span class="fact-tag">${escHtml(item)}</span>`).join("");
+  }
+
+  const profilePage = {
+    loaded: false,
+
+    async load() {
+      $("profile-loader").classList.remove("hidden");
+      // Populate identity panel from settings/auth
+      const name     = state.settings?.display_name || auth.getEmail()?.split("@")[0] || "?";
+      const initials = name.trim().split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+      $("profile-avatar-large").textContent = initials;
+      const displayName = state.settings?.display_name || "";
+      const email       = auth.getEmail() || "";
+      $("profile-display-name").textContent = displayName || email || "—";
+      // Only show email sub-line if there's a separate display name set
+      $("profile-email").textContent = displayName ? email : "";
+
+      const saveBtn = $("profile-context-save-btn");
+      saveBtn.disabled = true;
+      $("profile-context-msg").classList.add("hidden");
+
+      try {
+        const data = await api.getAssistantMemory();
+        if (!data) return;
+
+        // Bio
+        const ctx = (data.master_context || "").trim();
+        $("profile-context").value = ctx;
+        const bioText = $("profile-bio-text");
+        if (ctx) {
+          bioText.className = "profile-bio-text";
+          bioText.textContent = ctx;
+        } else {
+          bioText.className = "profile-bio-empty";
+          bioText.textContent = "No summary yet — start chatting and the AI will build one, or click to write your own.";
+        }
+
+        // Occupation badge
+        const occ = data.facts?.occupation || "";
+        const occBadge = $("profile-occupation-badge");
+        if (occ) { occBadge.textContent = occ.replace(/_/g, " "); occBadge.classList.remove("hidden"); }
+        else      { occBadge.classList.add("hidden"); }
+
+        profilePage.renderFacts(data.facts || {});
+        profilePage.loaded = true;
+        saveBtn.disabled = false;
+      } catch (e) {
+        console.error("Failed to load profile:", e);
+        const msg = $("profile-context-msg");
+        msg.textContent = "Failed to load profile data. Refresh to try again.";
+        msg.style.color = "var(--danger)";
+        msg.classList.remove("hidden");
+      } finally {
+        $("profile-loader").classList.add("hidden");
+      }
+    },
+
+    enterEditMode() {
+      $("profile-bio-display").classList.add("hidden");
+      $("profile-bio-edit").classList.remove("hidden");
+      $("profile-context").focus();
+    },
+
+    exitEditMode() {
+      $("profile-bio-display").classList.remove("hidden");
+      $("profile-bio-edit").classList.add("hidden");
+    },
+
+    renderFacts(facts) {
+      const keys = Object.keys(facts);
+      const empty = $("profile-facts-empty");
+      const list  = $("profile-facts-list");
+      if (keys.length === 0) {
+        empty.classList.remove("hidden");
+        list.innerHTML = "";
+        return;
+      }
+      empty.classList.add("hidden");
+      const pencilSvg = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+      const trashSvg  = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+      list.innerHTML = keys.map(k => `
+        <div class="profile-fact" data-key="${escHtml(k)}">
+          <div class="profile-fact-actions">
+            <button class="profile-fact-action-btn" title="Edit" onclick="profilePage.editFact(this.closest('.profile-fact').dataset.key)">${pencilSvg}</button>
+            <button class="profile-fact-action-btn danger" title="Delete" onclick="profilePage.deleteFact(this.closest('.profile-fact').dataset.key)">${trashSvg}</button>
+          </div>
+          <div class="profile-fact-key">${escHtml(k.replace(/_/g, " "))}</div>
+          <div class="profile-fact-value" id="pfv-${escHtml(k)}">${renderFactValue(facts[k])}</div>
+        </div>
+      `).join("");
+    },
+
+    async saveContext() {
+      const context = $("profile-context").value.trim();
+      const msg     = $("profile-context-msg");
+      try {
+        await api.updateAssistantMemory({ master_context: context });
+        // Update display
+        const bioText = $("profile-bio-text");
+        if (context) {
+          bioText.className = "profile-bio-text";
+          bioText.textContent = context;
+        } else {
+          bioText.className = "profile-bio-empty";
+          bioText.textContent = "No summary yet — start chatting and the AI will build one, or click to write your own.";
+        }
+        profilePage.exitEditMode();
+        msg.textContent = "Saved.";
+        msg.style.color = "var(--primary)";
+      } catch {
+        msg.textContent = "Failed to save.";
+        msg.style.color = "var(--danger, #e53e3e)";
+      }
+      msg.classList.remove("hidden");
+      setTimeout(() => msg.classList.add("hidden"), 3000);
+    },
+
+    editFact(key) {
+      const valueEl = $(`pfv-${key}`);
+      if (!valueEl) return;
+      const currentValue = valueEl.textContent;
+      const originalHTML = valueEl.innerHTML;
+      valueEl.innerHTML = `<input type="text" value="${escHtml(currentValue)}" />`;
+      const input = valueEl.querySelector("input");
+      input.focus();
+      input.select();
+
+      let finalized = false;
+      let blurTimer  = null;
+
+      const commit = async () => {
+        if (finalized) return;
+        finalized = true;
+        clearTimeout(blurTimer);
+        const newVal = input.value.trim();
+        if (!newVal || newVal === currentValue) { valueEl.innerHTML = originalHTML; return; }
+        valueEl.innerHTML = originalHTML;
+        try {
+          await api.updateAssistantMemoryFact(key, newVal);
+          valueEl.innerHTML = renderFactValue(newVal);
+          if (key === "occupation") {
+            const occBadge = $("profile-occupation-badge");
+            occBadge.textContent = newVal.replace(/_/g, " ");
+            occBadge.classList.remove("hidden");
+          }
+        } catch { valueEl.innerHTML = originalHTML; }
+      };
+
+      const cancel = () => {
+        if (finalized) return;
+        finalized = true;
+        clearTimeout(blurTimer);
+        valueEl.innerHTML = originalHTML;
+      };
+
+      input.addEventListener("keydown", e => {
+        if (e.key === "Enter")  { e.preventDefault(); commit(); }
+        if (e.key === "Escape") { e.preventDefault(); cancel(); }
+      });
+      input.addEventListener("blur", () => { blurTimer = setTimeout(commit, 150); });
+    },
+
+    async deleteFact(key) {
+      try {
+        await api.deleteAssistantMemoryFact(key);
+        const row = document.querySelector(`.profile-fact[data-key="${CSS.escape(key)}"]`);
+        if (row) row.remove();
+        const remaining = $("profile-facts-list").querySelectorAll(".profile-fact");
+        if (remaining.length === 0) $("profile-facts-empty").classList.remove("hidden");
+        if (key === "occupation") $("profile-occupation-badge").classList.add("hidden");
+      } catch (e) {
+        console.error("Failed to delete fact:", e);
+        const msg = $("profile-context-msg");
+        msg.textContent = "Failed to delete fact. Please try again.";
+        msg.style.color = "var(--danger)";
+        msg.classList.remove("hidden");
+        setTimeout(() => msg.classList.add("hidden"), 3000);
+      }
+    },
+  };
+
+  document.getElementById("profile-context-save-btn").addEventListener("click", () => profilePage.saveContext());
+  document.getElementById("profile-context-cancel-btn").addEventListener("click", () => profilePage.exitEditMode());
+  document.getElementById("profile-refresh-btn").addEventListener("click", () => profilePage.load());
+
   // ── Global search ────────────────────────────────────────────────────────────
 
   const globalSearch = {
@@ -8820,7 +9391,7 @@
     },
 
     expand(name) {
-      const sections = ["home", "tasks", "notes", "habits", "goals", "journal", "feeds", "diagrams", "settings", "admin"];
+      const sections = ["home", "tasks", "notes", "habits", "goals", "journal", "feeds", "diagrams", "settings", "admin", "profile"];
       sections.forEach(s => {
         const sect = $(`sb-${s}`);
         const body = $(`sb-${s}-body`);
@@ -8843,7 +9414,7 @@
 
   const pages = {
     current: "home",
-    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "diagrams", "settings", "admin"],
+    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "diagrams", "settings", "admin", "profile"],
 
     show(name) {
       pages.current = name;
@@ -8884,6 +9455,7 @@
       if (name === "feeds")     feeds.refresh();
       if (name === "favorites") { if (!favs.loaded) favs.load(); else favs.render(); }
       if (name === "diagrams")  { if (!diagrams.loaded) diagrams.load(); else diagrams.render(); }
+      if (name === "profile")   { profilePage.load(); }
       // Hide the AI pal FAB on the diagrams page — Excalidraw's help button occupies the same corner
       const palBtn = document.getElementById("pal-btn");
       if (palBtn) palBtn.classList.toggle("hidden", name === "diagrams");

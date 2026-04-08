@@ -957,5 +957,18 @@ def _lookup_nutrition(user_id: str, inputs: dict) -> str:
 
 
 def _remember_fact(user_id: str, inputs: dict) -> str:
-    mem.save_memory(user_id, inputs["key"], inputs["value"])
-    return f"Remembered: {inputs['key']} = {inputs['value']}"
+    key      = inputs["key"]
+    new_val  = inputs["value"]
+    existing_facts, _ = mem.load_memory(user_id)
+    existing = existing_facts.get(key, "")
+    if existing:
+        existing_items = [v.strip() for v in existing.split(",") if v.strip()]
+        new_items      = [v.strip() for v in new_val.split(",")  if v.strip()]
+        existing_lower = {v.lower() for v in existing_items}
+        for item in new_items:
+            if item.lower() not in existing_lower:
+                existing_items.append(item)
+                existing_lower.add(item.lower())
+        new_val = ", ".join(existing_items)
+    mem.save_memory(user_id, key, new_val)
+    return f"Remembered: {key} = {new_val}"
