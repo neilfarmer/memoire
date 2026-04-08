@@ -9,6 +9,7 @@ import pytest
 from moto import mock_aws
 
 from conftest import USER, load_lambda, make_table
+from freezegun import freeze_time
 
 # ── env vars must be set before module load ───────────────────────────────────
 os.environ["CONVERSATIONS_TABLE"] = "test-conversations"
@@ -943,11 +944,12 @@ class TestMemoryProfile:
         assert profile["occupation"] == "Designer"
         assert profile["summary"]    == "Builds things."
 
+    @freeze_time("2026-04-08T12:00:00+00:00")
     def test_save_and_load_ai_analysis(self, tbls):
         memory.save_ai_analysis(USER, "Neil is focused and goal-oriented.")
         result = memory.load_ai_analysis(USER)
         assert result["analysis"]     == "Neil is focused and goal-oriented."
-        assert result["generated_at"] != ""
+        assert result["generated_at"] == "2026-04-08T12:00:00+00:00"
 
     def test_load_ai_analysis_empty(self, tbls):
         result = memory.load_ai_analysis(USER)
@@ -996,6 +998,7 @@ class TestProfileRoutes:
         assert body["profile"]["name"]       == "Neil"
         assert body["ai_analysis"]["analysis"] == "Neil is focused."
 
+    @freeze_time("2026-04-08T12:00:00+00:00")
     def test_generate_analysis_persists_and_returns(self, tbls):
         memory.save_profile(USER, name="Neil", occupation="Engineer", summary="Builds things.")
         memory.save_memory(USER, "morning_routine", "coffee and code")
@@ -1005,11 +1008,12 @@ class TestProfileRoutes:
         with patch.object(analysis._bedrock, "converse", return_value=fake_resp):
             result = analysis.generate_analysis(USER)
         assert "Neil is a focused engineer" in result["analysis"]
-        assert result["generated_at"] != ""
+        assert result["generated_at"] == "2026-04-08T12:00:00+00:00"
         # Verify it was persisted
         stored = memory.load_ai_analysis(USER)
         assert stored["analysis"] == result["analysis"]
 
+    @freeze_time("2026-04-08T12:00:00+00:00")
     def test_post_profile_analyze(self, tbls):
         fake_resp = {
             "output": {"message": {"content": [{"text": "Neil is a driven engineer."}]}},
@@ -1020,7 +1024,7 @@ class TestProfileRoutes:
         assert resp["statusCode"] == 200
         body = json.loads(resp["body"])
         assert "Neil is a driven engineer." in body["analysis"]
-        assert body["generated_at"] != ""
+        assert body["generated_at"] == "2026-04-08T12:00:00+00:00"
 
 
 # ── token_auth: JWKS fetch and RSA paths ─────────────────────────────────────
