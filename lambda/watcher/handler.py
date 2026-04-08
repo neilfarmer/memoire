@@ -172,7 +172,8 @@ def _run_profile_inference(settings_table, now: datetime) -> None:
             continue
 
         existing_facts = _load_user_facts(memory_table, user_id)
-        new_facts = _infer_facts_from_activity(existing_facts, context)
+        profile        = _load_user_profile(memory_table, user_id)
+        new_facts      = _infer_facts_from_activity(existing_facts, context, profile)
 
         for key, value in new_facts.items():
             merged = _merge_fact(existing_facts.get(key, ""), value)
@@ -208,6 +209,22 @@ def _load_user_facts(memory_table, user_id: str) -> dict:
         if key and not key.startswith("__"):
             facts[key] = item.get("value", "")
     return facts
+
+
+def _load_user_profile(memory_table, user_id: str) -> dict:
+    """Return the user's self-reported profile fields (name, occupation, summary)."""
+    key_map = {
+        "__profile_name__":       "name",
+        "__profile_occupation__": "occupation",
+        "__profile_summary__":    "summary",
+    }
+    profile: dict = {}
+    items = _query_user(memory_table, user_id)
+    for item in items:
+        field = key_map.get(item.get("memory_key", ""))
+        if field:
+            profile[field] = item.get("value", "")
+    return profile
 
 
 def _get_raw_memory(memory_table, user_id: str, key: str) -> str:
@@ -269,12 +286,22 @@ def _build_activity_context(tasks, habits, journal, goals, notes) -> str:
     return "\n".join(lines)
 
 
-def _infer_facts_from_activity(existing_facts: dict, activity_context: str) -> dict:
+def _infer_facts_from_activity(existing_facts: dict, activity_context: str, profile: dict | None = None) -> dict:
     """Call Bedrock to extract/update personal facts from the user's activity data."""
     existing_str = "\n".join(f"{k}: {v}" for k, v in existing_facts.items()) or "None"
 
+    profile_section = ""
+    if profile:
+        parts = []
+        if profile.get("name"):       parts.append(f"Name: {profile['name']}")
+        if profile.get("occupation"): parts.append(f"Occupation: {profile['occupation']}")
+        if profile.get("summary"):    parts.append(f"About: {profile['summary']}")
+        if parts:
+            profile_section = "Self-reported profile (treat as ground truth):\n" + "\n".join(parts) + "\n\n"
+
     prompt = (
         "You are analyzing a user's personal productivity data to infer stable facts about them.\n\n"
+        f"{profile_section}"
         "Existing known facts:\n"
         f"{existing_str}\n\n"
         "User's recent activity:\n"
