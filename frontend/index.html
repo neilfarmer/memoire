@@ -8719,7 +8719,6 @@
 
   function renderFactValue(value) {
     const items = value.split(",").map(v => v.trim().replace(/_/g, " ")).filter(Boolean);
-    if (items.length <= 1) return escHtml(items[0] || value);
     return items.map(item => `<span class="fact-tag">${escHtml(item)}</span>`).join("");
   }
 
