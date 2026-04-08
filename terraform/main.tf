@@ -172,8 +172,8 @@ data "archive_file" "lambda_diagrams" {
   output_path = "${path.module}/../build/diagrams.zip"
 }
 
-data "archive_file" "lambda_budget" {
+data "archive_file" "lambda_finances" {
   type        = "zip"
-  source_dir  = "${path.module}/../lambda/budget"
-  output_path = "${path.module}/../build/budget.zip"
+  source_dir  = "${path.module}/../lambda/finances"
+  output_path = "${path.module}/../build/finances.zip"
 }

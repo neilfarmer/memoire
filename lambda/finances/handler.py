@@ -1,4 +1,4 @@
-"""Budget Lambda entry point."""
+"""Finances Lambda entry point."""
 
 import json
 import logging

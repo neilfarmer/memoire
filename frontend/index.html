@@ -1049,20 +1049,20 @@
       text-align: right;
     }
 
-    /* ── Budget ──────────────────────────────────────────────────────────── */
-    .budget-summary {
+    /* ── Finances ────────────────────────────────────────────────────────── */
+    .fin-summary {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 12px;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
     }
-    .budget-summary-card {
+    .fin-summary-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 16px 20px;
     }
-    .budget-summary-label {
+    .fin-summary-label {
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
@@ -1070,130 +1070,99 @@
       color: var(--muted);
       margin-bottom: 6px;
     }
-    .budget-summary-value {
-      font-size: 22px;
+    .fin-summary-value {
+      font-size: 20px;
       font-weight: 700;
       color: var(--text);
     }
-    .budget-summary-value.income  { color: #16a34a; }
-    .budget-summary-value.expense { color: #dc2626; }
-    .budget-summary-value.net-pos { color: #16a34a; }
-    .budget-summary-value.net-neg { color: #dc2626; }
-    html[data-theme="dark"] .budget-summary-value.income  { color: #86efac; }
-    html[data-theme="dark"] .budget-summary-value.expense { color: #fca5a5; }
-    html[data-theme="dark"] .budget-summary-value.net-pos { color: #86efac; }
-    html[data-theme="dark"] .budget-summary-value.net-neg { color: #fca5a5; }
-    .budget-section-title {
+    .fin-summary-value.pos { color: #16a34a; }
+    .fin-summary-value.neg { color: #dc2626; }
+    html[data-theme="dark"] .fin-summary-value.pos { color: #86efac; }
+    html[data-theme="dark"] .fin-summary-value.neg { color: #fca5a5; }
+    .fin-section-title {
       font-size: 12px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: .6px;
       color: var(--muted);
-      margin: 20px 0 10px;
-    }
-    .budget-category-row {
+      margin: 24px 0 10px;
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
+      justify-content: space-between;
     }
-    .budget-category-row:last-child { border-bottom: none; }
-    .budget-category-name {
-      min-width: 140px;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text);
-      flex-shrink: 0;
-    }
-    .budget-bar-wrap {
-      flex: 1;
-      height: 8px;
-      background: var(--border);
-      border-radius: 99px;
-      overflow: hidden;
-    }
-    .budget-bar-fill {
-      height: 100%;
-      border-radius: 99px;
-      background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary) 65%, var(--accent)));
-      transition: width .3s;
-    }
-    .budget-bar-fill.over { background: #dc2626; }
-    html[data-theme="dark"] .budget-bar-fill.over { background: #fca5a5; }
-    .budget-category-amounts {
-      font-size: 12px;
-      color: var(--muted);
-      white-space: nowrap;
-      min-width: 100px;
-      text-align: right;
-    }
-    .budget-category-set-btn {
+    .fin-section-title button {
       font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 4px;
+      padding: 3px 10px;
+      border-radius: 5px;
       border: 1px solid var(--border);
       background: var(--surface);
       color: var(--muted);
       cursor: pointer;
-      white-space: nowrap;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 500;
     }
-    .budget-category-set-btn:hover { border-color: var(--primary); color: var(--primary); }
-    .budget-txn-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    .budget-txn-table th {
-      text-align: left;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      color: var(--muted);
-      padding: 0 8px 8px;
-      border-bottom: 1px solid var(--border);
-    }
-    .budget-txn-table td {
-      padding: 10px 8px;
-      border-bottom: 1px solid var(--border);
-      vertical-align: middle;
-    }
-    .budget-txn-table tr:last-child td { border-bottom: none; }
-    .budget-txn-table tr:hover td { background: var(--hover); cursor: pointer; }
-    .txn-amount-income      { color: #16a34a; font-weight: 600; }
-    .txn-amount-expense     { color: #dc2626; font-weight: 600; }
-    .txn-amount-debt_payment { color: #b45309; font-weight: 600; }
-    html[data-theme="dark"] .txn-amount-income      { color: #86efac; }
-    html[data-theme="dark"] .txn-amount-expense     { color: #fca5a5; }
-    html[data-theme="dark"] .txn-amount-debt_payment { color: #fde68a; }
-    .budget-month-nav {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-left: auto;
-    }
-    .budget-month-nav button {
-      background: none;
+    .fin-section-title button:hover { border-color: var(--primary); color: var(--primary); }
+    .fin-card {
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 4px 10px;
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 10px;
       cursor: pointer;
-      font-size: 14px;
-      color: var(--text);
-      line-height: 1;
+      transition: border-color .15s;
     }
-    .budget-month-nav button:hover { border-color: var(--primary); color: var(--primary); }
-    .budget-month-label {
+    .fin-card:hover { border-color: var(--primary); }
+    .fin-card-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+    .fin-card-name {
       font-size: 14px;
       font-weight: 600;
       color: var(--text);
-      min-width: 96px;
-      text-align: center;
     }
-    @media (max-width: 640px) {
-      .budget-summary { grid-template-columns: 1fr; }
-      .budget-category-name { min-width: 90px; }
+    .fin-card-amount {
+      font-size: 15px;
+      font-weight: 700;
+      white-space: nowrap;
+      color: var(--text);
+    }
+    .fin-card-meta {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .fin-card-meta span { white-space: nowrap; }
+    .fin-debt-bar-wrap {
+      margin-top: 10px;
+      height: 5px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .fin-debt-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, #dc2626, #f87171);
+    }
+    html[data-theme="dark"] .fin-debt-bar-fill { background: linear-gradient(90deg, #fca5a5, #dc2626); }
+    .fin-empty {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 12px 0;
+    }
+    @media (max-width: 700px) {
+      .fin-summary { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 400px) {
+      .fin-summary { grid-template-columns: 1fr; }
     }
 
     .habits-group-label {
@@ -4111,10 +4080,10 @@
             <span class="sb-hdr-label">Diagrams</span>
           </div>
         </div>
-        <div class="sb-section" id="sb-budget">
-          <div class="sb-section-hdr" onclick="sidebar.navigate('budget')">
+        <div class="sb-section" id="sb-finances">
+          <div class="sb-section-hdr" onclick="sidebar.navigate('finances')">
             <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
-            <span class="sb-hdr-label">Budget</span>
+            <span class="sb-hdr-label">Finances</span>
           </div>
         </div>
         <div class="sb-spacer"></div>
@@ -4591,40 +4560,49 @@
     </div>
   </main>
 
-  <!-- Budget page -->
-  <main id="page-budget" class="hidden">
+  <!-- Finances page -->
+  <main id="page-finances" class="hidden">
     <div class="toolbar">
-      <h2>Budget</h2>
-      <div class="budget-month-nav">
-        <button id="budget-prev-btn" title="Previous month">&#8249;</button>
-        <span class="budget-month-label" id="budget-month-label"></span>
-        <button id="budget-next-btn" title="Next month">&#8250;</button>
-      </div>
-      <button class="btn btn-primary" id="new-txn-btn">+ Transaction</button>
+      <h2>Finances</h2>
     </div>
-    <div id="budget-loader" class="page-loader hidden"><div class="spinner"></div></div>
-    <div id="budget-content">
-      <div class="budget-summary" id="budget-summary">
-        <div class="budget-summary-card">
-          <div class="budget-summary-label">Income</div>
-          <div class="budget-summary-value income" id="budget-income">$0.00</div>
-        </div>
-        <div class="budget-summary-card">
-          <div class="budget-summary-label">Expenses</div>
-          <div class="budget-summary-value expense" id="budget-expense">$0.00</div>
-        </div>
-        <div class="budget-summary-card">
-          <div class="budget-summary-label">Net</div>
-          <div class="budget-summary-value" id="budget-net">$0.00</div>
-        </div>
+    <div id="finances-loader" class="page-loader hidden"><div class="spinner"></div></div>
+
+    <div class="fin-summary">
+      <div class="fin-summary-card">
+        <div class="fin-summary-label">Monthly income</div>
+        <div class="fin-summary-value pos" id="fin-monthly-income">—</div>
       </div>
-
-      <div class="budget-section-title">Categories</div>
-      <div id="budget-categories"></div>
-
-      <div class="budget-section-title" style="margin-top:28px;">Transactions</div>
-      <div id="budget-transactions"></div>
+      <div class="fin-summary-card">
+        <div class="fin-summary-label">Monthly outflow</div>
+        <div class="fin-summary-value neg" id="fin-monthly-outflow">—</div>
+      </div>
+      <div class="fin-summary-card">
+        <div class="fin-summary-label">Net cash flow</div>
+        <div class="fin-summary-value" id="fin-net-cash-flow">—</div>
+      </div>
+      <div class="fin-summary-card">
+        <div class="fin-summary-label">Total debt</div>
+        <div class="fin-summary-value" id="fin-total-debt">—</div>
+      </div>
     </div>
+
+    <div class="fin-section-title">
+      <span>Debts</span>
+      <button onclick="debtModal.open()">+ Add debt</button>
+    </div>
+    <div id="fin-debts-list"></div>
+
+    <div class="fin-section-title">
+      <span>Income</span>
+      <button onclick="incomeModal.open()">+ Add income</button>
+    </div>
+    <div id="fin-income-list"></div>
+
+    <div class="fin-section-title">
+      <span>Fixed expenses</span>
+      <button onclick="expenseModal.open()">+ Add expense</button>
+    </div>
+    <div id="fin-expenses-list"></div>
   </main>
 
   <!-- Profile page -->
@@ -4873,86 +4851,156 @@
   </div>
 </div>
 
-<!-- ── Transaction modal ── -->
-<div id="txn-modal-overlay" class="modal-overlay hidden">
+<!-- ── Debt modal ── -->
+<div id="debt-modal-overlay" class="modal-overlay hidden">
   <div class="modal">
     <div class="modal-header">
-      <h3 id="txn-modal-title">New transaction</h3>
-      <button class="modal-close" id="txn-modal-close">&#x2715;</button>
+      <h3 id="debt-modal-title">Add debt</h3>
+      <button class="modal-close" id="debt-modal-close">&#x2715;</button>
     </div>
     <div class="modal-body">
-      <div id="txn-modal-error" class="error-msg hidden"></div>
+      <div id="debt-modal-error" class="error-msg hidden"></div>
       <div class="field-row">
         <div class="field">
-          <label for="txn-amount">Amount <span style="color:var(--danger)">*</span></label>
-          <input type="number" id="txn-amount" min="0.01" step="0.01" placeholder="0.00" />
+          <label for="debt-name">Name <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="debt-name" placeholder="e.g. Car loan, Visa, Mortgage" />
         </div>
         <div class="field">
-          <label for="txn-type">Type <span style="color:var(--danger)">*</span></label>
-          <select id="txn-type">
-            <option value="expense">Expense</option>
-            <option value="income">Income</option>
-            <option value="debt_payment">Debt payment</option>
+          <label for="debt-type">Type</label>
+          <select id="debt-type">
+            <option value="auto_loan">Auto loan</option>
+            <option value="mortgage">Mortgage</option>
+            <option value="credit_card">Credit card</option>
+            <option value="student_loan">Student loan</option>
+            <option value="personal_loan">Personal loan</option>
+            <option value="line_of_credit">Line of credit</option>
+            <option value="other">Other</option>
           </select>
         </div>
       </div>
       <div class="field-row">
         <div class="field">
-          <label for="txn-category">Category <span style="color:var(--danger)">*</span></label>
-          <input type="text" id="txn-category" placeholder="e.g. Rent, Groceries, Visa" list="txn-category-list" />
-          <datalist id="txn-category-list"></datalist>
+          <label for="debt-balance">Current balance <span style="color:var(--danger)">*</span></label>
+          <input type="number" id="debt-balance" min="0.01" step="0.01" placeholder="0.00" />
         </div>
         <div class="field">
-          <label for="txn-date">Date <span style="color:var(--danger)">*</span></label>
-          <input type="date" id="txn-date" />
+          <label for="debt-apr">Interest rate (APR %) <span style="color:var(--danger)">*</span></label>
+          <input type="number" id="debt-apr" min="0" step="0.01" placeholder="e.g. 7.99" />
         </div>
       </div>
       <div class="field">
-        <label for="txn-desc">Description</label>
-        <input type="text" id="txn-desc" placeholder="Optional note" />
+        <label for="debt-payment">Monthly payment <span style="color:var(--danger)">*</span></label>
+        <input type="number" id="debt-payment" min="0.01" step="0.01" placeholder="0.00" />
       </div>
       <div class="field">
-        <label for="txn-interest-rate">Interest rate % <span style="font-weight:400;color:var(--muted)">(optional, for debts)</span></label>
-        <input type="number" id="txn-interest-rate" min="0" step="0.01" placeholder="e.g. 19.99" />
+        <label for="debt-notes">Notes</label>
+        <input type="text" id="debt-notes" placeholder="Optional" />
       </div>
       <div class="modal-footer">
         <div class="modal-footer-left">
-          <button class="btn btn-danger hidden" id="txn-delete-btn">Delete</button>
+          <button class="btn btn-danger hidden" id="debt-delete-btn">Delete</button>
         </div>
-        <button class="btn btn-secondary" id="txn-cancel-btn">Cancel</button>
-        <button class="btn btn-primary" id="txn-save-btn">Save</button>
+        <button class="btn btn-secondary" id="debt-cancel-btn">Cancel</button>
+        <button class="btn btn-primary" id="debt-save-btn">Save</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ── Budget limit modal ── -->
-<div id="budget-limit-modal-overlay" class="modal-overlay hidden">
-  <div class="modal" style="max-width:360px;">
+<!-- ── Income modal ── -->
+<div id="income-modal-overlay" class="modal-overlay hidden">
+  <div class="modal" style="max-width:400px;">
     <div class="modal-header">
-      <h3 id="budget-limit-modal-title">Set budget limit</h3>
-      <button class="modal-close" id="budget-limit-modal-close">&#x2715;</button>
+      <h3 id="income-modal-title">Add income</h3>
+      <button class="modal-close" id="income-modal-close">&#x2715;</button>
     </div>
     <div class="modal-body">
-      <div id="budget-limit-modal-error" class="error-msg hidden"></div>
+      <div id="income-modal-error" class="error-msg hidden"></div>
       <div class="field">
-        <label for="budget-limit-category">Category</label>
-        <input type="text" id="budget-limit-category" readonly style="background:var(--hover);color:var(--muted);" />
+        <label for="income-name">Source <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="income-name" placeholder="e.g. Salary, Freelance, Rental" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="income-amount">Amount <span style="color:var(--danger)">*</span></label>
+          <input type="number" id="income-amount" min="0.01" step="0.01" placeholder="0.00" />
+        </div>
+        <div class="field">
+          <label for="income-frequency">Frequency</label>
+          <select id="income-frequency">
+            <option value="monthly">Monthly</option>
+            <option value="biweekly">Biweekly</option>
+            <option value="weekly">Weekly</option>
+            <option value="annual">Annual</option>
+          </select>
+        </div>
       </div>
       <div class="field">
-        <label for="budget-limit-month">Month</label>
-        <input type="month" id="budget-limit-month" />
-      </div>
-      <div class="field">
-        <label for="budget-limit-amount">Monthly limit <span style="color:var(--danger)">*</span></label>
-        <input type="number" id="budget-limit-amount" min="0.01" step="0.01" placeholder="0.00" />
+        <label for="income-notes">Notes</label>
+        <input type="text" id="income-notes" placeholder="Optional" />
       </div>
       <div class="modal-footer">
         <div class="modal-footer-left">
-          <button class="btn btn-danger hidden" id="budget-limit-delete-btn">Remove limit</button>
+          <button class="btn btn-danger hidden" id="income-delete-btn">Delete</button>
         </div>
-        <button class="btn btn-secondary" id="budget-limit-cancel-btn">Cancel</button>
-        <button class="btn btn-primary" id="budget-limit-save-btn">Save</button>
+        <button class="btn btn-secondary" id="income-cancel-btn">Cancel</button>
+        <button class="btn btn-primary" id="income-save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Expense modal ── -->
+<div id="expense-modal-overlay" class="modal-overlay hidden">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <h3 id="expense-modal-title">Add expense</h3>
+      <button class="modal-close" id="expense-modal-close">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div id="expense-modal-error" class="error-msg hidden"></div>
+      <div class="field">
+        <label for="expense-name">Name <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="expense-name" placeholder="e.g. Rent, Hydro, Netflix" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="expense-amount">Amount <span style="color:var(--danger)">*</span></label>
+          <input type="number" id="expense-amount" min="0.01" step="0.01" placeholder="0.00" />
+        </div>
+        <div class="field">
+          <label for="expense-frequency">Frequency</label>
+          <select id="expense-frequency">
+            <option value="monthly">Monthly</option>
+            <option value="biweekly">Biweekly</option>
+            <option value="weekly">Weekly</option>
+            <option value="annual">Annual</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="expense-category">Category</label>
+        <select id="expense-category">
+          <option value="housing">Housing</option>
+          <option value="utilities">Utilities</option>
+          <option value="subscriptions">Subscriptions</option>
+          <option value="insurance">Insurance</option>
+          <option value="food">Food</option>
+          <option value="transport">Transport</option>
+          <option value="healthcare">Healthcare</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="expense-notes">Notes</label>
+        <input type="text" id="expense-notes" placeholder="Optional" />
+      </div>
+      <div class="modal-footer">
+        <div class="modal-footer-left">
+          <button class="btn btn-danger hidden" id="expense-delete-btn">Delete</button>
+        </div>
+        <button class="btn btn-secondary" id="expense-cancel-btn">Cancel</button>
+        <button class="btn btn-primary" id="expense-save-btn">Save</button>
       </div>
     </div>
   </div>
@@ -8573,325 +8621,319 @@
     }
   });
 
-  // ── Budget ───────────────────────────────────────────────────────────────────
+  // ── Finances ─────────────────────────────────────────────────────────────────
 
-  const budget = {
-    currentMonth: (() => {
-      const d = new Date();
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    })(),
-    transactions: [],
-    categories:   [],
-    summary:      null,
-    editingTxnId: null,
-    editingBudgetId: null,
+  const finances = {
+    summary: null,
+    editingId: null,
 
-    fmtMoney(val) {
+    fmt(val) {
       const n = parseFloat(val) || 0;
-      return "$" + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      return "$" + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     },
 
-    monthLabel(ym) {
-      const [y, m] = ym.split("-");
-      return new Date(parseInt(y), parseInt(m) - 1, 1)
-        .toLocaleDateString(undefined, { month: "long", year: "numeric" });
-    },
-
-    prevMonth() {
-      const [y, m] = budget.currentMonth.split("-").map(Number);
-      const d = new Date(y, m - 2, 1);
-      budget.currentMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      budget.load();
-    },
-
-    nextMonth() {
-      const [y, m] = budget.currentMonth.split("-").map(Number);
-      const d = new Date(y, m, 1);
-      budget.currentMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      budget.load();
+    fmtSigned(val) {
+      const n = parseFloat(val) || 0;
+      return (n < 0 ? "-$" : "$") + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     },
 
     async load() {
-      $("budget-month-label").textContent = budget.monthLabel(budget.currentMonth);
-      showLoader("budget-loader");
+      showLoader("finances-loader");
       try {
-        const [summ, txns] = await Promise.all([
-          api.call("GET", `/summary?month=${budget.currentMonth}`),
-          api.call("GET", `/transactions?month=${budget.currentMonth}`),
-        ]);
-        budget.summary      = summ;
-        budget.transactions = txns || [];
-        budget.renderSummary();
-        budget.renderCategories();
-        budget.renderTransactions();
-        budget.refreshCategoryDatalist();
+        finances.summary = await api.call("GET", "/finances/summary");
+        finances.render();
       } catch (e) {
-        console.error("Failed to load budget:", e);
+        console.error("Failed to load finances:", e);
       } finally {
-        hideLoader("budget-loader");
+        hideLoader("finances-loader");
       }
     },
 
-    renderSummary() {
-      const s = budget.summary;
+    render() {
+      const s = finances.summary;
       if (!s) return;
-      $("budget-income").textContent  = budget.fmtMoney(s.total_income);
-      $("budget-expense").textContent = budget.fmtMoney(s.total_expense);
-      const net = parseFloat(s.net) || 0;
-      const netEl = $("budget-net");
-      netEl.textContent = (net < 0 ? "-" : "") + budget.fmtMoney(Math.abs(net));
-      netEl.className = "budget-summary-value " + (net >= 0 ? "net-pos" : "net-neg");
-    },
 
-    renderCategories() {
-      const container = $("budget-categories");
-      const rows = (budget.summary?.category_breakdown || []);
-      if (rows.length === 0) {
-        container.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No expense categories this month.</div>`;
-        return;
+      // Summary cards
+      $("fin-monthly-income").textContent  = finances.fmt(s.total_monthly_income);
+      $("fin-monthly-outflow").textContent = finances.fmt(s.total_monthly_outflow);
+      const net = parseFloat(s.net_monthly_cash_flow) || 0;
+      const netEl = $("fin-net-cash-flow");
+      netEl.textContent = finances.fmtSigned(net);
+      netEl.className = "fin-summary-value " + (net >= 0 ? "pos" : "neg");
+      $("fin-total-debt").textContent = finances.fmt(s.total_debt_balance);
+
+      // Debts
+      const debtTypeLabel = {
+        auto_loan: "Auto loan", mortgage: "Mortgage", credit_card: "Credit card",
+        student_loan: "Student loan", personal_loan: "Personal loan",
+        line_of_credit: "Line of credit", other: "Other",
+      };
+      const debtList = $("fin-debts-list");
+      if (!s.debts.length) {
+        debtList.innerHTML = `<div class="fin-empty">No debts added yet.</div>`;
+      } else {
+        debtList.innerHTML = s.debts.map(d => {
+          const payoffTxt = d.payoff_months != null
+            ? `Payoff in ~${d.payoff_months} mo &middot; ${finances.fmt(d.total_interest_remaining)} total interest`
+            : `Payment does not cover interest`;
+          const annualInt = d.annual_interest ? `${finances.fmt(d.annual_interest)}/yr interest` : "";
+          return `
+            <div class="fin-card" onclick="debtModal.open('${d.debt_id}')">
+              <div class="fin-card-header">
+                <div class="fin-card-name">${escHtml(d.name)}</div>
+                <div class="fin-card-amount">${finances.fmt(d.balance)}</div>
+              </div>
+              <div class="fin-card-meta">
+                <span>${debtTypeLabel[d.type] || d.type}</span>
+                <span>${parseFloat(d.apr).toFixed(2)}% APR</span>
+                <span>${finances.fmt(d.monthly_payment)}/mo payment</span>
+                ${annualInt ? `<span>${annualInt}</span>` : ""}
+                <span style="color:var(--muted);">${payoffTxt}</span>
+              </div>
+            </div>`;
+        }).join("");
       }
-      container.innerHTML = rows.map(row => {
-        const spent = parseFloat(row.spent) || 0;
-        const limit = row.limit ? parseFloat(row.limit) : null;
-        const pct   = limit ? Math.min((spent / limit) * 100, 100) : 0;
-        const over  = limit && spent > limit;
-        const barHtml = limit
-          ? `<div class="budget-bar-wrap"><div class="budget-bar-fill${over ? " over" : ""}" style="width:${pct.toFixed(1)}%"></div></div>`
-          : `<div class="budget-bar-wrap"><div class="budget-bar-fill" style="width:0%"></div></div>`;
-        const amtHtml = limit
-          ? `${budget.fmtMoney(spent)} / ${budget.fmtMoney(limit)}`
-          : `${budget.fmtMoney(spent)}`;
-        const btnLabel = row.budget_id ? "Edit limit" : "Set limit";
-        return `
-          <div class="budget-category-row">
-            <div class="budget-category-name">${escHtml(row.category)}</div>
-            ${barHtml}
-            <div class="budget-category-amounts">${amtHtml}</div>
-            <button class="budget-category-set-btn" onclick="budgetLimitModal.open(${JSON.stringify(row.category)}, ${JSON.stringify(row.budget_id || null)}, ${JSON.stringify(row.limit || null)})">${btnLabel}</button>
-          </div>`;
-      }).join("");
-    },
 
-    renderTransactions() {
-      const container = $("budget-transactions");
-      const txns = budget.transactions;
-      if (txns.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <p>No transactions this month.</p>
-            <button class="btn btn-primary" onclick="txnModal.open()">+ Transaction</button>
-          </div>`;
-        return;
+      // Income
+      const freqLabel = { monthly: "monthly", biweekly: "biweekly", weekly: "weekly", annual: "annual" };
+      const incList = $("fin-income-list");
+      if (!s.income.length) {
+        incList.innerHTML = `<div class="fin-empty">No income sources added yet.</div>`;
+      } else {
+        incList.innerHTML = s.income.map(i => `
+          <div class="fin-card" onclick="incomeModal.open('${i.income_id}')">
+            <div class="fin-card-header">
+              <div class="fin-card-name">${escHtml(i.name)}</div>
+              <div class="fin-card-amount pos" style="color:#16a34a;">${finances.fmt(i.monthly_amount)}<span style="font-size:11px;font-weight:400;color:var(--muted);">/mo</span></div>
+            </div>
+            <div class="fin-card-meta">
+              <span>${finances.fmt(i.amount)} ${freqLabel[i.frequency] || i.frequency}</span>
+              ${i.notes ? `<span>${escHtml(i.notes)}</span>` : ""}
+            </div>
+          </div>`).join("");
       }
-      const typeLabel = { income: "Income", expense: "Expense", debt_payment: "Debt payment" };
-      container.innerHTML = `
-        <table class="budget-txn-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Category</th>
-              <th>Description</th>
-              <th>Type</th>
-              <th style="text-align:right;">Amount</th>
-              <th style="text-align:right;">APR %</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${txns.map(t => {
-              const date = t.date ? new Date(t.date + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
-              const apr  = t.interest_rate ? parseFloat(t.interest_rate).toFixed(2) + "%" : "";
-              return `
-                <tr onclick="txnModal.open('${t.transaction_id}')">
-                  <td>${date}</td>
-                  <td>${escHtml(t.category || "")}</td>
-                  <td style="color:var(--muted);">${escHtml(t.description || "")}</td>
-                  <td>${typeLabel[t.type] || t.type}</td>
-                  <td style="text-align:right;" class="txn-amount-${t.type}">${t.type === "income" ? "+" : "-"}${budget.fmtMoney(t.amount)}</td>
-                  <td style="text-align:right;color:var(--muted);">${apr}</td>
-                </tr>`;
-            }).join("")}
-          </tbody>
-        </table>`;
-    },
 
-    refreshCategoryDatalist() {
-      const cats = [...new Set(budget.transactions.map(t => t.category).filter(Boolean))];
-      const dl = document.getElementById("txn-category-list");
-      if (dl) dl.innerHTML = cats.map(c => `<option value="${escHtml(c)}">`).join("");
+      // Expenses
+      const catLabel = {
+        housing: "Housing", utilities: "Utilities", subscriptions: "Subscriptions",
+        insurance: "Insurance", food: "Food", transport: "Transport",
+        healthcare: "Healthcare", other: "Other",
+      };
+      const expList = $("fin-expenses-list");
+      if (!s.expenses.length) {
+        expList.innerHTML = `<div class="fin-empty">No fixed expenses added yet.</div>`;
+      } else {
+        expList.innerHTML = s.expenses.map(e => `
+          <div class="fin-card" onclick="expenseModal.open('${e.expense_id}')">
+            <div class="fin-card-header">
+              <div class="fin-card-name">${escHtml(e.name)}</div>
+              <div class="fin-card-amount">${finances.fmt(e.monthly_amount)}<span style="font-size:11px;font-weight:400;color:var(--muted);">/mo</span></div>
+            </div>
+            <div class="fin-card-meta">
+              <span class="badge">${catLabel[e.category] || e.category}</span>
+              <span>${finances.fmt(e.amount)} ${freqLabel[e.frequency] || e.frequency}</span>
+              ${e.notes ? `<span>${escHtml(e.notes)}</span>` : ""}
+            </div>
+          </div>`).join("");
+      }
     },
   };
 
-  const txnModal = {
-    open(txnId) {
-      budget.editingTxnId = txnId || null;
-      clearError("txn-modal-error");
-      const today = new Date().toISOString().slice(0, 10);
+  // ── Debt modal ───────────────────────────────────────────────────────────────
 
-      if (txnId) {
-        const t = budget.transactions.find(t => t.transaction_id === txnId);
-        if (!t) return;
-        $("txn-modal-title").textContent = "Edit transaction";
-        $("txn-amount").value          = t.amount;
-        $("txn-type").value            = t.type || "expense";
-        $("txn-category").value        = t.category || "";
-        $("txn-date").value            = t.date || today;
-        $("txn-desc").value            = t.description || "";
-        $("txn-interest-rate").value   = t.interest_rate || "";
-        $("txn-delete-btn").classList.remove("hidden");
+  const debtModal = {
+    open(debtId) {
+      finances.editingId = debtId || null;
+      clearError("debt-modal-error");
+      if (debtId) {
+        const d = (finances.summary?.debts || []).find(d => d.debt_id === debtId);
+        if (!d) return;
+        $("debt-modal-title").textContent = "Edit debt";
+        $("debt-name").value    = d.name;
+        $("debt-type").value    = d.type;
+        $("debt-balance").value = d.balance;
+        $("debt-apr").value     = d.apr;
+        $("debt-payment").value = d.monthly_payment;
+        $("debt-notes").value   = d.notes || "";
+        $("debt-delete-btn").classList.remove("hidden");
       } else {
-        $("txn-modal-title").textContent = "New transaction";
-        $("txn-amount").value          = "";
-        $("txn-type").value            = "expense";
-        $("txn-category").value        = "";
-        $("txn-date").value            = today;
-        $("txn-desc").value            = "";
-        $("txn-interest-rate").value   = "";
-        $("txn-delete-btn").classList.add("hidden");
+        $("debt-modal-title").textContent = "Add debt";
+        $("debt-name").value = $("debt-balance").value = $("debt-apr").value = $("debt-payment").value = $("debt-notes").value = "";
+        $("debt-type").value = "auto_loan";
+        $("debt-delete-btn").classList.add("hidden");
       }
-
-      $("txn-modal-overlay").classList.remove("hidden");
-      $("txn-amount").focus();
+      $("debt-modal-overlay").classList.remove("hidden");
+      $("debt-name").focus();
     },
-
     close() {
-      $("txn-modal-overlay").classList.add("hidden");
-      budget.editingTxnId = null;
+      $("debt-modal-overlay").classList.add("hidden");
+      finances.editingId = null;
     },
   };
 
-  $("new-txn-btn").addEventListener("click", () => txnModal.open());
-  $("txn-modal-close").addEventListener("click", () => txnModal.close());
-  $("txn-cancel-btn").addEventListener("click", () => txnModal.close());
-  $("txn-modal-overlay").addEventListener("click", e => {
-    if (e.target === $("txn-modal-overlay")) txnModal.close();
-  });
+  $("debt-modal-close").addEventListener("click",  () => debtModal.close());
+  $("debt-cancel-btn").addEventListener("click",   () => debtModal.close());
+  $("debt-modal-overlay").addEventListener("click", e => { if (e.target === $("debt-modal-overlay")) debtModal.close(); });
 
-  $("txn-save-btn").addEventListener("click", async () => {
-    clearError("txn-modal-error");
-    const amount = $("txn-amount").value.trim();
-    if (!amount || parseFloat(amount) <= 0) { showError("txn-modal-error", "Amount must be greater than zero."); return; }
-    const category = $("txn-category").value.trim();
-    if (!category) { showError("txn-modal-error", "Category is required."); return; }
-    const date = $("txn-date").value;
-    if (!date) { showError("txn-modal-error", "Date is required."); return; }
+  $("debt-save-btn").addEventListener("click", async () => {
+    clearError("debt-modal-error");
+    const name    = $("debt-name").value.trim();
+    const balance = $("debt-balance").value.trim();
+    const apr     = $("debt-apr").value.trim();
+    const payment = $("debt-payment").value.trim();
+    if (!name)    { showError("debt-modal-error", "Name is required."); return; }
+    if (!balance || parseFloat(balance) <= 0) { showError("debt-modal-error", "Balance must be greater than zero."); return; }
+    if (apr === "" || parseFloat(apr) < 0)    { showError("debt-modal-error", "APR must be 0 or greater."); return; }
+    if (!payment || parseFloat(payment) <= 0) { showError("debt-modal-error", "Monthly payment must be greater than zero."); return; }
 
-    const body = {
-      amount,
-      type:          $("txn-type").value,
-      category,
-      date,
-      description:   $("txn-desc").value.trim(),
-    };
-    const ir = $("txn-interest-rate").value.trim();
-    if (ir) body.interest_rate = ir;
-
-    $("txn-save-btn").disabled    = true;
-    $("txn-save-btn").textContent = "Saving...";
+    const body = { name, type: $("debt-type").value, balance, apr, monthly_payment: payment, notes: $("debt-notes").value.trim() };
+    $("debt-save-btn").disabled = true; $("debt-save-btn").textContent = "Saving...";
     try {
-      if (budget.editingTxnId) {
-        await api.call("PUT", `/transactions/${budget.editingTxnId}`, body);
+      if (finances.editingId) {
+        await api.call("PUT", `/debts/${finances.editingId}`, body);
       } else {
-        await api.call("POST", "/transactions", body);
+        await api.call("POST", "/debts", body);
       }
-      txnModal.close();
-      await budget.load();
-    } catch (e) {
-      showError("txn-modal-error", e.message);
-    } finally {
-      $("txn-save-btn").disabled    = false;
-      $("txn-save-btn").textContent = "Save";
-    }
+      debtModal.close();
+      await finances.load();
+    } catch (e) { showError("debt-modal-error", e.message); }
+    finally { $("debt-save-btn").disabled = false; $("debt-save-btn").textContent = "Save"; }
   });
 
-  $("txn-delete-btn").addEventListener("click", async () => {
-    if (!budget.editingTxnId) return;
-    if (!await confirmDialog("Delete this transaction?")) return;
-    $("txn-delete-btn").disabled = true;
-    try {
-      await api.call("DELETE", `/transactions/${budget.editingTxnId}`);
-      txnModal.close();
-      await budget.load();
-    } catch (e) {
-      showError("txn-modal-error", e.message);
-    } finally {
-      $("txn-delete-btn").disabled = false;
-    }
+  $("debt-delete-btn").addEventListener("click", async () => {
+    if (!finances.editingId || !await confirmDialog("Delete this debt?")) return;
+    $("debt-delete-btn").disabled = true;
+    try { await api.call("DELETE", `/debts/${finances.editingId}`); debtModal.close(); await finances.load(); }
+    catch (e) { showError("debt-modal-error", e.message); }
+    finally { $("debt-delete-btn").disabled = false; }
   });
 
-  const budgetLimitModal = {
-    open(category, budgetId, currentLimit) {
-      budget.editingBudgetId = budgetId || null;
-      clearError("budget-limit-modal-error");
-      $("budget-limit-modal-title").textContent = budgetId ? "Edit budget limit" : "Set budget limit";
-      $("budget-limit-category").value          = category;
-      $("budget-limit-month").value             = budget.currentMonth;
-      $("budget-limit-amount").value            = currentLimit || "";
-      if (budgetId) {
-        $("budget-limit-delete-btn").classList.remove("hidden");
+  // ── Income modal ─────────────────────────────────────────────────────────────
+
+  const incomeModal = {
+    open(incomeId) {
+      finances.editingId = incomeId || null;
+      clearError("income-modal-error");
+      if (incomeId) {
+        const i = (finances.summary?.income || []).find(i => i.income_id === incomeId);
+        if (!i) return;
+        $("income-modal-title").textContent = "Edit income";
+        $("income-name").value      = i.name;
+        $("income-amount").value    = i.amount;
+        $("income-frequency").value = i.frequency;
+        $("income-notes").value     = i.notes || "";
+        $("income-delete-btn").classList.remove("hidden");
       } else {
-        $("budget-limit-delete-btn").classList.add("hidden");
+        $("income-modal-title").textContent = "Add income";
+        $("income-name").value = $("income-amount").value = $("income-notes").value = "";
+        $("income-frequency").value = "monthly";
+        $("income-delete-btn").classList.add("hidden");
       }
-      $("budget-limit-modal-overlay").classList.remove("hidden");
-      $("budget-limit-amount").focus();
+      $("income-modal-overlay").classList.remove("hidden");
+      $("income-name").focus();
     },
-
     close() {
-      $("budget-limit-modal-overlay").classList.add("hidden");
-      budget.editingBudgetId = null;
+      $("income-modal-overlay").classList.add("hidden");
+      finances.editingId = null;
     },
   };
 
-  $("budget-limit-modal-close").addEventListener("click",  () => budgetLimitModal.close());
-  $("budget-limit-cancel-btn").addEventListener("click",   () => budgetLimitModal.close());
-  $("budget-limit-modal-overlay").addEventListener("click", e => {
-    if (e.target === $("budget-limit-modal-overlay")) budgetLimitModal.close();
-  });
+  $("income-modal-close").addEventListener("click",  () => incomeModal.close());
+  $("income-cancel-btn").addEventListener("click",   () => incomeModal.close());
+  $("income-modal-overlay").addEventListener("click", e => { if (e.target === $("income-modal-overlay")) incomeModal.close(); });
 
-  $("budget-prev-btn").addEventListener("click", () => budget.prevMonth());
-  $("budget-next-btn").addEventListener("click", () => budget.nextMonth());
+  $("income-save-btn").addEventListener("click", async () => {
+    clearError("income-modal-error");
+    const name   = $("income-name").value.trim();
+    const amount = $("income-amount").value.trim();
+    if (!name)   { showError("income-modal-error", "Source name is required."); return; }
+    if (!amount || parseFloat(amount) <= 0) { showError("income-modal-error", "Amount must be greater than zero."); return; }
 
-  $("budget-limit-save-btn").addEventListener("click", async () => {
-    clearError("budget-limit-modal-error");
-    const limitVal = $("budget-limit-amount").value.trim();
-    if (!limitVal || parseFloat(limitVal) <= 0) { showError("budget-limit-modal-error", "Limit must be greater than zero."); return; }
-
-    const body = {
-      category: $("budget-limit-category").value,
-      limit:    limitVal,
-      month:    $("budget-limit-month").value,
-    };
-
-    $("budget-limit-save-btn").disabled    = true;
-    $("budget-limit-save-btn").textContent = "Saving...";
+    const body = { name, amount, frequency: $("income-frequency").value, notes: $("income-notes").value.trim() };
+    $("income-save-btn").disabled = true; $("income-save-btn").textContent = "Saving...";
     try {
-      if (budget.editingBudgetId) {
-        await api.call("PUT", `/budgets/${budget.editingBudgetId}`, body);
+      if (finances.editingId) {
+        await api.call("PUT", `/income/${finances.editingId}`, body);
       } else {
-        await api.call("POST", "/budgets", body);
+        await api.call("POST", "/income", body);
       }
-      budgetLimitModal.close();
-      await budget.load();
-    } catch (e) {
-      showError("budget-limit-modal-error", e.message);
-    } finally {
-      $("budget-limit-save-btn").disabled    = false;
-      $("budget-limit-save-btn").textContent = "Save";
-    }
+      incomeModal.close();
+      await finances.load();
+    } catch (e) { showError("income-modal-error", e.message); }
+    finally { $("income-save-btn").disabled = false; $("income-save-btn").textContent = "Save"; }
   });
 
-  $("budget-limit-delete-btn").addEventListener("click", async () => {
-    if (!budget.editingBudgetId) return;
-    if (!await confirmDialog("Remove this budget limit?")) return;
-    $("budget-limit-delete-btn").disabled = true;
+  $("income-delete-btn").addEventListener("click", async () => {
+    if (!finances.editingId || !await confirmDialog("Delete this income source?")) return;
+    $("income-delete-btn").disabled = true;
+    try { await api.call("DELETE", `/income/${finances.editingId}`); incomeModal.close(); await finances.load(); }
+    catch (e) { showError("income-modal-error", e.message); }
+    finally { $("income-delete-btn").disabled = false; }
+  });
+
+  // ── Expense modal ────────────────────────────────────────────────────────────
+
+  const expenseModal = {
+    open(expenseId) {
+      finances.editingId = expenseId || null;
+      clearError("expense-modal-error");
+      if (expenseId) {
+        const e = (finances.summary?.expenses || []).find(e => e.expense_id === expenseId);
+        if (!e) return;
+        $("expense-modal-title").textContent = "Edit expense";
+        $("expense-name").value      = e.name;
+        $("expense-amount").value    = e.amount;
+        $("expense-frequency").value = e.frequency;
+        $("expense-category").value  = e.category;
+        $("expense-notes").value     = e.notes || "";
+        $("expense-delete-btn").classList.remove("hidden");
+      } else {
+        $("expense-modal-title").textContent = "Add expense";
+        $("expense-name").value = $("expense-amount").value = $("expense-notes").value = "";
+        $("expense-frequency").value = "monthly";
+        $("expense-category").value  = "other";
+        $("expense-delete-btn").classList.add("hidden");
+      }
+      $("expense-modal-overlay").classList.remove("hidden");
+      $("expense-name").focus();
+    },
+    close() {
+      $("expense-modal-overlay").classList.add("hidden");
+      finances.editingId = null;
+    },
+  };
+
+  $("expense-modal-close").addEventListener("click",  () => expenseModal.close());
+  $("expense-cancel-btn").addEventListener("click",   () => expenseModal.close());
+  $("expense-modal-overlay").addEventListener("click", e => { if (e.target === $("expense-modal-overlay")) expenseModal.close(); });
+
+  $("expense-save-btn").addEventListener("click", async () => {
+    clearError("expense-modal-error");
+    const name   = $("expense-name").value.trim();
+    const amount = $("expense-amount").value.trim();
+    if (!name)   { showError("expense-modal-error", "Name is required."); return; }
+    if (!amount || parseFloat(amount) <= 0) { showError("expense-modal-error", "Amount must be greater than zero."); return; }
+
+    const body = { name, amount, frequency: $("expense-frequency").value, category: $("expense-category").value, notes: $("expense-notes").value.trim() };
+    $("expense-save-btn").disabled = true; $("expense-save-btn").textContent = "Saving...";
     try {
-      await api.call("DELETE", `/budgets/${budget.editingBudgetId}`);
-      budgetLimitModal.close();
-      await budget.load();
-    } catch (e) {
-      showError("budget-limit-modal-error", e.message);
-    } finally {
-      $("budget-limit-delete-btn").disabled = false;
-    }
+      if (finances.editingId) {
+        await api.call("PUT", `/fixed-expenses/${finances.editingId}`, body);
+      } else {
+        await api.call("POST", "/fixed-expenses", body);
+      }
+      expenseModal.close();
+      await finances.load();
+    } catch (e) { showError("expense-modal-error", e.message); }
+    finally { $("expense-save-btn").disabled = false; $("expense-save-btn").textContent = "Save"; }
+  });
+
+  $("expense-delete-btn").addEventListener("click", async () => {
+    if (!finances.editingId || !await confirmDialog("Delete this expense?")) return;
+    $("expense-delete-btn").disabled = true;
+    try { await api.call("DELETE", `/fixed-expenses/${finances.editingId}`); expenseModal.close(); await finances.load(); }
+    catch (e) { showError("expense-modal-error", e.message); }
+    finally { $("expense-delete-btn").disabled = false; }
   });
 
   // ── Pomodoro timer ────────────────────────────────────────────────────────────
@@ -10094,7 +10136,7 @@
     },
 
     expand(name) {
-      const sections = ["home", "tasks", "notes", "journal", "feeds", "diagrams", "budget", "settings", "admin", "profile"];
+      const sections = ["home", "tasks", "notes", "journal", "feeds", "diagrams", "finances", "settings", "admin", "profile"];
       sections.forEach(s => {
         const sect = $(`sb-${s}`);
         const body = $(`sb-${s}-body`);
@@ -10117,7 +10159,7 @@
 
   const pages = {
     current: "home",
-    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "diagrams", "budget", "settings", "admin", "profile"],
+    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "diagrams", "finances", "settings", "admin", "profile"],
 
     show(name) {
       pages.current = name;
@@ -10158,7 +10200,7 @@
       if (name === "feeds")     feeds.refresh();
       if (name === "favorites") { if (!favs.loaded) favs.load(); else favs.render(); }
       if (name === "diagrams")  { if (!diagrams.loaded) diagrams.load(); else diagrams.render(); }
-      if (name === "budget")    { budget.load(); }
+      if (name === "finances")  { finances.load(); }
       if (name === "profile")   { profilePage.load(); }
       // Hide the AI pal FAB on the diagrams page — Excalidraw's help button occupies the same corner
       const palBtn = document.getElementById("pal-btn");

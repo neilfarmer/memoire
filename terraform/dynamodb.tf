@@ -494,20 +494,19 @@ resource "aws_dynamodb_table" "feeds_read" {
   }
 }
 
-# ── Budget: Transactions table ────────────────────────────────────────────────
+# ── Finances: Debts table ─────────────────────────────────────────────────────
 #
-# PK: user_id         (String) — Cognito sub claim
-# SK: transaction_id  (String) — UUID generated at creation
+# PK: user_id  (String) — Cognito sub claim
+# SK: debt_id  (String) — UUID generated at creation
 #
-# Attributes: amount (String), type (income|expense|debt_payment), category,
-#             description, date (YYYY-MM-DD), interest_rate (String, optional),
-#             created_at, updated_at
+# Attributes: name, type, balance (String), apr (String), monthly_payment (String),
+#             notes, created_at, updated_at
 
-resource "aws_dynamodb_table" "transactions" {
-  name         = "${local.name_prefix}-transactions"
+resource "aws_dynamodb_table" "debts" {
+  name         = "${local.name_prefix}-debts"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "user_id"
-  range_key    = "transaction_id"
+  range_key    = "debt_id"
 
   attribute {
     name = "user_id"
@@ -515,7 +514,7 @@ resource "aws_dynamodb_table" "transactions" {
   }
 
   attribute {
-    name = "transaction_id"
+    name = "debt_id"
     type = "S"
   }
 
@@ -524,18 +523,19 @@ resource "aws_dynamodb_table" "transactions" {
   }
 }
 
-# ── Budget: Budgets table ─────────────────────────────────────────────────────
+# ── Finances: Income sources table ────────────────────────────────────────────
 #
 # PK: user_id    (String) — Cognito sub claim
-# SK: budget_id  (String) — UUID generated at creation
+# SK: income_id  (String) — UUID generated at creation
 #
-# Attributes: category, limit (String), month (YYYY-MM), created_at, updated_at
+# Attributes: name, amount (String), frequency (monthly|biweekly|weekly|annual),
+#             notes, created_at, updated_at
 
-resource "aws_dynamodb_table" "budgets" {
-  name         = "${local.name_prefix}-budgets"
+resource "aws_dynamodb_table" "income" {
+  name         = "${local.name_prefix}-income"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "user_id"
-  range_key    = "budget_id"
+  range_key    = "income_id"
 
   attribute {
     name = "user_id"
@@ -543,7 +543,36 @@ resource "aws_dynamodb_table" "budgets" {
   }
 
   attribute {
-    name = "budget_id"
+    name = "income_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
+# ── Finances: Fixed expenses table ────────────────────────────────────────────
+#
+# PK: user_id     (String) — Cognito sub claim
+# SK: expense_id  (String) — UUID generated at creation
+#
+# Attributes: name, amount (String), category, frequency (monthly|biweekly|weekly|annual),
+#             notes, created_at, updated_at
+
+resource "aws_dynamodb_table" "fixed_expenses" {
+  name         = "${local.name_prefix}-fixed-expenses"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "expense_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "expense_id"
     type = "S"
   }
 
