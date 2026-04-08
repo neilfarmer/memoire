@@ -1140,9 +1140,9 @@
       margin-top: 4px;
     }
     .fin-card-meta span { white-space: nowrap; }
+    .fin-payoff-timeline { margin-top: 12px; }
     .fin-debt-bar-wrap {
-      margin-top: 10px;
-      height: 5px;
+      height: 6px;
       background: var(--border);
       border-radius: 99px;
       overflow: hidden;
@@ -1151,8 +1151,32 @@
       height: 100%;
       border-radius: 99px;
       background: linear-gradient(90deg, #dc2626, #f87171);
+      width: 100%;
     }
     html[data-theme="dark"] .fin-debt-bar-fill { background: linear-gradient(90deg, #fca5a5, #dc2626); }
+    .fin-payoff-labels {
+      position: relative;
+      height: 20px;
+      margin-top: 3px;
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .fin-payoff-labels .fin-pl-now {
+      position: absolute;
+      left: 0;
+    }
+    .fin-payoff-labels .fin-pl-yr {
+      position: absolute;
+      transform: translateX(-50%);
+    }
+    .fin-payoff-labels .fin-pl-end {
+      position: absolute;
+      right: 0;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+    }
     .fin-empty {
       color: var(--muted);
       font-size: 13px;
@@ -8673,10 +8697,33 @@
         debtList.innerHTML = `<div class="fin-empty">No debts added yet.</div>`;
       } else {
         debtList.innerHTML = s.debts.map(d => {
-          const payoffTxt = d.payoff_months != null
-            ? `Payoff in ~${d.payoff_months} mo &middot; ${finances.fmt(d.total_interest_remaining)} total interest`
-            : `Payment does not cover interest`;
           const annualInt = d.annual_interest ? `${finances.fmt(d.annual_interest)}/yr interest` : "";
+          let timelineHTML = "";
+          if (d.payoff_months != null) {
+            const pm = d.payoff_months;
+            const pd = new Date();
+            pd.setMonth(pd.getMonth() + pm);
+            const endStr = pd.toLocaleDateString("en-US", {month:"short", year:"numeric"});
+            const numYrs = Math.ceil(pm / 12);
+            let ticks = "";
+            for (let y = 1; y < numYrs; y++) {
+              const pct = (y * 12 / pm * 100).toFixed(1);
+              const yr = new Date();
+              yr.setFullYear(yr.getFullYear() + y);
+              ticks += `<span class="fin-pl-yr" style="left:${pct}%">${yr.getFullYear()}</span>`;
+            }
+            timelineHTML = `
+              <div class="fin-payoff-timeline">
+                <div class="fin-debt-bar-wrap"><div class="fin-debt-bar-fill"></div></div>
+                <div class="fin-payoff-labels">
+                  <span class="fin-pl-now">Now</span>
+                  ${ticks}
+                  <span class="fin-pl-end">Paid off ${endStr}</span>
+                </div>
+              </div>`;
+          } else {
+            timelineHTML = `<div class="fin-payoff-timeline" style="font-size:11px;color:#dc2626;margin-top:8px;">Payment does not cover interest — debt will not pay off</div>`;
+          }
           return `
             <div class="fin-card" onclick="debtModal.open('${d.debt_id}')">
               <div class="fin-card-header">
@@ -8688,8 +8735,9 @@
                 <span>${parseFloat(d.apr).toFixed(2)}% APR</span>
                 <span>${finances.fmt(d.monthly_payment)}/mo payment</span>
                 ${annualInt ? `<span>${annualInt}</span>` : ""}
-                <span style="color:var(--muted);">${payoffTxt}</span>
+                ${d.payoff_months != null ? `<span>~${d.payoff_months} mo &middot; ${finances.fmt(d.total_interest_remaining)} total interest</span>` : ""}
               </div>
+              ${timelineHTML}
             </div>`;
         }).join("");
       }
