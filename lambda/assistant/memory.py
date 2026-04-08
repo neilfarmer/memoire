@@ -57,7 +57,12 @@ def save_message(user_id: str, role: str, content: str) -> None:
     })
 
 
-MASTER_CONTEXT_KEY = "__master_context__"
+MASTER_CONTEXT_KEY  = "__master_context__"
+PROFILE_NAME_KEY    = "__profile_name__"
+PROFILE_OCC_KEY     = "__profile_occupation__"
+PROFILE_SUMMARY_KEY = "__profile_summary__"
+AI_ANALYSIS_KEY     = "__ai_analysis__"
+AI_ANALYSIS_AT_KEY  = "__ai_analysis_at__"
 
 
 def load_memory(user_id: str) -> tuple[dict, str]:
@@ -92,6 +97,55 @@ def save_memory(user_id: str, key: str, value: str) -> None:
 def save_master_context(user_id: str, context: str) -> None:
     """Persist the master context paragraph."""
     save_memory(user_id, MASTER_CONTEXT_KEY, context)
+
+
+def load_profile(user_id: str) -> dict:
+    """Return {name, occupation, summary} from profile keys."""
+    table = db.get_table(MEMORY_TABLE)
+    items = db.query_by_user(table, user_id)
+    result  = {"name": "", "occupation": "", "summary": ""}
+    key_map = {
+        PROFILE_NAME_KEY:    "name",
+        PROFILE_OCC_KEY:     "occupation",
+        PROFILE_SUMMARY_KEY: "summary",
+    }
+    for item in items:
+        field = key_map.get(item["memory_key"])
+        if field:
+            result[field] = item.get("value", "")
+    return result
+
+
+def save_profile(user_id: str, name: str | None = None, occupation: str | None = None, summary: str | None = None) -> None:
+    """Save profile fields — only provided (non-None) fields are updated."""
+    if name is not None:
+        save_memory(user_id, PROFILE_NAME_KEY, name)
+    if occupation is not None:
+        save_memory(user_id, PROFILE_OCC_KEY, occupation)
+    if summary is not None:
+        save_memory(user_id, PROFILE_SUMMARY_KEY, summary)
+
+
+def load_ai_analysis(user_id: str) -> dict:
+    """Return {analysis, generated_at} for the stored AI profile analysis."""
+    table = db.get_table(MEMORY_TABLE)
+    items = db.query_by_user(table, user_id)
+    analysis     = ""
+    generated_at = ""
+    for item in items:
+        k = item["memory_key"]
+        if k == AI_ANALYSIS_KEY:
+            analysis = item.get("value", "")
+        elif k == AI_ANALYSIS_AT_KEY:
+            generated_at = item.get("value", "")
+    return {"analysis": analysis, "generated_at": generated_at}
+
+
+def save_ai_analysis(user_id: str, analysis: str) -> None:
+    """Persist the AI profile analysis and its generation timestamp."""
+    now = datetime.now(timezone.utc).isoformat()
+    save_memory(user_id, AI_ANALYSIS_KEY, analysis)
+    save_memory(user_id, AI_ANALYSIS_AT_KEY, now)
 
 
 def delete_memory(user_id: str, key: str) -> None:

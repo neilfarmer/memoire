@@ -20,6 +20,9 @@ __pycache__/
 # Environment
 .env
 
+# Local scripts (not for version control)
+scripts/deploy-dev.sh
+
 # Test artifacts
 tests/.test-content-ids.json
 htmlcov/

@@ -3,6 +3,7 @@
 from response import error, ok
 import chat
 import memory as mem
+import analysis as ana
 
 
 def route(route_key: str, user_id: str, body: dict, path_params: dict | None = None) -> dict:
@@ -38,7 +39,9 @@ def route(route_key: str, user_id: str, body: dict, path_params: dict | None = N
 
     if route_key == "GET /assistant/memory":
         facts, master = mem.load_memory(user_id)
-        return ok({"master_context": master, "facts": facts})
+        profile       = mem.load_profile(user_id)
+        ai_analysis   = mem.load_ai_analysis(user_id)
+        return ok({"master_context": master, "facts": facts, "profile": profile, "ai_analysis": ai_analysis})
 
     if route_key == "PUT /assistant/memory":
         context = (body.get("master_context") or "").strip()
@@ -61,5 +64,21 @@ def route(route_key: str, user_id: str, body: dict, path_params: dict | None = N
             return error("Invalid key")
         mem.delete_memory(user_id, key)
         return ok({"deleted": True})
+
+    if route_key == "GET /assistant/profile":
+        return ok(mem.load_profile(user_id))
+
+    if route_key == "PUT /assistant/profile":
+        name       = body.get("name")
+        occupation = body.get("occupation")
+        summary    = body.get("summary")
+        if name is None and occupation is None and summary is None:
+            return error("At least one field required")
+        mem.save_profile(user_id, name=name, occupation=occupation, summary=summary)
+        return ok({"updated": True})
+
+    if route_key == "POST /assistant/profile/analyze":
+        result = ana.generate_analysis(user_id)
+        return ok(result)
 
     return error("Not found", status=404)

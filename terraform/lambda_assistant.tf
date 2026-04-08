@@ -132,6 +132,9 @@ locals {
     "PUT /assistant/memory",
     "PUT /assistant/memory/facts/{key}",
     "DELETE /assistant/memory/{key}",
+    "GET /assistant/profile",
+    "PUT /assistant/profile",
+    "POST /assistant/profile/analyze",
   ]
 }
 

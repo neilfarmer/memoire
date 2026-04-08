@@ -1629,6 +1629,83 @@
       font-style: italic;
     }
 
+    /* ── Profile tabs ── */
+    .profile-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .profile-tab-btn {
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .profile-tab-btn:hover { color: var(--text); }
+    .profile-tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    .profile-tab-pane { display: flex; flex-direction: column; gap: 28px; }
+    .profile-tab-pane.hidden { display: none; }
+
+    .profile-fields { display: flex; flex-direction: column; gap: 16px; }
+
+    .profile-field-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    .profile-field-input,
+    .profile-field-textarea {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 9px 12px;
+      font-size: 14px;
+      color: var(--text);
+      font-family: inherit;
+      box-sizing: border-box;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    .profile-field-input:focus,
+    .profile-field-textarea:focus { border-color: var(--primary); }
+    .profile-field-textarea { resize: vertical; min-height: 90px; }
+
+    .profile-fields-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .profile-analysis-text {
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.7;
+      white-space: pre-line;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+
+    .profile-analysis-date {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
     /* ── Admin page ── */
     .admin-grid {
       display: grid;
@@ -3853,18 +3930,6 @@
             <div id="notes-search-results" class="hidden"></div>
           </div>
         </div>
-        <div class="sb-section" id="sb-habits">
-          <div class="sb-section-hdr" onclick="sidebar.navigate('habits')">
-            <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>
-            <span class="sb-hdr-label">Habits</span>
-          </div>
-        </div>
-        <div class="sb-section" id="sb-goals">
-          <div class="sb-section-hdr" onclick="sidebar.navigate('goals')">
-            <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/></svg></span>
-            <span class="sb-hdr-label">Goals</span>
-          </div>
-        </div>
         <div class="sb-section" id="sb-journal">
           <div class="sb-section-hdr" onclick="sidebar.navigate('journal')">
             <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
@@ -3875,6 +3940,9 @@
             <div style="padding:4px 10px 6px;">
               <button class="btn btn-secondary btn-sm btn-full" id="journal-today-btn" onclick="event.stopPropagation()">Today's entry</button>
             </div>
+            <div class="sb-sub-label">Tracking</div>
+            <button class="sb-sub-link" data-page="habits" onclick="pages.show('habits')">Habits</button>
+            <button class="sb-sub-link" data-page="goals" onclick="pages.show('goals')">Goals</button>
             <div class="sb-sub-label">Health</div>
             <button class="sb-sub-link" data-page="health" onclick="pages.show('health')">Exercise</button>
             <button class="sb-sub-link" data-page="nutrition" onclick="pages.show('nutrition')">Nutrition</button>
@@ -4384,33 +4452,52 @@
         </div>
       </div>
 
-      <!-- Bio + facts -->
-      <div class="profile-main">
-        <div id="profile-loader" class="page-loader hidden"><div class="spinner"></div></div>
+      <!-- Tabs -->
+      <div class="profile-tabs">
+        <button class="profile-tab-btn active" id="profile-tab-btn-about" onclick="profilePage.switchTab('about')">About Me</button>
+        <button class="profile-tab-btn" id="profile-tab-btn-ai" onclick="profilePage.switchTab('ai')">AI Insights</button>
+      </div>
 
-        <!-- Bio section -->
-        <div>
-          <div class="profile-section-header">
-            <span class="profile-section-title">About me</span>
-            <span class="ai-badge"><span class="ai-pulse"></span>AI maintained</span>
+      <div id="profile-loader" class="page-loader hidden"><div class="spinner"></div></div>
+
+      <!-- Tab: About Me -->
+      <div id="profile-tab-about" class="profile-tab-pane">
+        <div class="profile-fields">
+          <div>
+            <label class="profile-field-label" for="profile-field-name">Name</label>
+            <input id="profile-field-name" type="text" class="profile-field-input" placeholder="Your name" />
           </div>
-          <!-- Read mode -->
-          <div id="profile-bio-display" class="profile-bio-display" onclick="profilePage.enterEditMode()">
-            <p id="profile-bio-text" class="profile-bio-empty">No summary yet — start chatting and the AI will build one, or click to write your own.</p>
-            <span class="profile-bio-hint">Click to edit</span>
+          <div>
+            <label class="profile-field-label" for="profile-field-occupation">Occupation</label>
+            <input id="profile-field-occupation" type="text" class="profile-field-input" placeholder="e.g. Software engineer, Designer, Student" />
           </div>
-          <!-- Edit mode -->
-          <div id="profile-bio-edit" class="hidden">
-            <textarea id="profile-context" placeholder="Write a few sentences about yourself — your role, goals, preferences, routines. The AI will also keep this updated from your conversations."></textarea>
-            <div class="profile-bio-actions">
-              <button class="btn btn-primary btn-sm" id="profile-context-save-btn">Save</button>
-              <button class="btn btn-secondary btn-sm" id="profile-context-cancel-btn">Cancel</button>
-              <span id="profile-context-msg" class="hidden" style="font-size:13px;"></span>
-            </div>
+          <div>
+            <label class="profile-field-label" for="profile-field-summary">Summary</label>
+            <textarea id="profile-field-summary" class="profile-field-textarea" placeholder="A few sentences about yourself — your goals, routines, what you're working on." rows="4"></textarea>
           </div>
         </div>
+        <div class="profile-fields-actions">
+          <button class="btn btn-primary btn-sm" id="profile-fields-save-btn">Save</button>
+          <span id="profile-fields-msg" class="hidden" style="font-size:13px;color:var(--muted);"></span>
+        </div>
+      </div>
 
-        <!-- Facts section -->
+      <!-- Tab: AI Insights -->
+      <div id="profile-tab-ai" class="profile-tab-pane hidden">
+
+        <!-- AI Analysis -->
+        <div>
+          <div class="profile-section-header">
+            <span class="profile-section-title">AI Analysis</span>
+            <span class="ai-badge"><span class="ai-pulse"></span>AI generated</span>
+            <button class="btn btn-secondary btn-sm" id="profile-analyze-btn" style="margin-left:auto;">Refresh analysis</button>
+          </div>
+          <div id="profile-analysis-empty" class="profile-facts-empty-msg">No analysis yet. Click "Refresh analysis" to generate one based on your tasks, notes, journal, and habits.</div>
+          <div id="profile-analysis-text" class="profile-analysis-text hidden"></div>
+          <div id="profile-analysis-date" class="profile-analysis-date hidden"></div>
+        </div>
+
+        <!-- AI Facts -->
         <div>
           <div class="profile-section-header">
             <span class="profile-section-title">What the AI knows</span>
@@ -4423,6 +4510,7 @@
         </div>
 
       </div>
+
     </div>
   </main>
 
@@ -8727,73 +8815,129 @@
   }
 
   const profilePage = {
-    loaded: false,
+    loaded:     false,
+    activeTab:  "about",
 
     async load() {
       $("profile-loader").classList.remove("hidden");
-      // Populate identity panel from settings/auth
-      const name     = state.settings?.display_name || auth.getEmail()?.split("@")[0] || "?";
-      const initials = name.trim().split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+
+      // Populate header identity from auth/settings
+      const authName  = state.settings?.display_name || auth.getEmail()?.split("@")[0] || "?";
+      const initials  = authName.trim().split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
       $("profile-avatar-large").textContent = initials;
       const displayName = state.settings?.display_name || "";
       const email       = auth.getEmail() || "";
       $("profile-display-name").textContent = displayName || email || "—";
-      // Only show email sub-line if there's a separate display name set
       $("profile-email").textContent = displayName ? email : "";
-
-      const saveBtn = $("profile-context-save-btn");
-      saveBtn.disabled = true;
-      $("profile-context-msg").classList.add("hidden");
 
       try {
         const data = await api.getAssistantMemory();
         if (!data) return;
 
-        // Bio
-        const ctx = (data.master_context || "").trim();
-        $("profile-context").value = ctx;
-        const bioText = $("profile-bio-text");
-        if (ctx) {
-          bioText.className = "profile-bio-text";
-          bioText.textContent = ctx;
-        } else {
-          bioText.className = "profile-bio-empty";
-          bioText.textContent = "No summary yet — start chatting and the AI will build one, or click to write your own.";
+        // About Me tab — only populate fields on first load to avoid overwriting unsaved edits
+        if (!profilePage.loaded) {
+          const p = data.profile || {};
+          $("profile-field-name").value       = p.name       || "";
+          $("profile-field-occupation").value = p.occupation || "";
+          $("profile-field-summary").value    = p.summary    || "";
         }
 
-        // Occupation badge
-        const occ = data.facts?.occupation || "";
+        // Occupation badge in header
+        const occ      = (data.profile || {}).occupation || data.facts?.occupation || "";
         const occBadge = $("profile-occupation-badge");
-        if (occ) { occBadge.textContent = occ.replace(/_/g, " "); occBadge.classList.remove("hidden"); }
+        if (occ) { occBadge.textContent = occ; occBadge.classList.remove("hidden"); }
         else      { occBadge.classList.add("hidden"); }
 
+        // AI Insights tab — analysis
+        const ai = data.ai_analysis || {};
+        profilePage.renderAnalysis(ai.analysis || "", ai.generated_at || "");
+
+        // AI Insights tab — facts grid
         profilePage.renderFacts(data.facts || {});
+
         profilePage.loaded = true;
-        saveBtn.disabled = false;
       } catch (e) {
         console.error("Failed to load profile:", e);
-        const msg = $("profile-context-msg");
-        msg.textContent = "Failed to load profile data. Refresh to try again.";
-        msg.style.color = "var(--danger)";
-        msg.classList.remove("hidden");
       } finally {
         $("profile-loader").classList.add("hidden");
       }
     },
 
-    enterEditMode() {
-      $("profile-bio-display").classList.add("hidden");
-      $("profile-bio-edit").classList.remove("hidden");
-      $("profile-context").focus();
+    switchTab(tab) {
+      profilePage.activeTab = tab;
+      ["about", "ai"].forEach(t => {
+        $(`profile-tab-btn-${t}`).classList.toggle("active", t === tab);
+        $(`profile-tab-${t}`).classList.toggle("hidden", t !== tab);
+      });
     },
 
-    exitEditMode() {
-      $("profile-bio-display").classList.remove("hidden");
-      $("profile-bio-edit").classList.add("hidden");
+    async saveProfile() {
+      const name       = $("profile-field-name").value.trim();
+      const occupation = $("profile-field-occupation").value.trim();
+      const summary    = $("profile-field-summary").value.trim();
+      const msg        = $("profile-fields-msg");
+      const btn        = $("profile-fields-save-btn");
+      btn.disabled     = true;
+      try {
+        await api.call("PUT", "/assistant/profile", { name, occupation, summary });
+        // Update occupation badge
+        const occBadge = $("profile-occupation-badge");
+        if (occupation) { occBadge.textContent = occupation; occBadge.classList.remove("hidden"); }
+        else             { occBadge.classList.add("hidden"); }
+        msg.textContent  = "Saved.";
+        msg.style.color  = "var(--primary)";
+        msg.classList.remove("hidden");
+      } catch {
+        msg.textContent  = "Failed to save.";
+        msg.style.color  = "var(--danger)";
+        msg.classList.remove("hidden");
+      } finally {
+        btn.disabled = false;
+        setTimeout(() => msg.classList.add("hidden"), 3000);
+      }
+    },
+
+    async generateAnalysis() {
+      const btn = $("profile-analyze-btn");
+      btn.disabled    = true;
+      btn.textContent = "Generating...";
+      try {
+        const result = await api.call("POST", "/assistant/profile/analyze", {});
+        profilePage.renderAnalysis(result.analysis || "", result.generated_at || "");
+      } catch (e) {
+        console.error("Failed to generate analysis:", e);
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = "Refresh analysis";
+      }
+    },
+
+    renderAnalysis(text, generatedAt) {
+      const emptyEl = $("profile-analysis-empty");
+      const textEl  = $("profile-analysis-text");
+      const dateEl  = $("profile-analysis-date");
+      if (text) {
+        textEl.textContent = text;
+        textEl.classList.remove("hidden");
+        emptyEl.classList.add("hidden");
+        if (generatedAt) {
+          try {
+            const d = new Date(generatedAt);
+            dateEl.textContent = "Generated " + d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+            dateEl.classList.remove("hidden");
+          } catch { dateEl.classList.add("hidden"); }
+        } else {
+          dateEl.classList.add("hidden");
+        }
+      } else {
+        textEl.classList.add("hidden");
+        dateEl.classList.add("hidden");
+        emptyEl.classList.remove("hidden");
+      }
     },
 
     renderFacts(facts) {
-      const keys = Object.keys(facts);
+      const keys  = Object.keys(facts);
       const empty = $("profile-facts-empty");
       const list  = $("profile-facts-list");
       if (keys.length === 0) {
@@ -8814,31 +8958,6 @@
           <div class="profile-fact-value" id="pfv-${escHtml(k)}">${renderFactValue(facts[k])}</div>
         </div>
       `).join("");
-    },
-
-    async saveContext() {
-      const context = $("profile-context").value.trim();
-      const msg     = $("profile-context-msg");
-      try {
-        await api.updateAssistantMemory({ master_context: context });
-        // Update display
-        const bioText = $("profile-bio-text");
-        if (context) {
-          bioText.className = "profile-bio-text";
-          bioText.textContent = context;
-        } else {
-          bioText.className = "profile-bio-empty";
-          bioText.textContent = "No summary yet — start chatting and the AI will build one, or click to write your own.";
-        }
-        profilePage.exitEditMode();
-        msg.textContent = "Saved.";
-        msg.style.color = "var(--primary)";
-      } catch {
-        msg.textContent = "Failed to save.";
-        msg.style.color = "var(--danger, #e53e3e)";
-      }
-      msg.classList.remove("hidden");
-      setTimeout(() => msg.classList.add("hidden"), 3000);
     },
 
     editFact(key) {
@@ -8864,11 +8983,6 @@
         try {
           await api.updateAssistantMemoryFact(key, newVal);
           valueEl.innerHTML = renderFactValue(newVal);
-          if (key === "occupation") {
-            const occBadge = $("profile-occupation-badge");
-            occBadge.textContent = newVal.replace(/_/g, " ");
-            occBadge.classList.remove("hidden");
-          }
         } catch { valueEl.innerHTML = originalHTML; }
       };
 
@@ -8893,20 +9007,14 @@
         if (row) row.remove();
         const remaining = $("profile-facts-list").querySelectorAll(".profile-fact");
         if (remaining.length === 0) $("profile-facts-empty").classList.remove("hidden");
-        if (key === "occupation") $("profile-occupation-badge").classList.add("hidden");
       } catch (e) {
         console.error("Failed to delete fact:", e);
-        const msg = $("profile-context-msg");
-        msg.textContent = "Failed to delete fact. Please try again.";
-        msg.style.color = "var(--danger)";
-        msg.classList.remove("hidden");
-        setTimeout(() => msg.classList.add("hidden"), 3000);
       }
     },
   };
 
-  document.getElementById("profile-context-save-btn").addEventListener("click", () => profilePage.saveContext());
-  document.getElementById("profile-context-cancel-btn").addEventListener("click", () => profilePage.exitEditMode());
+  document.getElementById("profile-fields-save-btn").addEventListener("click", () => profilePage.saveProfile());
+  document.getElementById("profile-analyze-btn").addEventListener("click", () => profilePage.generateAnalysis());
   document.getElementById("profile-refresh-btn").addEventListener("click", () => profilePage.load());
 
   // ── Global search ────────────────────────────────────────────────────────────
@@ -9391,7 +9499,7 @@
     },
 
     expand(name) {
-      const sections = ["home", "tasks", "notes", "habits", "goals", "journal", "feeds", "diagrams", "settings", "admin", "profile"];
+      const sections = ["home", "tasks", "notes", "journal", "feeds", "diagrams", "settings", "admin", "profile"];
       sections.forEach(s => {
         const sect = $(`sb-${s}`);
         const body = $(`sb-${s}-body`);
@@ -9418,8 +9526,8 @@
 
     show(name) {
       pages.current = name;
-      // health and nutrition are sub-sections of journal; favorites is a sub-section of feeds
-      const sbSection = (name === "health" || name === "nutrition") ? "journal"
+      // habits, goals, health, nutrition are sub-sections of journal; favorites is a sub-section of feeds
+      const sbSection = (name === "habits" || name === "goals" || name === "health" || name === "nutrition") ? "journal"
                       : name === "favorites" ? "feeds"
                       : name;
       sidebar.expand(sbSection);
