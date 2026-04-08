@@ -4997,18 +4997,24 @@
           </select>
         </div>
       </div>
-      <div class="field">
-        <label for="expense-category">Category</label>
-        <select id="expense-category">
-          <option value="housing">Housing</option>
-          <option value="utilities">Utilities</option>
-          <option value="subscriptions">Subscriptions</option>
-          <option value="insurance">Insurance</option>
-          <option value="food">Food</option>
-          <option value="transport">Transport</option>
-          <option value="healthcare">Healthcare</option>
-          <option value="other">Other</option>
-        </select>
+      <div class="field-row">
+        <div class="field">
+          <label for="expense-category">Category</label>
+          <select id="expense-category">
+            <option value="housing">Housing</option>
+            <option value="utilities">Utilities</option>
+            <option value="subscriptions">Subscriptions</option>
+            <option value="insurance">Insurance</option>
+            <option value="food">Food</option>
+            <option value="transport">Transport</option>
+            <option value="healthcare">Healthcare</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="expense-due-day">Due day</label>
+          <input type="number" id="expense-due-day" min="1" max="31" placeholder="e.g. 15" style="width:100%;" />
+        </div>
       </div>
       <div class="field">
         <label for="expense-notes">Notes</label>
@@ -8642,6 +8648,11 @@
 
   // ── Finances ─────────────────────────────────────────────────────────────────
 
+  function ordinal(n) {
+    const s = ["th","st","nd","rd"], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
   const finances = {
     summary: null,
     editingId: null,
@@ -8775,6 +8786,7 @@
             <div class="fin-card-meta">
               <span class="badge">${catLabel[e.category] || e.category}</span>
               <span>${finances.fmt(e.amount)} ${freqLabel[e.frequency] || e.frequency}</span>
+              ${e.due_day != null ? `<span>Due ${ordinal(e.due_day)} of month</span>` : ""}
               ${e.notes ? `<span>${escHtml(e.notes)}</span>` : ""}
             </div>
           </div>`).join("");
@@ -8928,11 +8940,12 @@
         $("expense-amount").value    = e.amount;
         $("expense-frequency").value = e.frequency;
         $("expense-category").value  = e.category;
+        $("expense-due-day").value   = e.due_day != null ? e.due_day : "";
         $("expense-notes").value     = e.notes || "";
         $("expense-delete-btn").classList.remove("hidden");
       } else {
         $("expense-modal-title").textContent = "Add expense";
-        $("expense-name").value = $("expense-amount").value = $("expense-notes").value = "";
+        $("expense-name").value = $("expense-amount").value = $("expense-notes").value = $("expense-due-day").value = "";
         $("expense-frequency").value = "monthly";
         $("expense-category").value  = "other";
         $("expense-delete-btn").classList.add("hidden");
@@ -8957,7 +8970,9 @@
     if (!name)   { showError("expense-modal-error", "Name is required."); return; }
     if (!amount || parseFloat(amount) <= 0) { showError("expense-modal-error", "Amount must be greater than zero."); return; }
 
+    const dueDayRaw = $("expense-due-day").value.trim();
     const body = { name, amount, frequency: $("expense-frequency").value, category: $("expense-category").value, notes: $("expense-notes").value.trim() };
+    if (dueDayRaw !== "") body.due_day = parseInt(dueDayRaw, 10);
     $("expense-save-btn").disabled = true; $("expense-save-btn").textContent = "Saving...";
     try {
       if (finances.editingId) {

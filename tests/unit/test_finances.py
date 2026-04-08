@@ -214,6 +214,21 @@ class TestCreateExpense:
         assert body["category"] == "subscriptions"
         assert body["monthly_amount"] == "17"
 
+    def test_due_day_stored(self, tbls):
+        r = crud.create_expense(USER, {"name": "Hydro", "amount": "120", "frequency": "monthly", "category": "utilities", "due_day": 15})
+        assert r["statusCode"] == 201
+        assert json.loads(r["body"])["due_day"] == 15
+
+    def test_due_day_optional(self, tbls):
+        r = crud.create_expense(USER, {"name": "Rent", "amount": "1500", "frequency": "monthly", "category": "housing"})
+        assert r["statusCode"] == 201
+        assert "due_day" not in json.loads(r["body"])
+
+    def test_due_day_invalid(self, tbls):
+        assert crud.create_expense(USER, {"name": "X", "amount": "50", "frequency": "monthly", "category": "other", "due_day": 0})["statusCode"] == 400
+        assert crud.create_expense(USER, {"name": "X", "amount": "50", "frequency": "monthly", "category": "other", "due_day": 32})["statusCode"] == 400
+        assert crud.create_expense(USER, {"name": "X", "amount": "50", "frequency": "monthly", "category": "other", "due_day": "bad"})["statusCode"] == 400
+
 
 class TestDeleteExpense:
     def test_deletes(self, tbls):

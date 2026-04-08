@@ -358,6 +358,19 @@ def list_expenses(user_id: str) -> dict:
     return ok(items)
 
 
+def _validate_due_day(value) -> tuple[int | None, str | None]:
+    """Return (day, error_message). day is None if value is absent."""
+    if value is None or value == "":
+        return None, None
+    try:
+        day = int(value)
+    except (ValueError, TypeError):
+        return None, "due_day must be an integer between 1 and 31"
+    if not 1 <= day <= 31:
+        return None, "due_day must be between 1 and 31"
+    return day, None
+
+
 def create_expense(user_id: str, body: dict) -> dict:
     name = (body.get("name") or "").strip()
     if not name:
@@ -377,6 +390,10 @@ def create_expense(user_id: str, body: dict) -> dict:
     if category not in VALID_EXPENSE_CATS:
         return error(f"category must be one of: {', '.join(sorted(VALID_EXPENSE_CATS))}")
 
+    due_day, err = _validate_due_day(body.get("due_day"))
+    if err:
+        return error(err)
+
     notes = (body.get("notes") or "").strip()
     if len(notes) > MAX_NOTES_LEN:
         return error(f"notes exceeds maximum length of {MAX_NOTES_LEN}")
@@ -390,6 +407,7 @@ def create_expense(user_id: str, body: dict) -> dict:
         "amount":     str(amount),
         "frequency":  frequency,
         "category":   category,
+        "due_day":    due_day,
         "notes":      notes or None,
         "created_at": now,
         "updated_at": now,
@@ -401,7 +419,7 @@ def create_expense(user_id: str, body: dict) -> dict:
 
 
 def update_expense(user_id: str, expense_id: str, body: dict) -> dict:
-    updatable = {"name", "amount", "frequency", "category", "notes"}
+    updatable = {"name", "amount", "frequency", "category", "due_day", "notes"}
     fields = {k: v for k, v in body.items() if k in updatable}
     if not fields:
         return error("No valid fields provided for update")
@@ -424,6 +442,15 @@ def update_expense(user_id: str, expense_id: str, body: dict) -> dict:
 
     if "category" in fields and fields["category"] not in VALID_EXPENSE_CATS:
         return error(f"category must be one of: {', '.join(sorted(VALID_EXPENSE_CATS))}")
+
+    if "due_day" in fields:
+        due_day, err = _validate_due_day(fields["due_day"])
+        if err:
+            return error(err)
+        if due_day is None:
+            fields.pop("due_day")  # clearing it — handled by omitting from update
+        else:
+            fields["due_day"] = due_day
 
     if "notes" in fields:
         fields["notes"] = (fields["notes"] or "").strip()
