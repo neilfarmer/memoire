@@ -1049,6 +1049,153 @@
       text-align: right;
     }
 
+    /* ── Budget ──────────────────────────────────────────────────────────── */
+    .budget-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .budget-summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+    }
+    .budget-summary-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .budget-summary-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .budget-summary-value.income  { color: #16a34a; }
+    .budget-summary-value.expense { color: #dc2626; }
+    .budget-summary-value.net-pos { color: #16a34a; }
+    .budget-summary-value.net-neg { color: #dc2626; }
+    html[data-theme="dark"] .budget-summary-value.income  { color: #86efac; }
+    html[data-theme="dark"] .budget-summary-value.expense { color: #fca5a5; }
+    html[data-theme="dark"] .budget-summary-value.net-pos { color: #86efac; }
+    html[data-theme="dark"] .budget-summary-value.net-neg { color: #fca5a5; }
+    .budget-section-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+      margin: 20px 0 10px;
+    }
+    .budget-category-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .budget-category-row:last-child { border-bottom: none; }
+    .budget-category-name {
+      min-width: 140px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      flex-shrink: 0;
+    }
+    .budget-bar-wrap {
+      flex: 1;
+      height: 8px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .budget-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary) 65%, var(--accent)));
+      transition: width .3s;
+    }
+    .budget-bar-fill.over { background: #dc2626; }
+    html[data-theme="dark"] .budget-bar-fill.over { background: #fca5a5; }
+    .budget-category-amounts {
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      min-width: 100px;
+      text-align: right;
+    }
+    .budget-category-set-btn {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .budget-category-set-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .budget-txn-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .budget-txn-table th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+      padding: 0 8px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .budget-txn-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .budget-txn-table tr:last-child td { border-bottom: none; }
+    .budget-txn-table tr:hover td { background: var(--hover); cursor: pointer; }
+    .txn-amount-income      { color: #16a34a; font-weight: 600; }
+    .txn-amount-expense     { color: #dc2626; font-weight: 600; }
+    .txn-amount-debt_payment { color: #b45309; font-weight: 600; }
+    html[data-theme="dark"] .txn-amount-income      { color: #86efac; }
+    html[data-theme="dark"] .txn-amount-expense     { color: #fca5a5; }
+    html[data-theme="dark"] .txn-amount-debt_payment { color: #fde68a; }
+    .budget-month-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+    .budget-month-nav button {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1;
+    }
+    .budget-month-nav button:hover { border-color: var(--primary); color: var(--primary); }
+    .budget-month-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      min-width: 96px;
+      text-align: center;
+    }
+    @media (max-width: 640px) {
+      .budget-summary { grid-template-columns: 1fr; }
+      .budget-category-name { min-width: 90px; }
+    }
+
     .habits-group-label {
       font-size: 11px;
       font-weight: 700;
@@ -3964,6 +4111,12 @@
             <span class="sb-hdr-label">Diagrams</span>
           </div>
         </div>
+        <div class="sb-section" id="sb-budget">
+          <div class="sb-section-hdr" onclick="sidebar.navigate('budget')">
+            <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+            <span class="sb-hdr-label">Budget</span>
+          </div>
+        </div>
         <div class="sb-spacer"></div>
         <div class="sb-section" id="sb-settings">
           <div class="sb-section-hdr" onclick="sidebar.navigate('settings')">
@@ -4438,6 +4591,42 @@
     </div>
   </main>
 
+  <!-- Budget page -->
+  <main id="page-budget" class="hidden">
+    <div class="toolbar">
+      <h2>Budget</h2>
+      <div class="budget-month-nav">
+        <button id="budget-prev-btn" title="Previous month">&#8249;</button>
+        <span class="budget-month-label" id="budget-month-label"></span>
+        <button id="budget-next-btn" title="Next month">&#8250;</button>
+      </div>
+      <button class="btn btn-primary" id="new-txn-btn">+ Transaction</button>
+    </div>
+    <div id="budget-loader" class="page-loader hidden"><div class="spinner"></div></div>
+    <div id="budget-content">
+      <div class="budget-summary" id="budget-summary">
+        <div class="budget-summary-card">
+          <div class="budget-summary-label">Income</div>
+          <div class="budget-summary-value income" id="budget-income">$0.00</div>
+        </div>
+        <div class="budget-summary-card">
+          <div class="budget-summary-label">Expenses</div>
+          <div class="budget-summary-value expense" id="budget-expense">$0.00</div>
+        </div>
+        <div class="budget-summary-card">
+          <div class="budget-summary-label">Net</div>
+          <div class="budget-summary-value" id="budget-net">$0.00</div>
+        </div>
+      </div>
+
+      <div class="budget-section-title">Categories</div>
+      <div id="budget-categories"></div>
+
+      <div class="budget-section-title" style="margin-top:28px;">Transactions</div>
+      <div id="budget-transactions"></div>
+    </div>
+  </main>
+
   <!-- Profile page -->
   <main id="page-profile" class="hidden">
     <div class="profile-layout">
@@ -4679,6 +4868,91 @@
         </div>
         <button class="btn btn-secondary" id="goal-cancel-btn">Cancel</button>
         <button class="btn btn-primary" id="goal-save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Transaction modal ── -->
+<div id="txn-modal-overlay" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="txn-modal-title">New transaction</h3>
+      <button class="modal-close" id="txn-modal-close">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div id="txn-modal-error" class="error-msg hidden"></div>
+      <div class="field-row">
+        <div class="field">
+          <label for="txn-amount">Amount <span style="color:var(--danger)">*</span></label>
+          <input type="number" id="txn-amount" min="0.01" step="0.01" placeholder="0.00" />
+        </div>
+        <div class="field">
+          <label for="txn-type">Type <span style="color:var(--danger)">*</span></label>
+          <select id="txn-type">
+            <option value="expense">Expense</option>
+            <option value="income">Income</option>
+            <option value="debt_payment">Debt payment</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="txn-category">Category <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="txn-category" placeholder="e.g. Rent, Groceries, Visa" list="txn-category-list" />
+          <datalist id="txn-category-list"></datalist>
+        </div>
+        <div class="field">
+          <label for="txn-date">Date <span style="color:var(--danger)">*</span></label>
+          <input type="date" id="txn-date" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="txn-desc">Description</label>
+        <input type="text" id="txn-desc" placeholder="Optional note" />
+      </div>
+      <div class="field">
+        <label for="txn-interest-rate">Interest rate % <span style="font-weight:400;color:var(--muted)">(optional, for debts)</span></label>
+        <input type="number" id="txn-interest-rate" min="0" step="0.01" placeholder="e.g. 19.99" />
+      </div>
+      <div class="modal-footer">
+        <div class="modal-footer-left">
+          <button class="btn btn-danger hidden" id="txn-delete-btn">Delete</button>
+        </div>
+        <button class="btn btn-secondary" id="txn-cancel-btn">Cancel</button>
+        <button class="btn btn-primary" id="txn-save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Budget limit modal ── -->
+<div id="budget-limit-modal-overlay" class="modal-overlay hidden">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-header">
+      <h3 id="budget-limit-modal-title">Set budget limit</h3>
+      <button class="modal-close" id="budget-limit-modal-close">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div id="budget-limit-modal-error" class="error-msg hidden"></div>
+      <div class="field">
+        <label for="budget-limit-category">Category</label>
+        <input type="text" id="budget-limit-category" readonly style="background:var(--hover);color:var(--muted);" />
+      </div>
+      <div class="field">
+        <label for="budget-limit-month">Month</label>
+        <input type="month" id="budget-limit-month" />
+      </div>
+      <div class="field">
+        <label for="budget-limit-amount">Monthly limit <span style="color:var(--danger)">*</span></label>
+        <input type="number" id="budget-limit-amount" min="0.01" step="0.01" placeholder="0.00" />
+      </div>
+      <div class="modal-footer">
+        <div class="modal-footer-left">
+          <button class="btn btn-danger hidden" id="budget-limit-delete-btn">Remove limit</button>
+        </div>
+        <button class="btn btn-secondary" id="budget-limit-cancel-btn">Cancel</button>
+        <button class="btn btn-primary" id="budget-limit-save-btn">Save</button>
       </div>
     </div>
   </div>
@@ -8299,6 +8573,327 @@
     }
   });
 
+  // ── Budget ───────────────────────────────────────────────────────────────────
+
+  const budget = {
+    currentMonth: (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    })(),
+    transactions: [],
+    categories:   [],
+    summary:      null,
+    editingTxnId: null,
+    editingBudgetId: null,
+
+    fmtMoney(val) {
+      const n = parseFloat(val) || 0;
+      return "$" + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    },
+
+    monthLabel(ym) {
+      const [y, m] = ym.split("-");
+      return new Date(parseInt(y), parseInt(m) - 1, 1)
+        .toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    },
+
+    prevMonth() {
+      const [y, m] = budget.currentMonth.split("-").map(Number);
+      const d = new Date(y, m - 2, 1);
+      budget.currentMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      budget.load();
+    },
+
+    nextMonth() {
+      const [y, m] = budget.currentMonth.split("-").map(Number);
+      const d = new Date(y, m, 1);
+      budget.currentMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      budget.load();
+    },
+
+    async load() {
+      $("budget-month-label").textContent = budget.monthLabel(budget.currentMonth);
+      showLoader("budget-loader");
+      try {
+        const [summ, txns] = await Promise.all([
+          api.call("GET", `/summary?month=${budget.currentMonth}`),
+          api.call("GET", `/transactions?month=${budget.currentMonth}`),
+        ]);
+        budget.summary      = summ;
+        budget.transactions = txns || [];
+        budget.renderSummary();
+        budget.renderCategories();
+        budget.renderTransactions();
+        budget.refreshCategoryDatalist();
+      } catch (e) {
+        console.error("Failed to load budget:", e);
+      } finally {
+        hideLoader("budget-loader");
+      }
+    },
+
+    renderSummary() {
+      const s = budget.summary;
+      if (!s) return;
+      $("budget-income").textContent  = budget.fmtMoney(s.total_income);
+      $("budget-expense").textContent = budget.fmtMoney(s.total_expense);
+      const net = parseFloat(s.net) || 0;
+      const netEl = $("budget-net");
+      netEl.textContent = (net < 0 ? "-" : "") + budget.fmtMoney(Math.abs(net));
+      netEl.className = "budget-summary-value " + (net >= 0 ? "net-pos" : "net-neg");
+    },
+
+    renderCategories() {
+      const container = $("budget-categories");
+      const rows = (budget.summary?.category_breakdown || []);
+      if (rows.length === 0) {
+        container.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No expense categories this month.</div>`;
+        return;
+      }
+      container.innerHTML = rows.map(row => {
+        const spent = parseFloat(row.spent) || 0;
+        const limit = row.limit ? parseFloat(row.limit) : null;
+        const pct   = limit ? Math.min((spent / limit) * 100, 100) : 0;
+        const over  = limit && spent > limit;
+        const barHtml = limit
+          ? `<div class="budget-bar-wrap"><div class="budget-bar-fill${over ? " over" : ""}" style="width:${pct.toFixed(1)}%"></div></div>`
+          : `<div class="budget-bar-wrap"><div class="budget-bar-fill" style="width:0%"></div></div>`;
+        const amtHtml = limit
+          ? `${budget.fmtMoney(spent)} / ${budget.fmtMoney(limit)}`
+          : `${budget.fmtMoney(spent)}`;
+        const btnLabel = row.budget_id ? "Edit limit" : "Set limit";
+        return `
+          <div class="budget-category-row">
+            <div class="budget-category-name">${escHtml(row.category)}</div>
+            ${barHtml}
+            <div class="budget-category-amounts">${amtHtml}</div>
+            <button class="budget-category-set-btn" onclick="budgetLimitModal.open(${JSON.stringify(row.category)}, ${JSON.stringify(row.budget_id || null)}, ${JSON.stringify(row.limit || null)})">${btnLabel}</button>
+          </div>`;
+      }).join("");
+    },
+
+    renderTransactions() {
+      const container = $("budget-transactions");
+      const txns = budget.transactions;
+      if (txns.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <p>No transactions this month.</p>
+            <button class="btn btn-primary" onclick="txnModal.open()">+ Transaction</button>
+          </div>`;
+        return;
+      }
+      const typeLabel = { income: "Income", expense: "Expense", debt_payment: "Debt payment" };
+      container.innerHTML = `
+        <table class="budget-txn-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th>Type</th>
+              <th style="text-align:right;">Amount</th>
+              <th style="text-align:right;">APR %</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${txns.map(t => {
+              const date = t.date ? new Date(t.date + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
+              const apr  = t.interest_rate ? parseFloat(t.interest_rate).toFixed(2) + "%" : "";
+              return `
+                <tr onclick="txnModal.open('${t.transaction_id}')">
+                  <td>${date}</td>
+                  <td>${escHtml(t.category || "")}</td>
+                  <td style="color:var(--muted);">${escHtml(t.description || "")}</td>
+                  <td>${typeLabel[t.type] || t.type}</td>
+                  <td style="text-align:right;" class="txn-amount-${t.type}">${t.type === "income" ? "+" : "-"}${budget.fmtMoney(t.amount)}</td>
+                  <td style="text-align:right;color:var(--muted);">${apr}</td>
+                </tr>`;
+            }).join("")}
+          </tbody>
+        </table>`;
+    },
+
+    refreshCategoryDatalist() {
+      const cats = [...new Set(budget.transactions.map(t => t.category).filter(Boolean))];
+      const dl = document.getElementById("txn-category-list");
+      if (dl) dl.innerHTML = cats.map(c => `<option value="${escHtml(c)}">`).join("");
+    },
+  };
+
+  const txnModal = {
+    open(txnId) {
+      budget.editingTxnId = txnId || null;
+      clearError("txn-modal-error");
+      const today = new Date().toISOString().slice(0, 10);
+
+      if (txnId) {
+        const t = budget.transactions.find(t => t.transaction_id === txnId);
+        if (!t) return;
+        $("txn-modal-title").textContent = "Edit transaction";
+        $("txn-amount").value          = t.amount;
+        $("txn-type").value            = t.type || "expense";
+        $("txn-category").value        = t.category || "";
+        $("txn-date").value            = t.date || today;
+        $("txn-desc").value            = t.description || "";
+        $("txn-interest-rate").value   = t.interest_rate || "";
+        $("txn-delete-btn").classList.remove("hidden");
+      } else {
+        $("txn-modal-title").textContent = "New transaction";
+        $("txn-amount").value          = "";
+        $("txn-type").value            = "expense";
+        $("txn-category").value        = "";
+        $("txn-date").value            = today;
+        $("txn-desc").value            = "";
+        $("txn-interest-rate").value   = "";
+        $("txn-delete-btn").classList.add("hidden");
+      }
+
+      $("txn-modal-overlay").classList.remove("hidden");
+      $("txn-amount").focus();
+    },
+
+    close() {
+      $("txn-modal-overlay").classList.add("hidden");
+      budget.editingTxnId = null;
+    },
+  };
+
+  $("new-txn-btn").addEventListener("click", () => txnModal.open());
+  $("txn-modal-close").addEventListener("click", () => txnModal.close());
+  $("txn-cancel-btn").addEventListener("click", () => txnModal.close());
+  $("txn-modal-overlay").addEventListener("click", e => {
+    if (e.target === $("txn-modal-overlay")) txnModal.close();
+  });
+
+  $("txn-save-btn").addEventListener("click", async () => {
+    clearError("txn-modal-error");
+    const amount = $("txn-amount").value.trim();
+    if (!amount || parseFloat(amount) <= 0) { showError("txn-modal-error", "Amount must be greater than zero."); return; }
+    const category = $("txn-category").value.trim();
+    if (!category) { showError("txn-modal-error", "Category is required."); return; }
+    const date = $("txn-date").value;
+    if (!date) { showError("txn-modal-error", "Date is required."); return; }
+
+    const body = {
+      amount,
+      type:          $("txn-type").value,
+      category,
+      date,
+      description:   $("txn-desc").value.trim(),
+    };
+    const ir = $("txn-interest-rate").value.trim();
+    if (ir) body.interest_rate = ir;
+
+    $("txn-save-btn").disabled    = true;
+    $("txn-save-btn").textContent = "Saving...";
+    try {
+      if (budget.editingTxnId) {
+        await api.call("PUT", `/transactions/${budget.editingTxnId}`, body);
+      } else {
+        await api.call("POST", "/transactions", body);
+      }
+      txnModal.close();
+      await budget.load();
+    } catch (e) {
+      showError("txn-modal-error", e.message);
+    } finally {
+      $("txn-save-btn").disabled    = false;
+      $("txn-save-btn").textContent = "Save";
+    }
+  });
+
+  $("txn-delete-btn").addEventListener("click", async () => {
+    if (!budget.editingTxnId) return;
+    if (!await confirmDialog("Delete this transaction?")) return;
+    $("txn-delete-btn").disabled = true;
+    try {
+      await api.call("DELETE", `/transactions/${budget.editingTxnId}`);
+      txnModal.close();
+      await budget.load();
+    } catch (e) {
+      showError("txn-modal-error", e.message);
+    } finally {
+      $("txn-delete-btn").disabled = false;
+    }
+  });
+
+  const budgetLimitModal = {
+    open(category, budgetId, currentLimit) {
+      budget.editingBudgetId = budgetId || null;
+      clearError("budget-limit-modal-error");
+      $("budget-limit-modal-title").textContent = budgetId ? "Edit budget limit" : "Set budget limit";
+      $("budget-limit-category").value          = category;
+      $("budget-limit-month").value             = budget.currentMonth;
+      $("budget-limit-amount").value            = currentLimit || "";
+      if (budgetId) {
+        $("budget-limit-delete-btn").classList.remove("hidden");
+      } else {
+        $("budget-limit-delete-btn").classList.add("hidden");
+      }
+      $("budget-limit-modal-overlay").classList.remove("hidden");
+      $("budget-limit-amount").focus();
+    },
+
+    close() {
+      $("budget-limit-modal-overlay").classList.add("hidden");
+      budget.editingBudgetId = null;
+    },
+  };
+
+  $("budget-limit-modal-close").addEventListener("click",  () => budgetLimitModal.close());
+  $("budget-limit-cancel-btn").addEventListener("click",   () => budgetLimitModal.close());
+  $("budget-limit-modal-overlay").addEventListener("click", e => {
+    if (e.target === $("budget-limit-modal-overlay")) budgetLimitModal.close();
+  });
+
+  $("budget-prev-btn").addEventListener("click", () => budget.prevMonth());
+  $("budget-next-btn").addEventListener("click", () => budget.nextMonth());
+
+  $("budget-limit-save-btn").addEventListener("click", async () => {
+    clearError("budget-limit-modal-error");
+    const limitVal = $("budget-limit-amount").value.trim();
+    if (!limitVal || parseFloat(limitVal) <= 0) { showError("budget-limit-modal-error", "Limit must be greater than zero."); return; }
+
+    const body = {
+      category: $("budget-limit-category").value,
+      limit:    limitVal,
+      month:    $("budget-limit-month").value,
+    };
+
+    $("budget-limit-save-btn").disabled    = true;
+    $("budget-limit-save-btn").textContent = "Saving...";
+    try {
+      if (budget.editingBudgetId) {
+        await api.call("PUT", `/budgets/${budget.editingBudgetId}`, body);
+      } else {
+        await api.call("POST", "/budgets", body);
+      }
+      budgetLimitModal.close();
+      await budget.load();
+    } catch (e) {
+      showError("budget-limit-modal-error", e.message);
+    } finally {
+      $("budget-limit-save-btn").disabled    = false;
+      $("budget-limit-save-btn").textContent = "Save";
+    }
+  });
+
+  $("budget-limit-delete-btn").addEventListener("click", async () => {
+    if (!budget.editingBudgetId) return;
+    if (!await confirmDialog("Remove this budget limit?")) return;
+    $("budget-limit-delete-btn").disabled = true;
+    try {
+      await api.call("DELETE", `/budgets/${budget.editingBudgetId}`);
+      budgetLimitModal.close();
+      await budget.load();
+    } catch (e) {
+      showError("budget-limit-modal-error", e.message);
+    } finally {
+      $("budget-limit-delete-btn").disabled = false;
+    }
+  });
+
   // ── Pomodoro timer ────────────────────────────────────────────────────────────
 
   const pomodoro = {
@@ -9563,6 +10158,7 @@
       if (name === "feeds")     feeds.refresh();
       if (name === "favorites") { if (!favs.loaded) favs.load(); else favs.render(); }
       if (name === "diagrams")  { if (!diagrams.loaded) diagrams.load(); else diagrams.render(); }
+      if (name === "budget")    { budget.load(); }
       if (name === "profile")   { profilePage.load(); }
       // Hide the AI pal FAB on the diagrams page — Excalidraw's help button occupies the same corner
       const palBtn = document.getElementById("pal-btn");

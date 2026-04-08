@@ -494,6 +494,64 @@ resource "aws_dynamodb_table" "feeds_read" {
   }
 }
 
+# ── Budget: Transactions table ────────────────────────────────────────────────
+#
+# PK: user_id         (String) — Cognito sub claim
+# SK: transaction_id  (String) — UUID generated at creation
+#
+# Attributes: amount (String), type (income|expense|debt_payment), category,
+#             description, date (YYYY-MM-DD), interest_rate (String, optional),
+#             created_at, updated_at
+
+resource "aws_dynamodb_table" "transactions" {
+  name         = "${local.name_prefix}-transactions"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "transaction_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "transaction_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
+# ── Budget: Budgets table ─────────────────────────────────────────────────────
+#
+# PK: user_id    (String) — Cognito sub claim
+# SK: budget_id  (String) — UUID generated at creation
+#
+# Attributes: category, limit (String), month (YYYY-MM), created_at, updated_at
+
+resource "aws_dynamodb_table" "budgets" {
+  name         = "${local.name_prefix}-budgets"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "budget_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "budget_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
 # ── Diagrams table ────────────────────────────────────────────────────────────
 #
 # PK: user_id     (String) — Cognito sub claim
