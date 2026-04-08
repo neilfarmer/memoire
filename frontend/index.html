@@ -3940,6 +3940,7 @@
             <div style="padding:4px 10px 6px;">
               <button class="btn btn-secondary btn-sm btn-full" id="journal-today-btn" onclick="event.stopPropagation()">Today's entry</button>
             </div>
+            <div class="sb-sub-label">Tracking</div>
             <button class="sb-sub-link" data-page="habits" onclick="pages.show('habits')">Habits</button>
             <button class="sb-sub-link" data-page="goals" onclick="pages.show('goals')">Goals</button>
             <div class="sb-sub-label">Health</div>
@@ -9498,7 +9499,7 @@
     },
 
     expand(name) {
-      const sections = ["home", "tasks", "notes", "habits", "goals", "journal", "feeds", "diagrams", "settings", "admin", "profile"];
+      const sections = ["home", "tasks", "notes", "journal", "feeds", "diagrams", "settings", "admin", "profile"];
       sections.forEach(s => {
         const sect = $(`sb-${s}`);
         const body = $(`sb-${s}-body`);
@@ -9525,8 +9526,8 @@
 
     show(name) {
       pages.current = name;
-      // health and nutrition are sub-sections of journal; favorites is a sub-section of feeds
-      const sbSection = (name === "health" || name === "nutrition") ? "journal"
+      // habits, goals, health, nutrition are sub-sections of journal; favorites is a sub-section of feeds
+      const sbSection = (name === "habits" || name === "goals" || name === "health" || name === "nutrition") ? "journal"
                       : name === "favorites" ? "feeds"
                       : name;
       sidebar.expand(sbSection);
