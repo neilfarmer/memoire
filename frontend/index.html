@@ -9538,7 +9538,7 @@
           <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px;color:var(--muted);">
             <span>Outflow</span><span style="color:var(--text);font-weight:600;">${finances.fmt(fs.total_monthly_outflow)}</span>
           </div>
-          ${fs.total_debt_balance !== "0.00" ? `
+          ${parseFloat(fs.total_debt_balance ?? 0) > 0 ? `
           <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px;color:var(--muted);">
             <span>Total debt</span><span style="color:var(--text);font-weight:600;">${finances.fmt(fs.total_debt_balance)}</span>
           </div>` : ""}`;

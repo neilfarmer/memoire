@@ -132,7 +132,7 @@ def list_debts(user_id: str) -> dict:
 
 
 def create_debt(user_id: str, body: dict) -> dict:
-    name = (body.get("name") or "").strip()
+    name = str(body.get("name") or "").strip()
     if not name:
         return error("name is required")
     if len(name) > MAX_NAME_LEN:
@@ -154,7 +154,7 @@ def create_debt(user_id: str, body: dict) -> dict:
     if err:
         return error(err)
 
-    notes = (body.get("notes") or "").strip()
+    notes = str(body.get("notes") or "").strip()
     if len(notes) > MAX_NOTES_LEN:
         return error(f"notes exceeds maximum length of {MAX_NOTES_LEN}")
 
@@ -196,7 +196,7 @@ def update_debt(user_id: str, debt_id: str, body: dict) -> dict:
         return error("No valid fields provided for update")
 
     if "name" in fields:
-        fields["name"] = fields["name"].strip()
+        fields["name"] = str(fields["name"]).strip()
         if not fields["name"]:
             return error("name cannot be empty")
         if len(fields["name"]) > MAX_NAME_LEN:
@@ -219,7 +219,7 @@ def update_debt(user_id: str, debt_id: str, body: dict) -> dict:
         fields["apr"] = str(_to_dec(fields["apr"]))
 
     if "notes" in fields:
-        fields["notes"] = (fields["notes"] or "").strip()
+        fields["notes"] = str(fields["notes"] or "").strip()
         if len(fields["notes"]) > MAX_NOTES_LEN:
             return error(f"notes exceeds maximum length of {MAX_NOTES_LEN}")
 
@@ -274,7 +274,7 @@ def list_income(user_id: str) -> dict:
 
 
 def create_income(user_id: str, body: dict) -> dict:
-    name = (body.get("name") or "").strip()
+    name = str(body.get("name") or "").strip()
     if not name:
         return error("name is required")
     if len(name) > MAX_NAME_LEN:
@@ -288,7 +288,7 @@ def create_income(user_id: str, body: dict) -> dict:
     if frequency not in VALID_FREQUENCIES:
         return error(f"frequency must be one of: {', '.join(sorted(VALID_FREQUENCIES))}")
 
-    notes = (body.get("notes") or "").strip()
+    notes = str(body.get("notes") or "").strip()
     if len(notes) > MAX_NOTES_LEN:
         return error(f"notes exceeds maximum length of {MAX_NOTES_LEN}")
 
@@ -317,7 +317,7 @@ def update_income(user_id: str, income_id: str, body: dict) -> dict:
         return error("No valid fields provided for update")
 
     if "name" in fields:
-        fields["name"] = fields["name"].strip()
+        fields["name"] = str(fields["name"]).strip()
         if not fields["name"]:
             return error("name cannot be empty")
         if len(fields["name"]) > MAX_NAME_LEN:
@@ -333,7 +333,7 @@ def update_income(user_id: str, income_id: str, body: dict) -> dict:
         return error(f"frequency must be one of: {', '.join(sorted(VALID_FREQUENCIES))}")
 
     if "notes" in fields:
-        fields["notes"] = (fields["notes"] or "").strip()
+        fields["notes"] = str(fields["notes"] or "").strip()
         if len(fields["notes"]) > MAX_NOTES_LEN:
             return error(f"notes exceeds maximum length of {MAX_NOTES_LEN}")
 
@@ -396,7 +396,7 @@ def _validate_due_day(value) -> tuple[int | None, str | None]:
 
 
 def create_expense(user_id: str, body: dict) -> dict:
-    name = (body.get("name") or "").strip()
+    name = str(body.get("name") or "").strip()
     if not name:
         return error("name is required")
     if len(name) > MAX_NAME_LEN:
@@ -418,7 +418,7 @@ def create_expense(user_id: str, body: dict) -> dict:
     if err:
         return error(err)
 
-    notes = (body.get("notes") or "").strip()
+    notes = str(body.get("notes") or "").strip()
     if len(notes) > MAX_NOTES_LEN:
         return error(f"notes exceeds maximum length of {MAX_NOTES_LEN}")
 
@@ -449,7 +449,7 @@ def update_expense(user_id: str, expense_id: str, body: dict) -> dict:
         return error("No valid fields provided for update")
 
     if "name" in fields:
-        fields["name"] = fields["name"].strip()
+        fields["name"] = str(fields["name"]).strip()
         if not fields["name"]:
             return error("name cannot be empty")
         if len(fields["name"]) > MAX_NAME_LEN:
@@ -479,7 +479,7 @@ def update_expense(user_id: str, expense_id: str, body: dict) -> dict:
             fields["due_day"] = due_day
 
     if "notes" in fields:
-        fields["notes"] = (fields["notes"] or "").strip()
+        fields["notes"] = str(fields["notes"] or "").strip()
         if len(fields["notes"]) > MAX_NOTES_LEN:
             return error(f"notes exceeds maximum length of {MAX_NOTES_LEN}")
 
