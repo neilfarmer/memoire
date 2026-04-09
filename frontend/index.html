@@ -3990,6 +3990,92 @@
       z-index: 10;
     }
     .pal-model-btn:hover .pal-tooltip { display: block; }
+
+    /* ── Mobile / Tablet Responsive ─────────────────────────────────────────── */
+
+    #sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(26,22,18,.45);
+      z-index: 150;
+    }
+    #sidebar-backdrop.visible { display: block; }
+
+    /* Tablet */
+    @media (max-width: 1024px) {
+      main { padding: 28px 20px; }
+    }
+
+    /* Mobile — sidebar becomes a slide-in overlay */
+    @media (max-width: 768px) {
+      header { padding: 0 12px; }
+      .search-btn { width: 160px; }
+      .search-btn-hint { display: none; }
+
+      #sidebar {
+        position: fixed;
+        top: 56px;
+        left: 0;
+        height: calc(100vh - 56px);
+        z-index: 200;
+        width: 0 !important;
+        transition: width .25s cubic-bezier(.4,0,.2,1), box-shadow .25s;
+      }
+      #sidebar.mobile-open {
+        width: 260px !important;
+        box-shadow: 4px 0 24px rgba(26,22,18,.18);
+      }
+      /* Keep contents visible when desktop .collapsed class is present on mobile */
+      #sidebar.collapsed .sb-scroll,
+      #sidebar.collapsed .sb-footer { opacity: 1; pointer-events: auto; }
+
+      main { padding: 20px 16px; }
+
+      /* Diagrams: list on top, canvas below */
+      .diagrams-body { flex-direction: column; }
+      .diagrams-list-panel {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        max-height: 180px;
+        overflow-y: auto;
+      }
+      .diagrams-body.mobile-diagram-open .diagrams-list-panel { display: none; }
+
+      /* Modal as bottom sheet */
+      .modal-overlay { align-items: flex-end; padding: 0; }
+      .modal { border-radius: 16px 16px 0 0; max-height: 88vh; max-width: 100%; }
+
+      /* Touch target sizes */
+      .avatar-btn { width: 40px; height: 40px; font-size: 14px; }
+      .sb-section-hdr { padding: 12px 8px 12px 10px; }
+      .sb-sub-link { padding: 11px 10px 11px 18px; }
+      .filter-btn { padding: 8px 14px; }
+      .modal-close { padding: 10px; }
+    }
+
+    /* Small phones */
+    @media (max-width: 480px) {
+      header { padding: 0 10px; }
+      .search-btn { width: 38px; padding: 5px; overflow: hidden; }
+      #logout-btn { display: none; }
+      .login-card { padding: 32px 20px; }
+      .field-row { grid-template-columns: 1fr; }
+      main { padding: 16px 12px; }
+      .home-greeting-name { font-size: 26px; }
+      .pomo-ring-wrap { width: 100px; height: 100px; }
+    }
+
+    /* Touch devices: make hover-only UI permanently visible */
+    @media (hover: none) {
+      .pomo-focus-btn { opacity: 1; }
+      .hm-cell[title]:hover::after { display: none; }
+      .profile-bio-hint { opacity: 1; }
+      .profile-fact-actions { opacity: 1; }
+      .task-card:hover { transform: none; }
+      .home-widget:hover { transform: none; }
+    }
   </style>
 </head>
 <body>
@@ -4033,6 +4119,7 @@
     </div>
   </div>
 
+  <div id="sidebar-backdrop"></div>
   <div class="app-body">
     <div id="sidebar">
       <div class="sb-scroll">
@@ -4571,6 +4658,7 @@
   <main id="page-diagrams" class="hidden">
     <div class="toolbar">
       <h2>Diagrams</h2>
+      <button class="btn btn-secondary hidden" id="diagram-back-btn">Back to list</button>
       <button class="btn btn-secondary hidden" id="diagram-rename-btn">Rename</button>
       <button class="btn btn-danger hidden" id="diagram-delete-btn">Delete</button>
       <button class="btn btn-secondary hidden" id="diagram-save-btn">Save</button>
@@ -10085,6 +10173,10 @@
       this._pendingAppState = fullDiagram.app_state || {};
       this._unsaved = false;
       $("diagrams-placeholder").style.display = "none";
+      if (window.innerWidth <= 768) {
+        document.querySelector(".diagrams-body").classList.add("mobile-diagram-open");
+        $("diagram-back-btn").classList.remove("hidden");
+      }
       await this._mountCanvas(this._pendingElements, this._pendingAppState);
     },
 
@@ -10296,7 +10388,12 @@
     },
 
     toggle() {
-      $("sidebar").classList.toggle("collapsed");
+      if (window.innerWidth <= 768) {
+        const open = $("sidebar").classList.toggle("mobile-open");
+        $("sidebar-backdrop").classList.toggle("visible", open);
+      } else {
+        $("sidebar").classList.toggle("collapsed");
+      }
     },
   };
 
@@ -10313,6 +10410,18 @@
                       : name === "favorites" ? "feeds"
                       : name;
       sidebar.expand(sbSection);
+      // Close mobile sidebar overlay on navigation
+      if (window.innerWidth <= 768) {
+        $("sidebar").classList.remove("mobile-open");
+        $("sidebar-backdrop").classList.remove("visible");
+      }
+      // Reset diagrams mobile state when leaving diagrams
+      if (name !== "diagrams") {
+        const db = document.querySelector(".diagrams-body");
+        if (db) db.classList.remove("mobile-diagram-open");
+        const backBtn = $("diagram-back-btn");
+        if (backBtn) backBtn.classList.add("hidden");
+      }
       // highlight sub-links for health/nutrition
       document.querySelectorAll(".sb-sub-link").forEach(link => {
         link.classList.toggle("active", link.dataset.page === name);
@@ -10750,11 +10859,19 @@
   };
 
   $("sb-toggle").addEventListener("click", () => sidebar.toggle());
+  $("sidebar-backdrop").addEventListener("click", () => {
+    $("sidebar").classList.remove("mobile-open");
+    $("sidebar-backdrop").classList.remove("visible");
+  });
   $("admin-refresh-btn").addEventListener("click", () => { admin.loaded = false; admin.load(); });
   $("diagram-new-btn").addEventListener("click", () => diagrams.newDiagram());
   $("diagram-save-btn").addEventListener("click", () => diagrams.save());
   $("diagram-rename-btn").addEventListener("click", () => diagrams.rename());
   $("diagram-delete-btn").addEventListener("click", () => diagrams.deleteCurrent());
+  $("diagram-back-btn").addEventListener("click", () => {
+    document.querySelector(".diagrams-body").classList.remove("mobile-diagram-open");
+    $("diagram-back-btn").classList.add("hidden");
+  });
 
   // ── Article summary modal ────────────────────────────────────────────────────
 
