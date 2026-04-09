@@ -494,6 +494,93 @@ resource "aws_dynamodb_table" "feeds_read" {
   }
 }
 
+# ── Finances: Debts table ─────────────────────────────────────────────────────
+#
+# PK: user_id  (String) — Cognito sub claim
+# SK: debt_id  (String) — UUID generated at creation
+#
+# Attributes: name, type, balance (String), apr (String), monthly_payment (String),
+#             notes, created_at, updated_at
+
+resource "aws_dynamodb_table" "debts" {
+  name         = "${local.name_prefix}-debts"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "debt_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "debt_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
+# ── Finances: Income sources table ────────────────────────────────────────────
+#
+# PK: user_id    (String) — Cognito sub claim
+# SK: income_id  (String) — UUID generated at creation
+#
+# Attributes: name, amount (String), frequency (monthly|biweekly|weekly|annual),
+#             notes, created_at, updated_at
+
+resource "aws_dynamodb_table" "income" {
+  name         = "${local.name_prefix}-income"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "income_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "income_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
+# ── Finances: Fixed expenses table ────────────────────────────────────────────
+#
+# PK: user_id     (String) — Cognito sub claim
+# SK: expense_id  (String) — UUID generated at creation
+#
+# Attributes: name, amount (String), category, frequency (monthly|biweekly|weekly|annual),
+#             notes, created_at, updated_at
+
+resource "aws_dynamodb_table" "fixed_expenses" {
+  name         = "${local.name_prefix}-fixed-expenses"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "expense_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "expense_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
 # ── Diagrams table ────────────────────────────────────────────────────────────
 #
 # PK: user_id     (String) — Cognito sub claim

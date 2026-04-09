@@ -1049,6 +1049,142 @@
       text-align: right;
     }
 
+    /* ── Finances ────────────────────────────────────────────────────────── */
+    .fin-summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .fin-summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+    }
+    .fin-summary-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .fin-summary-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .fin-summary-value.pos { color: #16a34a; }
+    .fin-summary-value.neg { color: #dc2626; }
+    html[data-theme="dark"] .fin-summary-value.pos { color: #86efac; }
+    html[data-theme="dark"] .fin-summary-value.neg { color: #fca5a5; }
+    .fin-section-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+      margin: 24px 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .fin-section-title button {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 500;
+    }
+    .fin-section-title button:hover { border-color: var(--primary); color: var(--primary); }
+    .fin-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+    .fin-card:hover { border-color: var(--primary); }
+    .fin-card-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+    .fin-card-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .fin-card-amount {
+      font-size: 15px;
+      font-weight: 700;
+      white-space: nowrap;
+      color: var(--text);
+    }
+    .fin-card-meta {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .fin-card-meta span { white-space: nowrap; }
+    .fin-payoff-timeline { margin-top: 12px; }
+    .fin-debt-bar-wrap {
+      position: relative;
+      height: 6px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .fin-debt-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--primary-h), var(--primary));
+      width: 100%;
+    }
+    .fin-payoff-tick-line {
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 1px;
+      background: rgba(255,255,255,0.3);
+    }
+    .fin-payoff-labels {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .fin-payoff-labels .fin-pl-end {
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .fin-empty {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 12px 0;
+    }
+    @media (max-width: 700px) {
+      .fin-summary { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 400px) {
+      .fin-summary { grid-template-columns: 1fr; }
+    }
+
     .habits-group-label {
       font-size: 11px;
       font-weight: 700;
@@ -3943,6 +4079,7 @@
             <div class="sb-sub-label">Tracking</div>
             <button class="sb-sub-link" data-page="habits" onclick="pages.show('habits')">Habits</button>
             <button class="sb-sub-link" data-page="goals" onclick="pages.show('goals')">Goals</button>
+            <button class="sb-sub-link" data-page="finances" onclick="pages.show('finances')">Finances</button>
             <div class="sb-sub-label">Health</div>
             <button class="sb-sub-link" data-page="health" onclick="pages.show('health')">Exercise</button>
             <button class="sb-sub-link" data-page="nutrition" onclick="pages.show('nutrition')">Nutrition</button>
@@ -4322,6 +4459,19 @@
       </div>
     </div>
     <div class="settings-section">
+      <div class="settings-section-title">Home</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Finances widget</div>
+          <div class="settings-desc">Show a financial summary card on the home dashboard</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="home-finances-toggle" />
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+    <div class="settings-section">
       <div class="settings-section-title">Data</div>
       <div class="settings-row">
         <div>
@@ -4436,6 +4586,51 @@
         <div id="diagrams-canvas"></div>
       </div>
     </div>
+  </main>
+
+  <!-- Finances page -->
+  <main id="page-finances" class="hidden">
+    <div class="toolbar">
+      <h2>Finances</h2>
+    </div>
+    <div id="finances-loader" class="page-loader hidden"><div class="spinner"></div></div>
+
+    <div class="fin-summary">
+      <div class="fin-summary-card">
+        <div class="fin-summary-label">Monthly income</div>
+        <div class="fin-summary-value pos" id="fin-monthly-income">—</div>
+      </div>
+      <div class="fin-summary-card">
+        <div class="fin-summary-label">Monthly outflow</div>
+        <div class="fin-summary-value neg" id="fin-monthly-outflow">—</div>
+      </div>
+      <div class="fin-summary-card">
+        <div class="fin-summary-label">Net cash flow</div>
+        <div class="fin-summary-value" id="fin-net-cash-flow">—</div>
+      </div>
+      <div class="fin-summary-card">
+        <div class="fin-summary-label">Total debt</div>
+        <div class="fin-summary-value" id="fin-total-debt">—</div>
+      </div>
+    </div>
+
+    <div class="fin-section-title">
+      <span>Debts</span>
+      <button onclick="debtModal.open()">+ Add debt</button>
+    </div>
+    <div id="fin-debts-list"></div>
+
+    <div class="fin-section-title">
+      <span>Income</span>
+      <button onclick="incomeModal.open()">+ Add income</button>
+    </div>
+    <div id="fin-income-list"></div>
+
+    <div class="fin-section-title">
+      <span>Fixed expenses</span>
+      <button onclick="expenseModal.open()">+ Add expense</button>
+    </div>
+    <div id="fin-expenses-list"></div>
   </main>
 
   <!-- Profile page -->
@@ -4679,6 +4874,173 @@
         </div>
         <button class="btn btn-secondary" id="goal-cancel-btn">Cancel</button>
         <button class="btn btn-primary" id="goal-save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Debt modal ── -->
+<div id="debt-modal-overlay" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="debt-modal-title">Add debt</h3>
+      <button class="modal-close" id="debt-modal-close">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div id="debt-modal-error" class="error-msg hidden"></div>
+      <div class="field-row">
+        <div class="field">
+          <label for="debt-name">Name <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="debt-name" placeholder="e.g. Car loan, Visa, Mortgage" />
+        </div>
+        <div class="field">
+          <label for="debt-type">Type</label>
+          <select id="debt-type">
+            <option value="auto_loan">Auto loan</option>
+            <option value="mortgage">Mortgage</option>
+            <option value="credit_card">Credit card</option>
+            <option value="student_loan">Student loan</option>
+            <option value="personal_loan">Personal loan</option>
+            <option value="line_of_credit">Line of credit</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="debt-original-balance">Original loan amount</label>
+          <input type="number" id="debt-original-balance" min="0.01" step="0.01" placeholder="e.g. 25000" />
+        </div>
+        <div class="field">
+          <label for="debt-balance">Current balance <span style="color:var(--danger)">*</span></label>
+          <input type="number" id="debt-balance" min="0.01" step="0.01" placeholder="0.00" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="debt-apr">Interest rate (APR %) <span style="color:var(--danger)">*</span></label>
+          <input type="number" id="debt-apr" min="0" step="0.01" placeholder="e.g. 7.99" />
+        </div>
+        <div class="field">
+          <label for="debt-payment">Monthly payment <span style="color:var(--danger)">*</span></label>
+          <input type="number" id="debt-payment" min="0.01" step="0.01" placeholder="0.00" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="debt-notes">Notes</label>
+        <input type="text" id="debt-notes" placeholder="Optional" />
+      </div>
+      <div class="modal-footer">
+        <div class="modal-footer-left">
+          <button class="btn btn-danger hidden" id="debt-delete-btn">Delete</button>
+        </div>
+        <button class="btn btn-secondary" id="debt-cancel-btn">Cancel</button>
+        <button class="btn btn-primary" id="debt-save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Income modal ── -->
+<div id="income-modal-overlay" class="modal-overlay hidden">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <h3 id="income-modal-title">Add income</h3>
+      <button class="modal-close" id="income-modal-close">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div id="income-modal-error" class="error-msg hidden"></div>
+      <div class="field">
+        <label for="income-name">Source <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="income-name" placeholder="e.g. Salary, Freelance, Rental" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="income-amount">Amount <span style="color:var(--danger)">*</span></label>
+          <input type="number" id="income-amount" min="0.01" step="0.01" placeholder="0.00" />
+        </div>
+        <div class="field">
+          <label for="income-frequency">Frequency</label>
+          <select id="income-frequency">
+            <option value="monthly">Monthly</option>
+            <option value="biweekly">Biweekly</option>
+            <option value="weekly">Weekly</option>
+            <option value="annual">Annual</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="income-notes">Notes</label>
+        <input type="text" id="income-notes" placeholder="Optional" />
+      </div>
+      <div class="modal-footer">
+        <div class="modal-footer-left">
+          <button class="btn btn-danger hidden" id="income-delete-btn">Delete</button>
+        </div>
+        <button class="btn btn-secondary" id="income-cancel-btn">Cancel</button>
+        <button class="btn btn-primary" id="income-save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Expense modal ── -->
+<div id="expense-modal-overlay" class="modal-overlay hidden">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <h3 id="expense-modal-title">Add expense</h3>
+      <button class="modal-close" id="expense-modal-close">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div id="expense-modal-error" class="error-msg hidden"></div>
+      <div class="field">
+        <label for="expense-name">Name <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="expense-name" placeholder="e.g. Rent, Hydro, Netflix" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="expense-amount">Amount <span style="color:var(--danger)">*</span></label>
+          <input type="number" id="expense-amount" min="0.01" step="0.01" placeholder="0.00" />
+        </div>
+        <div class="field">
+          <label for="expense-frequency">Frequency</label>
+          <select id="expense-frequency">
+            <option value="monthly">Monthly</option>
+            <option value="biweekly">Biweekly</option>
+            <option value="weekly">Weekly</option>
+            <option value="annual">Annual</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="expense-category">Category</label>
+          <select id="expense-category">
+            <option value="housing">Housing</option>
+            <option value="utilities">Utilities</option>
+            <option value="subscriptions">Subscriptions</option>
+            <option value="insurance">Insurance</option>
+            <option value="food">Food</option>
+            <option value="transport">Transport</option>
+            <option value="healthcare">Healthcare</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="expense-due-day">Due day</label>
+          <input type="number" id="expense-due-day" min="1" max="31" placeholder="e.g. 15" style="width:100%;" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="expense-notes">Notes</label>
+        <input type="text" id="expense-notes" placeholder="Optional" />
+      </div>
+      <div class="modal-footer">
+        <div class="modal-footer-left">
+          <button class="btn btn-danger hidden" id="expense-delete-btn">Delete</button>
+        </div>
+        <button class="btn btn-secondary" id="expense-cancel-btn">Cancel</button>
+        <button class="btn btn-primary" id="expense-save-btn">Save</button>
       </div>
     </div>
   </div>
@@ -5488,6 +5850,7 @@
       health.load();     // preload so journal calendar shows exercise dots
       nutrition.load();  // preload so journal calendar shows nutrition dots
       favs.load();       // preload so heart buttons show correct state on feeds page
+      if (state.settings?.home_finances_widget) finances.load(); // preload for home widget if enabled
       pages.show("home");
     },
 
@@ -5860,6 +6223,21 @@
   };
 
   $("dark-mode-toggle").addEventListener("change", () => theme.toggle());
+
+  $("home-finances-toggle").addEventListener("change", async function() {
+    const enabled = this.checked;
+    this.disabled = true;
+    try {
+      const updated = await api.updateSettings({ home_finances_widget: enabled });
+      state.settings = { ...state.settings, ...updated };
+      if (enabled && !finances.summary) finances.load();
+      if (pages.current === "home") renderHomeDashboard();
+    } catch (e) {
+      this.checked = !enabled; // revert on failure
+    } finally {
+      this.disabled = false;
+    }
+  });
 
   // ── Color themes ─────────────────────────────────────────────────────────────
 
@@ -8299,6 +8677,374 @@
     }
   });
 
+  // ── Finances ─────────────────────────────────────────────────────────────────
+
+  function ordinal(n) {
+    const s = ["th","st","nd","rd"], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  const finances = {
+    summary: null,
+    editingId: null,
+
+    fmt(val) {
+      const n = parseFloat(val) || 0;
+      return "$" + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    },
+
+    fmtSigned(val) {
+      const n = parseFloat(val) || 0;
+      return (n < 0 ? "-$" : "$") + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    },
+
+    async load() {
+      showLoader("finances-loader");
+      try {
+        finances.summary = await api.call("GET", "/finances/summary");
+        finances.render();
+        if (pages.current === "home" && state.settings?.home_finances_widget) renderHomeDashboard();
+      } catch (e) {
+        console.error("Failed to load finances:", e);
+      } finally {
+        hideLoader("finances-loader");
+      }
+    },
+
+    render() {
+      const s = finances.summary;
+      if (!s) return;
+
+      // Summary cards
+      $("fin-monthly-income").textContent  = finances.fmt(s.total_monthly_income);
+      $("fin-monthly-outflow").textContent = finances.fmt(s.total_monthly_outflow);
+      const net = parseFloat(s.net_monthly_cash_flow) || 0;
+      const netEl = $("fin-net-cash-flow");
+      netEl.textContent = finances.fmtSigned(net);
+      netEl.className = "fin-summary-value " + (net >= 0 ? "pos" : "neg");
+      $("fin-total-debt").textContent = finances.fmt(s.total_debt_balance);
+
+      // Debts
+      const debtTypeLabel = {
+        auto_loan: "Auto loan", mortgage: "Mortgage", credit_card: "Credit card",
+        student_loan: "Student loan", personal_loan: "Personal loan",
+        line_of_credit: "Line of credit", other: "Other",
+      };
+      const debtList = $("fin-debts-list");
+      if (!s.debts.length) {
+        debtList.innerHTML = `<div class="fin-empty">No debts added yet.</div>`;
+      } else {
+        debtList.innerHTML = s.debts.map(d => {
+          const annualInt = d.annual_interest ? `${finances.fmt(d.annual_interest)}/yr interest` : "";
+          let timelineHTML = "";
+          if (d.payoff_months != null) {
+            const pm       = d.payoff_months;
+            const tm       = d.total_months || pm;
+            const origBal  = parseFloat(d.original_balance || d.balance);
+            const curBal   = parseFloat(d.balance);
+            const paid     = Math.max(0, origBal - curBal);
+            const fillPct  = origBal > 0 ? Math.min(100, paid / origBal * 100) : 0;
+
+            const pd = new Date();
+            pd.setMonth(pd.getMonth() + pm);
+            const endStr = pd.toLocaleDateString("en-US", {month:"short", year:"numeric"});
+
+            // tick lines spaced across total loan duration
+            const numYrs = Math.ceil(tm / 12);
+            let tickLines = "";
+            for (let y = 1; y < numYrs; y++) {
+              const p = (y * 12 / tm * 100).toFixed(1);
+              tickLines += `<div class="fin-payoff-tick-line" style="left:${p}%"></div>`;
+            }
+
+            const paidLbl = fillPct > 0 ? `${fillPct.toFixed(0)}% paid` : "0% paid";
+            const totalLbl = tm !== pm ? `${tm}-month loan` : "";
+            timelineHTML = `
+              <div class="fin-payoff-timeline">
+                ${totalLbl ? `<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">${totalLbl}</div>` : ""}
+                <div class="fin-debt-bar-wrap"><div class="fin-debt-bar-fill" style="width:${fillPct.toFixed(1)}%"></div>${tickLines}</div>
+                <div class="fin-payoff-labels">
+                  <span>${paidLbl}</span>
+                  <span class="fin-pl-end">Paid off ${endStr}</span>
+                </div>
+              </div>`;
+          } else {
+            timelineHTML = `<div class="fin-payoff-timeline" style="font-size:11px;color:#dc2626;margin-top:8px;">Payment does not cover interest — debt will not pay off</div>`;
+          }
+          return `
+            <div class="fin-card" role="button" tabindex="0" onclick="debtModal.open('${d.debt_id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();debtModal.open('${d.debt_id}');}">
+              <div class="fin-card-header">
+                <div class="fin-card-name">${escHtml(d.name)}</div>
+                <div class="fin-card-amount">${finances.fmt(d.balance)}</div>
+              </div>
+              <div class="fin-card-meta">
+                <span>${debtTypeLabel[d.type] || d.type}</span>
+                <span>${parseFloat(d.apr).toFixed(2)}% APR</span>
+                <span>${finances.fmt(d.monthly_payment)}/mo payment</span>
+                ${annualInt ? `<span>${annualInt}</span>` : ""}
+                ${d.payoff_months != null ? `<span>~${d.payoff_months} mo &middot; ${finances.fmt(d.total_interest_remaining)} total interest</span>` : ""}
+              </div>
+              ${timelineHTML}
+            </div>`;
+        }).join("");
+      }
+
+      // Income
+      const freqLabel = { monthly: "monthly", biweekly: "biweekly", weekly: "weekly", annual: "annual" };
+      const incList = $("fin-income-list");
+      if (!s.income.length) {
+        incList.innerHTML = `<div class="fin-empty">No income sources added yet.</div>`;
+      } else {
+        incList.innerHTML = s.income.map(i => `
+          <div class="fin-card" role="button" tabindex="0" onclick="incomeModal.open('${i.income_id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();incomeModal.open('${i.income_id}');}">
+            <div class="fin-card-header">
+              <div class="fin-card-name">${escHtml(i.name)}</div>
+              <div class="fin-card-amount pos" style="color:#16a34a;">${finances.fmt(i.monthly_amount)}<span style="font-size:11px;font-weight:400;color:var(--muted);">/mo</span></div>
+            </div>
+            <div class="fin-card-meta">
+              <span>${finances.fmt(i.amount)} ${freqLabel[i.frequency] || i.frequency}</span>
+              ${i.notes ? `<span>${escHtml(i.notes)}</span>` : ""}
+            </div>
+          </div>`).join("");
+      }
+
+      // Expenses
+      const catLabel = {
+        housing: "Housing", utilities: "Utilities", subscriptions: "Subscriptions",
+        insurance: "Insurance", food: "Food", transport: "Transport",
+        healthcare: "Healthcare", other: "Other",
+      };
+      const expList = $("fin-expenses-list");
+      if (!s.expenses.length) {
+        expList.innerHTML = `<div class="fin-empty">No fixed expenses added yet.</div>`;
+      } else {
+        expList.innerHTML = s.expenses.map(e => `
+          <div class="fin-card" role="button" tabindex="0" onclick="expenseModal.open('${e.expense_id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();expenseModal.open('${e.expense_id}');}">
+            <div class="fin-card-header">
+              <div class="fin-card-name">${escHtml(e.name)}</div>
+              <div class="fin-card-amount">${finances.fmt(e.monthly_amount)}<span style="font-size:11px;font-weight:400;color:var(--muted);">/mo</span></div>
+            </div>
+            <div class="fin-card-meta">
+              <span class="badge">${catLabel[e.category] || e.category}</span>
+              <span>${finances.fmt(e.amount)} ${freqLabel[e.frequency] || e.frequency}</span>
+              ${e.due_day != null ? `<span>Due ${ordinal(e.due_day)} of month</span>` : ""}
+              ${e.notes ? `<span>${escHtml(e.notes)}</span>` : ""}
+            </div>
+          </div>`).join("");
+      }
+    },
+  };
+
+  // ── Debt modal ───────────────────────────────────────────────────────────────
+
+  const debtModal = {
+    open(debtId) {
+      finances.editingId = debtId || null;
+      clearError("debt-modal-error");
+      if (debtId) {
+        const d = (finances.summary?.debts || []).find(d => d.debt_id === debtId);
+        if (!d) return;
+        $("debt-modal-title").textContent = "Edit debt";
+        $("debt-name").value             = d.name;
+        $("debt-type").value             = d.type;
+        $("debt-original-balance").value = d.original_balance || "";
+        $("debt-balance").value          = d.balance;
+        $("debt-apr").value              = d.apr;
+        $("debt-payment").value          = d.monthly_payment;
+        $("debt-notes").value            = d.notes || "";
+        $("debt-delete-btn").classList.remove("hidden");
+      } else {
+        $("debt-modal-title").textContent = "Add debt";
+        $("debt-name").value = $("debt-original-balance").value = $("debt-balance").value = $("debt-apr").value = $("debt-payment").value = $("debt-notes").value = "";
+        $("debt-type").value = "auto_loan";
+        $("debt-delete-btn").classList.add("hidden");
+      }
+      $("debt-modal-overlay").classList.remove("hidden");
+      $("debt-name").focus();
+    },
+    close() {
+      $("debt-modal-overlay").classList.add("hidden");
+      finances.editingId = null;
+    },
+  };
+
+  $("debt-modal-close").addEventListener("click",  () => debtModal.close());
+  $("debt-cancel-btn").addEventListener("click",   () => debtModal.close());
+  $("debt-modal-overlay").addEventListener("click", e => { if (e.target === $("debt-modal-overlay")) debtModal.close(); });
+
+  $("debt-save-btn").addEventListener("click", async () => {
+    clearError("debt-modal-error");
+    const name    = $("debt-name").value.trim();
+    const balance = $("debt-balance").value.trim();
+    const apr     = $("debt-apr").value.trim();
+    const payment = $("debt-payment").value.trim();
+    if (!name)    { showError("debt-modal-error", "Name is required."); return; }
+    if (!balance || parseFloat(balance) <= 0) { showError("debt-modal-error", "Balance must be greater than zero."); return; }
+    if (apr === "" || parseFloat(apr) < 0)    { showError("debt-modal-error", "APR must be 0 or greater."); return; }
+    if (!payment || parseFloat(payment) <= 0) { showError("debt-modal-error", "Monthly payment must be greater than zero."); return; }
+
+    const origBal = $("debt-original-balance").value.trim();
+    const body = { name, type: $("debt-type").value, balance, apr, monthly_payment: payment, notes: $("debt-notes").value.trim() };
+    if (origBal) body.original_balance = origBal;
+    $("debt-save-btn").disabled = true; $("debt-save-btn").textContent = "Saving...";
+    try {
+      if (finances.editingId) {
+        await api.call("PUT", `/debts/${finances.editingId}`, body);
+      } else {
+        await api.call("POST", "/debts", body);
+      }
+      debtModal.close();
+      await finances.load();
+    } catch (e) { showError("debt-modal-error", e.message); }
+    finally { $("debt-save-btn").disabled = false; $("debt-save-btn").textContent = "Save"; }
+  });
+
+  $("debt-delete-btn").addEventListener("click", async () => {
+    if (!finances.editingId || !await confirmDialog("Delete this debt?")) return;
+    $("debt-delete-btn").disabled = true;
+    try { await api.call("DELETE", `/debts/${finances.editingId}`); debtModal.close(); await finances.load(); }
+    catch (e) { showError("debt-modal-error", e.message); }
+    finally { $("debt-delete-btn").disabled = false; }
+  });
+
+  // ── Income modal ─────────────────────────────────────────────────────────────
+
+  const incomeModal = {
+    open(incomeId) {
+      finances.editingId = incomeId || null;
+      clearError("income-modal-error");
+      if (incomeId) {
+        const i = (finances.summary?.income || []).find(i => i.income_id === incomeId);
+        if (!i) return;
+        $("income-modal-title").textContent = "Edit income";
+        $("income-name").value      = i.name;
+        $("income-amount").value    = i.amount;
+        $("income-frequency").value = i.frequency;
+        $("income-notes").value     = i.notes || "";
+        $("income-delete-btn").classList.remove("hidden");
+      } else {
+        $("income-modal-title").textContent = "Add income";
+        $("income-name").value = $("income-amount").value = $("income-notes").value = "";
+        $("income-frequency").value = "monthly";
+        $("income-delete-btn").classList.add("hidden");
+      }
+      $("income-modal-overlay").classList.remove("hidden");
+      $("income-name").focus();
+    },
+    close() {
+      $("income-modal-overlay").classList.add("hidden");
+      finances.editingId = null;
+    },
+  };
+
+  $("income-modal-close").addEventListener("click",  () => incomeModal.close());
+  $("income-cancel-btn").addEventListener("click",   () => incomeModal.close());
+  $("income-modal-overlay").addEventListener("click", e => { if (e.target === $("income-modal-overlay")) incomeModal.close(); });
+
+  $("income-save-btn").addEventListener("click", async () => {
+    clearError("income-modal-error");
+    const name   = $("income-name").value.trim();
+    const amount = $("income-amount").value.trim();
+    if (!name)   { showError("income-modal-error", "Source name is required."); return; }
+    if (!amount || parseFloat(amount) <= 0) { showError("income-modal-error", "Amount must be greater than zero."); return; }
+
+    const body = { name, amount, frequency: $("income-frequency").value, notes: $("income-notes").value.trim() };
+    $("income-save-btn").disabled = true; $("income-save-btn").textContent = "Saving...";
+    try {
+      if (finances.editingId) {
+        await api.call("PUT", `/income/${finances.editingId}`, body);
+      } else {
+        await api.call("POST", "/income", body);
+      }
+      incomeModal.close();
+      await finances.load();
+    } catch (e) { showError("income-modal-error", e.message); }
+    finally { $("income-save-btn").disabled = false; $("income-save-btn").textContent = "Save"; }
+  });
+
+  $("income-delete-btn").addEventListener("click", async () => {
+    if (!finances.editingId || !await confirmDialog("Delete this income source?")) return;
+    $("income-delete-btn").disabled = true;
+    try { await api.call("DELETE", `/income/${finances.editingId}`); incomeModal.close(); await finances.load(); }
+    catch (e) { showError("income-modal-error", e.message); }
+    finally { $("income-delete-btn").disabled = false; }
+  });
+
+  // ── Expense modal ────────────────────────────────────────────────────────────
+
+  const expenseModal = {
+    open(expenseId) {
+      finances.editingId = expenseId || null;
+      clearError("expense-modal-error");
+      if (expenseId) {
+        const e = (finances.summary?.expenses || []).find(e => e.expense_id === expenseId);
+        if (!e) return;
+        $("expense-modal-title").textContent = "Edit expense";
+        $("expense-name").value      = e.name;
+        $("expense-amount").value    = e.amount;
+        $("expense-frequency").value = e.frequency;
+        $("expense-category").value  = e.category;
+        $("expense-due-day").value   = e.due_day != null ? e.due_day : "";
+        $("expense-notes").value     = e.notes || "";
+        $("expense-delete-btn").classList.remove("hidden");
+      } else {
+        $("expense-modal-title").textContent = "Add expense";
+        $("expense-name").value = $("expense-amount").value = $("expense-notes").value = $("expense-due-day").value = "";
+        $("expense-frequency").value = "monthly";
+        $("expense-category").value  = "other";
+        $("expense-delete-btn").classList.add("hidden");
+      }
+      $("expense-modal-overlay").classList.remove("hidden");
+      $("expense-name").focus();
+    },
+    close() {
+      $("expense-modal-overlay").classList.add("hidden");
+      finances.editingId = null;
+    },
+  };
+
+  $("expense-modal-close").addEventListener("click",  () => expenseModal.close());
+  $("expense-cancel-btn").addEventListener("click",   () => expenseModal.close());
+  $("expense-modal-overlay").addEventListener("click", e => { if (e.target === $("expense-modal-overlay")) expenseModal.close(); });
+
+  $("expense-save-btn").addEventListener("click", async () => {
+    clearError("expense-modal-error");
+    const name   = $("expense-name").value.trim();
+    const amount = $("expense-amount").value.trim();
+    if (!name)   { showError("expense-modal-error", "Name is required."); return; }
+    if (!amount || parseFloat(amount) <= 0) { showError("expense-modal-error", "Amount must be greater than zero."); return; }
+
+    const dueDayRaw = $("expense-due-day").value.trim();
+    const body = { name, amount, frequency: $("expense-frequency").value, category: $("expense-category").value, notes: $("expense-notes").value.trim() };
+    if (dueDayRaw !== "") {
+      const dueDay = Number(dueDayRaw);
+      if (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31) {
+        showError("expense-modal-error", "Due day must be a number between 1 and 31.");
+        return;
+      }
+      body.due_day = dueDay;
+    }
+    $("expense-save-btn").disabled = true; $("expense-save-btn").textContent = "Saving...";
+    try {
+      if (finances.editingId) {
+        await api.call("PUT", `/fixed-expenses/${finances.editingId}`, body);
+      } else {
+        await api.call("POST", "/fixed-expenses", body);
+      }
+      expenseModal.close();
+      await finances.load();
+    } catch (e) { showError("expense-modal-error", e.message); }
+    finally { $("expense-save-btn").disabled = false; $("expense-save-btn").textContent = "Save"; }
+  });
+
+  $("expense-delete-btn").addEventListener("click", async () => {
+    if (!finances.editingId || !await confirmDialog("Delete this expense?")) return;
+    $("expense-delete-btn").disabled = true;
+    try { await api.call("DELETE", `/fixed-expenses/${finances.editingId}`); expenseModal.close(); await finances.load(); }
+    catch (e) { showError("expense-modal-error", e.message); }
+    finally { $("expense-delete-btn").disabled = false; }
+  });
+
   // ── Pomodoro timer ────────────────────────────────────────────────────────────
 
   const pomodoro = {
@@ -8771,6 +9517,40 @@
         }).join("")
       : `<div class="home-widget-empty">${goals.data.length ? "No active goals" : "No goals set"}</div>`;
 
+    // ── Finances widget (optional) ────────────────────────────────────────────
+    let financesWidget = "";
+    if (state.settings?.home_finances_widget) {
+      let financesHtml;
+      const fs = finances.summary;
+      if (!fs) {
+        financesHtml = `<div class="home-widget-empty">Loading...</div>`;
+      } else if (!fs.debts.length && !fs.income.length && !fs.expenses.length) {
+        financesHtml = `<div class="home-widget-empty">No financial data yet</div>`;
+      } else {
+        const net    = parseFloat(fs.net_monthly_cash_flow);
+        const netCol = net >= 0 ? "#16a34a" : "#dc2626";
+        financesHtml = `
+          <div class="home-widget-stat" style="color:${netCol}">${finances.fmtSigned(fs.net_monthly_cash_flow)}</div>
+          <div class="home-widget-sublabel">net monthly cash flow</div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:10px;color:var(--muted);">
+            <span>Income</span><span style="color:var(--text);font-weight:600;">${finances.fmt(fs.total_monthly_income)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px;color:var(--muted);">
+            <span>Outflow</span><span style="color:var(--text);font-weight:600;">${finances.fmt(fs.total_monthly_outflow)}</span>
+          </div>
+          ${parseFloat(fs.total_debt_balance ?? 0) > 0 ? `
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px;color:var(--muted);">
+            <span>Total debt</span><span style="color:var(--text);font-weight:600;">${finances.fmt(fs.total_debt_balance)}</span>
+          </div>` : ""}`;
+      }
+      financesWidget = `
+        <div class="home-widget" onclick="pages.show('finances')" style="cursor:pointer;">
+          <div class="home-widget-title">Finances</div>
+          ${financesHtml}
+          <div class="home-widget-footer"><span class="home-widget-link">View finances →</span></div>
+        </div>`;
+    }
+
     grid.innerHTML = `
       <div class="home-widget">
         <div class="home-widget-title">Tasks</div>
@@ -8791,7 +9571,8 @@
         <div class="home-widget-title">Goals</div>
         ${goalsHtml}
         <div class="home-widget-footer"><span class="home-widget-link" onclick="pages.show('goals')">View all →</span></div>
-      </div>`;
+      </div>
+      ${financesWidget}`;
   }
 
   function renderSettings() {
@@ -8804,6 +9585,7 @@
       : "—";
     $("display-name-input").value = state.settings?.display_name || "";
     $("pal-name-input").value = state.settings?.pal_name || "";
+    $("home-finances-toggle").checked = !!(state.settings?.home_finances_widget);
     loadPatList();
   }
 
@@ -9522,12 +10304,12 @@
 
   const pages = {
     current: "home",
-    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "diagrams", "settings", "admin", "profile"],
+    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "diagrams", "finances", "settings", "admin", "profile"],
 
     show(name) {
       pages.current = name;
-      // habits, goals, health, nutrition are sub-sections of journal; favorites is a sub-section of feeds
-      const sbSection = (name === "habits" || name === "goals" || name === "health" || name === "nutrition") ? "journal"
+      // habits, goals, health, nutrition, finances are sub-sections of journal; favorites is a sub-section of feeds
+      const sbSection = (name === "habits" || name === "goals" || name === "health" || name === "nutrition" || name === "finances") ? "journal"
                       : name === "favorites" ? "feeds"
                       : name;
       sidebar.expand(sbSection);
@@ -9563,6 +10345,7 @@
       if (name === "feeds")     feeds.refresh();
       if (name === "favorites") { if (!favs.loaded) favs.load(); else favs.render(); }
       if (name === "diagrams")  { if (!diagrams.loaded) diagrams.load(); else diagrams.render(); }
+      if (name === "finances")  { finances.load(); }
       if (name === "profile")   { profilePage.load(); }
       // Hide the AI pal FAB on the diagrams page — Excalidraw's help button occupies the same corner
       const palBtn = document.getElementById("pal-btn");

@@ -20,6 +20,7 @@ DEFAULTS = {
     "display_name":            "",
     "pal_name":                "",
     "profile_inference_hours": 24,
+    "home_finances_widget":    False,
 }
 
 ALLOWED_KEYS = set(DEFAULTS.keys())
