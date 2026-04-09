@@ -59,10 +59,10 @@ def upsert_log(user_id: str, log_date: str, body: dict) -> dict:
     for m in meals:
         if not m.get("id"):
             m["id"] = str(uuid.uuid4())
-        # DynamoDB rejects Python floats; coerce numeric fields to Decimal
-        for field in ("calories", "protein", "carbs", "fat"):
-            if field in m and isinstance(m[field], float):
-                m[field] = Decimal(str(m[field]))
+        # DynamoDB rejects Python floats; coerce any float value in the meal
+        for field, val in m.items():
+            if isinstance(val, float):
+                m[field] = Decimal(str(val))
 
     item = {
         "user_id":    user_id,

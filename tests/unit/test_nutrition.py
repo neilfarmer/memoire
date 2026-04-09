@@ -141,11 +141,29 @@ class TestUpsertLog:
         assert r["statusCode"] == 200
         assert json.loads(r["body"])["created_at"]  # backfilled, not empty
 
-    def test_float_calories_stored_without_error(self, tbl):
-        r = crud.upsert_log(USER, "2024-05-01", {
-            "meals": [{"name": "Oats", "calories": 312.5, "protein": 10.2, "carbs": 54.0, "fat": 5.8}]
+    def test_edit_ai_created_entry_succeeds(self, tbl):
+        # Reproduces: AI creates entry with Decimal protein_g/carbs_g/fat_g →
+        # frontend reads it (Decimal serialised to float) → edit sends floats back →
+        # upsert used to 500 because DynamoDB rejects Python floats.
+        from decimal import Decimal
+        ddb = boto3.resource("dynamodb", region_name="us-east-1")
+        ddb.Table(TABLE).put_item(Item={
+            "user_id":    USER,
+            "log_date":   "2024-06-01",
+            "meals":      [{"id": "ai-1", "name": "Chicken", "calories": Decimal("350"),
+                            "protein_g": Decimal("45.5"), "carbs_g": Decimal("10.2"), "fat_g": Decimal("8.0")}],
+            "notes":      "",
+            "created_at": "2024-06-01T12:00:00Z",
+            "updated_at": "2024-06-01T12:00:00Z",
+        })
+        # Simulate frontend round-trip: Decimal → JSON float → Python float on edit
+        r = crud.upsert_log(USER, "2024-06-01", {
+            "meals": [{"id": "ai-1", "name": "Chicken", "calories": 350.0,
+                       "protein_g": 45.5, "carbs_g": 10.2, "fat_g": 8.0}],
+            "notes": "edited",
         })
         assert r["statusCode"] == 200
+        assert json.loads(r["body"])["notes"] == "edited"
 
     def test_macros_stored(self, tbl):
         r = crud.upsert_log(USER, "2024-05-01", {
