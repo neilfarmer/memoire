@@ -2,6 +2,7 @@
 
 import os
 import uuid
+from decimal import Decimal
 
 from db import get_table, query_by_user
 from response import ok, no_content, error, not_found
@@ -58,13 +59,17 @@ def upsert_log(user_id: str, log_date: str, body: dict) -> dict:
     for m in meals:
         if not m.get("id"):
             m["id"] = str(uuid.uuid4())
+        # DynamoDB rejects Python floats; coerce numeric fields to Decimal
+        for field in ("calories", "protein", "carbs", "fat"):
+            if field in m and isinstance(m[field], float):
+                m[field] = Decimal(str(m[field]))
 
     item = {
         "user_id":    user_id,
         "log_date":   log_date,
         "meals":      meals,
         "notes":      body.get("notes", ""),
-        "created_at": existing["created_at"] if existing else now_iso(),
+        "created_at": (existing or {}).get("created_at") or now_iso(),
         "updated_at": now_iso(),
     }
     table.put_item(Item=item)

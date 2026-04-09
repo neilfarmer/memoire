@@ -128,6 +128,25 @@ class TestUpsertLog:
     def test_invalid_date_returns_400(self, tbl):
         assert crud.upsert_log(USER, "2024/05/01", {})["statusCode"] == 400
 
+    def test_preserves_created_at_on_legacy_record(self, tbl):
+        # Records created before created_at was added have no such field;
+        # upsert should not raise KeyError and should backfill created_at.
+        ddb = boto3.resource("dynamodb", region_name="us-east-1")
+        ddb.Table(TABLE).put_item(Item={
+            "user_id": USER, "log_date": "2023-01-01",
+            "meals": [], "notes": "",
+            # deliberately omit created_at to simulate a legacy record
+        })
+        r = crud.upsert_log(USER, "2023-01-01", {"meals": [], "notes": "updated"})
+        assert r["statusCode"] == 200
+        assert json.loads(r["body"])["created_at"]  # backfilled, not empty
+
+    def test_float_calories_stored_without_error(self, tbl):
+        r = crud.upsert_log(USER, "2024-05-01", {
+            "meals": [{"name": "Oats", "calories": 312.5, "protein": 10.2, "carbs": 54.0, "fat": 5.8}]
+        })
+        assert r["statusCode"] == 200
+
     def test_macros_stored(self, tbl):
         r = crud.upsert_log(USER, "2024-05-01", {
             "meals": [{"name": "Chicken", "calories": 300, "protein_g": 50,
