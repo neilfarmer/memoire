@@ -46,9 +46,10 @@ ATOM_XML = b"""<?xml version="1.0"?>
 </feed>"""
 
 
-def _mock_urlopen(body: bytes, status: int = 200):
+def _mock_urlopen(body: bytes, status: int = 200, final_url: str = ""):
     resp = MagicMock()
     resp.read.return_value = body
+    resp.geturl.return_value = final_url or "https://example.com/feed"
     resp.__enter__ = lambda s: s
     resp.__exit__ = MagicMock(return_value=False)
     return resp
@@ -66,6 +67,89 @@ def tbls():
 # ══════════════════════════════════════════════════════════════════════════════
 # Feed management
 # ══════════════════════════════════════════════════════════════════════════════
+
+class TestIsFeedRoot:
+    def test_rss_tag(self):
+        assert crud._is_feed_root("rss") is True
+
+    def test_atom_feed_tag(self):
+        assert crud._is_feed_root("feed") is True
+
+    def test_namespaced_atom_tag(self):
+        assert crud._is_feed_root("{http://www.w3.org/2005/Atom}feed") is True
+
+    def test_rdf_tag(self):
+        assert crud._is_feed_root("RDF") is True
+
+    def test_sitemap_tag(self):
+        assert crud._is_feed_root("urlset") is False
+
+    def test_html_tag(self):
+        assert crud._is_feed_root("html") is False
+
+
+class TestDiscoverFeedUrl:
+    def test_valid_rss_feed_returns_url(self):
+        mock = _mock_urlopen(RSS_XML, final_url="https://example.com/feed.rss")
+        with patch("urllib.request.urlopen", return_value=mock):
+            url, err = crud._discover_feed_url("https://example.com/feed.rss")
+        assert err is None
+        assert url == "https://example.com/feed.rss"
+
+    def test_returns_post_redirect_url(self):
+        mock = _mock_urlopen(RSS_XML, final_url="https://cdn.example.com/feed.rss")
+        with patch("urllib.request.urlopen", return_value=mock):
+            url, err = crud._discover_feed_url("https://example.com/feed")
+        assert err is None
+        assert url == "https://cdn.example.com/feed.rss"
+
+    def test_non_feed_xml_returns_error(self):
+        sitemap = b'<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>'
+        with patch("urllib.request.urlopen", return_value=_mock_urlopen(sitemap)):
+            url, err = crud._discover_feed_url("https://example.com/sitemap.xml")
+        assert url is None
+        assert err == "No RSS or Atom feed found at that URL"
+
+    def test_non_xml_page_autodiscovers_feed(self):
+        html = (
+            b'<html><head>'
+            b'<link rel="alternate" type="application/rss+xml" href="https://example.com/feed.rss">'
+            b'</head></html>'
+        )
+        feed_mock = _mock_urlopen(RSS_XML, final_url="https://example.com/feed.rss")
+        def side_effect(req, timeout):
+            if "feed.rss" in req.full_url:
+                return feed_mock
+            return _mock_urlopen(html, final_url="https://example.com/")
+        with patch("urllib.request.urlopen", side_effect=side_effect):
+            url, err = crud._discover_feed_url("https://example.com/")
+        assert err is None
+        assert url == "https://example.com/feed.rss"
+
+    def test_file_scheme_autodiscovery_skipped(self):
+        html = (
+            b'<html><head>'
+            b'<link rel="alternate" type="application/rss+xml" href="file:///etc/passwd">'
+            b'</head></html>'
+        )
+        with patch("urllib.request.urlopen", return_value=_mock_urlopen(html)):
+            url, err = crud._discover_feed_url("https://example.com/")
+        assert url is None
+        assert err == "No RSS or Atom feed found at that URL"
+
+    def test_network_error_returns_error(self):
+        with patch("urllib.request.urlopen", side_effect=Exception("timeout")):
+            url, err = crud._discover_feed_url("https://example.com/feed.rss")
+        assert url is None
+        assert "Could not reach" in err
+
+    def test_no_feed_found_returns_error(self):
+        html = b'<html><body>No feed here</body></html>'
+        with patch("urllib.request.urlopen", return_value=_mock_urlopen(html)):
+            url, err = crud._discover_feed_url("https://example.com/")
+        assert url is None
+        assert err == "No RSS or Atom feed found at that URL"
+
 
 class TestListFeeds:
     def test_empty_for_new_user(self, tbls):
