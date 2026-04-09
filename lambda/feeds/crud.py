@@ -47,6 +47,16 @@ def _real_feeds(items: list) -> list:
     return [f for f in items if f.get("feed_id") != CACHE_ITEM_KEY]
 
 
+_FEED_TAGS = {"rss", "feed", "RDF"}
+
+
+def _is_feed_root(tag: str) -> bool:
+    """Return True if the XML root tag is an RSS or Atom feed element."""
+    # Strip namespace, e.g. {http://www.w3.org/2005/Atom}feed → feed
+    local = tag.split("}")[-1] if "}" in tag else tag
+    return local in _FEED_TAGS
+
+
 def _discover_feed_url(url: str) -> tuple[str | None, str | None]:
     """Try to resolve a URL to a valid RSS/Atom feed.
 
@@ -59,17 +69,19 @@ def _discover_feed_url(url: str) -> tuple[str | None, str | None]:
         )
         with urllib.request.urlopen(req, timeout=FETCH_TIMEOUT) as resp:  # nosec B310
             content = resp.read(500_000)
+            final_url = resp.geturl()
     except Exception as exc:
         return None, f"Could not reach {url}: {exc}"
 
-    # Try parsing as XML directly
+    # Try parsing as XML — only accept RSS/Atom root elements
     try:
-        ET.fromstring(content)  # nosec B314
-        return url, None        # valid XML feed
+        root = ET.fromstring(content)  # nosec B314
+        if _is_feed_root(root.tag):
+            return final_url, None
     except ET.ParseError:
         pass
 
-    # Not XML — look for RSS/Atom autodiscovery links in the HTML
+    # Not a feed — look for RSS/Atom autodiscovery links in the HTML
     html = content.decode("utf-8", errors="ignore")
     pattern = re.compile(
         r'<link[^>]+type=["\']application/(?:rss|atom)\+xml["\'][^>]*href=["\']([^"\']+)["\']'
@@ -78,18 +90,23 @@ def _discover_feed_url(url: str) -> tuple[str | None, str | None]:
     )
     for m in pattern.finditer(html):
         discovered = m.group(1) or m.group(2)
-        if discovered:
-            discovered = urllib.parse.urljoin(url, discovered)
-            # Verify the discovered URL is a parseable feed
-            try:
-                req2 = urllib.request.Request(
-                    discovered, headers={"User-Agent": "Memoire/1.0 RSS Reader"}
-                )
-                with urllib.request.urlopen(req2, timeout=FETCH_TIMEOUT) as resp2:  # nosec B310
-                    ET.fromstring(resp2.read(500_000))  # nosec B314
-                return discovered, None
-            except Exception:
-                continue
+        if not discovered:
+            continue
+        discovered = urllib.parse.urljoin(url, discovered)
+        # Reject non-HTTP schemes to prevent SSRF via file://, ftp://, etc.
+        if not discovered.startswith(("http://", "https://")):
+            continue
+        # Verify the discovered URL is a parseable feed
+        try:
+            req2 = urllib.request.Request(
+                discovered, headers={"User-Agent": "Memoire/1.0 RSS Reader"}
+            )
+            with urllib.request.urlopen(req2, timeout=FETCH_TIMEOUT) as resp2:  # nosec B310
+                root2 = ET.fromstring(resp2.read(500_000))  # nosec B314
+                if _is_feed_root(root2.tag):
+                    return resp2.geturl(), None
+        except Exception:
+            continue
 
     return None, "No RSS or Atom feed found at that URL"
 
