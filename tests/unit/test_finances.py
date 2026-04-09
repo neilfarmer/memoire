@@ -138,6 +138,22 @@ class TestUpdateDebt:
         assert r["statusCode"] == 200
         assert json.loads(r["body"])["balance"] == "9000"
 
+    def test_updates_original_balance(self, tbls):
+        debt_id = self._make(tbls)
+        r = crud.update_debt(USER, debt_id, {"original_balance": "12000"})
+        assert r["statusCode"] == 200
+        body = json.loads(r["body"])
+        assert body["original_balance"] == "12000"
+        assert body["total_months"] is not None
+
+    def test_invalid_apr_returns_400(self, tbls):
+        debt_id = self._make(tbls)
+        assert crud.update_debt(USER, debt_id, {"apr": "-1"})["statusCode"] == 400
+
+    def test_invalid_type_returns_400(self, tbls):
+        debt_id = self._make(tbls)
+        assert crud.update_debt(USER, debt_id, {"type": "unknown"})["statusCode"] == 400
+
     def test_no_valid_fields_returns_400(self, tbls):
         debt_id = self._make(tbls)
         assert crud.update_debt(USER, debt_id, {"bogus": "x"})["statusCode"] == 400
@@ -188,13 +204,32 @@ class TestCreateIncome:
 
 
 class TestUpdateIncome:
-    def test_updates_amount(self, tbls):
-        inc_id = json.loads(
+    def _make(self, tbls):
+        return json.loads(
             crud.create_income(USER, {"name": "Job", "amount": "3000", "frequency": "monthly"})["body"]
         )["income_id"]
+
+    def test_updates_amount(self, tbls):
+        inc_id = self._make(tbls)
         r = crud.update_income(USER, inc_id, {"amount": "3500"})
         assert r["statusCode"] == 200
         assert json.loads(r["body"])["amount"] == "3500"
+
+    def test_updates_frequency(self, tbls):
+        inc_id = self._make(tbls)
+        r = crud.update_income(USER, inc_id, {"frequency": "biweekly"})
+        assert r["statusCode"] == 200
+        body = json.loads(r["body"])
+        assert body["frequency"] == "biweekly"
+        assert float(body["monthly_amount"]) == pytest.approx(3000 * 26 / 12, rel=1e-4)
+
+    def test_invalid_frequency_returns_400(self, tbls):
+        inc_id = self._make(tbls)
+        assert crud.update_income(USER, inc_id, {"frequency": "daily"})["statusCode"] == 400
+
+    def test_no_valid_fields_returns_400(self, tbls):
+        inc_id = self._make(tbls)
+        assert crud.update_income(USER, inc_id, {"bogus": "x"})["statusCode"] == 400
 
     def test_update_nonexistent(self, tbls):
         assert crud.update_income(USER, "ghost", {"amount": "100"})["statusCode"] == 404
@@ -246,6 +281,44 @@ class TestCreateExpense:
         assert crud.create_expense(USER, {"name": "X", "amount": "50", "frequency": "monthly", "category": "other", "due_day": "bad"})["statusCode"] == 400
 
 
+class TestUpdateExpense:
+    def _make(self, tbls):
+        return json.loads(
+            crud.create_expense(USER, {"name": "Rent", "amount": "1500", "frequency": "monthly", "category": "housing"})["body"]
+        )["expense_id"]
+
+    def test_updates_amount(self, tbls):
+        exp_id = self._make(tbls)
+        r = crud.update_expense(USER, exp_id, {"amount": "1600"})
+        assert r["statusCode"] == 200
+        assert json.loads(r["body"])["amount"] == "1600"
+
+    def test_updates_due_day(self, tbls):
+        exp_id = self._make(tbls)
+        r = crud.update_expense(USER, exp_id, {"due_day": 1})
+        assert r["statusCode"] == 200
+        assert json.loads(r["body"])["due_day"] == 1
+
+    def test_invalid_due_day_returns_400(self, tbls):
+        exp_id = self._make(tbls)
+        assert crud.update_expense(USER, exp_id, {"due_day": 99})["statusCode"] == 400
+
+    def test_invalid_category_returns_400(self, tbls):
+        exp_id = self._make(tbls)
+        assert crud.update_expense(USER, exp_id, {"category": "bad"})["statusCode"] == 400
+
+    def test_invalid_frequency_returns_400(self, tbls):
+        exp_id = self._make(tbls)
+        assert crud.update_expense(USER, exp_id, {"frequency": "daily"})["statusCode"] == 400
+
+    def test_no_valid_fields_returns_400(self, tbls):
+        exp_id = self._make(tbls)
+        assert crud.update_expense(USER, exp_id, {"bogus": "x"})["statusCode"] == 400
+
+    def test_update_nonexistent(self, tbls):
+        assert crud.update_expense(USER, "ghost", {"amount": "100"})["statusCode"] == 404
+
+
 class TestDeleteExpense:
     def test_deletes(self, tbls):
         exp_id = json.loads(
@@ -255,6 +328,40 @@ class TestDeleteExpense:
 
     def test_delete_nonexistent(self, tbls):
         assert crud.delete_expense(USER, "ghost")["statusCode"] == 404
+
+
+# ── List endpoints ────────────────────────────────────────────────────────────
+
+class TestListDebts:
+    def test_list_returns_computed_fields(self, tbls):
+        crud.create_debt(USER, {"name": "Car", "balance": "10000", "apr": "7", "monthly_payment": "300"})
+        items = json.loads(crud.list_debts(USER)["body"])
+        assert len(items) == 1
+        assert "payoff_months" in items[0]
+        assert "total_months" in items[0]
+        assert "annual_interest" in items[0]
+
+    def test_list_sorted_by_name(self, tbls):
+        crud.create_debt(USER, {"name": "Zebra", "balance": "1000", "apr": "5", "monthly_payment": "100"})
+        crud.create_debt(USER, {"name": "Apple", "balance": "2000", "apr": "5", "monthly_payment": "100"})
+        items = json.loads(crud.list_debts(USER)["body"])
+        assert items[0]["name"] == "Apple"
+
+
+class TestListIncome:
+    def test_list_returns_monthly_amount(self, tbls):
+        crud.create_income(USER, {"name": "Salary", "amount": "5000", "frequency": "monthly"})
+        items = json.loads(crud.list_income(USER)["body"])
+        assert len(items) == 1
+        assert items[0]["monthly_amount"] == "5000"
+
+
+class TestListExpenses:
+    def test_list_returns_monthly_amount(self, tbls):
+        crud.create_expense(USER, {"name": "Hydro", "amount": "120", "frequency": "monthly", "category": "utilities"})
+        items = json.loads(crud.list_expenses(USER)["body"])
+        assert len(items) == 1
+        assert items[0]["monthly_amount"] == "120"
 
 
 # ── Summary ───────────────────────────────────────────────────────────────────
