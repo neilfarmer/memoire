@@ -105,6 +105,12 @@ def _compute_debt_fields(balance: Decimal, apr: Decimal, monthly_payment: Decima
     }
 
 
+def _compute_total_fields(original_balance: Decimal, apr: Decimal, monthly_payment: Decimal) -> dict:
+    """Compute total_months from the original loan amount (for progress bar)."""
+    result = _compute_debt_fields(original_balance, apr, monthly_payment)
+    return {"total_months": result["payoff_months"]}
+
+
 def _to_monthly(amount: Decimal, frequency: str) -> Decimal:
     return amount * MONTHLY_MULTIPLIER[frequency]
 
@@ -113,14 +119,13 @@ def _to_monthly(amount: Decimal, frequency: str) -> Decimal:
 
 def list_debts(user_id: str) -> dict:
     items = db.query_by_user(_debts_table(), user_id)
-    # Attach computed fields
     for item in items:
-        computed = _compute_debt_fields(
-            _to_dec(item["balance"]),
-            _to_dec(item["apr"]),
-            _to_dec(item["monthly_payment"]),
-        )
-        item.update(computed)
+        balance  = _to_dec(item["balance"])
+        apr      = _to_dec(item["apr"])
+        payment  = _to_dec(item["monthly_payment"])
+        orig_bal = _to_dec(item.get("original_balance") or item["balance"])
+        item.update(_compute_debt_fields(balance, apr, payment))
+        item.update(_compute_total_fields(orig_bal, apr, payment))
     items.sort(key=lambda d: d.get("name", ""))
     return ok(items)
 
@@ -156,28 +161,35 @@ def create_debt(user_id: str, body: dict) -> dict:
     apr             = _to_dec(body["apr"])
     monthly_payment = _to_dec(body["monthly_payment"])
 
+    raw_orig = body.get("original_balance")
+    original_balance = _to_dec(raw_orig) if raw_orig not in (None, "") else balance
+    if original_balance < balance:
+        original_balance = balance
+
     now = now_iso()
     item = {
-        "user_id":         user_id,
-        "debt_id":         str(uuid.uuid4()),
-        "name":            name,
-        "type":            debt_type,
-        "balance":         str(balance),
-        "apr":             str(apr),
-        "monthly_payment": str(monthly_payment),
-        "notes":           notes or None,
-        "created_at":      now,
-        "updated_at":      now,
+        "user_id":          user_id,
+        "debt_id":          str(uuid.uuid4()),
+        "name":             name,
+        "type":             debt_type,
+        "balance":          str(balance),
+        "original_balance": str(original_balance),
+        "apr":              str(apr),
+        "monthly_payment":  str(monthly_payment),
+        "notes":            notes or None,
+        "created_at":       now,
+        "updated_at":       now,
     }
     item = {k: v for k, v in item.items() if v is not None}
     _debts_table().put_item(Item=item)
 
     item.update(_compute_debt_fields(balance, apr, monthly_payment))
+    item.update(_compute_total_fields(original_balance, apr, monthly_payment))
     return created(item)
 
 
 def update_debt(user_id: str, debt_id: str, body: dict) -> dict:
-    updatable = {"name", "type", "balance", "apr", "monthly_payment", "notes"}
+    updatable = {"name", "type", "balance", "original_balance", "apr", "monthly_payment", "notes"}
     fields = {k: v for k, v in body.items() if k in updatable}
     if not fields:
         return error("No valid fields provided for update")
@@ -192,7 +204,7 @@ def update_debt(user_id: str, debt_id: str, body: dict) -> dict:
     if "type" in fields and fields["type"] not in VALID_DEBT_TYPES:
         return error(f"type must be one of: {', '.join(sorted(VALID_DEBT_TYPES))}")
 
-    for field in ("balance", "monthly_payment"):
+    for field in ("balance", "original_balance", "monthly_payment"):
         if field in fields:
             err = _validate_amount(fields[field], field)
             if err:
@@ -226,11 +238,12 @@ def update_debt(user_id: str, debt_id: str, body: dict) -> dict:
         return not_found("Debt")
 
     item = result["Attributes"]
-    item.update(_compute_debt_fields(
-        _to_dec(item["balance"]),
-        _to_dec(item["apr"]),
-        _to_dec(item["monthly_payment"]),
-    ))
+    balance  = _to_dec(item["balance"])
+    apr      = _to_dec(item["apr"])
+    payment  = _to_dec(item["monthly_payment"])
+    orig_bal = _to_dec(item.get("original_balance") or item["balance"])
+    item.update(_compute_debt_fields(balance, apr, payment))
+    item.update(_compute_total_fields(orig_bal, apr, payment))
     return ok(item)
 
 
@@ -504,11 +517,12 @@ def get_summary(user_id: str) -> dict:
         balance         = _to_dec(d["balance"])
         apr             = _to_dec(d["apr"])
         monthly_payment = _to_dec(d["monthly_payment"])
+        orig_bal        = _to_dec(d.get("original_balance") or d["balance"])
         computed        = _compute_debt_fields(balance, apr, monthly_payment)
         total_debt_balance          += balance
         total_monthly_debt_payments += monthly_payment
         total_annual_interest       += _to_dec(computed["annual_interest"])
-        debts_out.append({**d, **computed})
+        debts_out.append({**d, **computed, **_compute_total_fields(orig_bal, apr, monthly_payment)})
 
     for i in incomes:
         total_monthly_income += _to_monthly(_to_dec(i["amount"]), i["frequency"])

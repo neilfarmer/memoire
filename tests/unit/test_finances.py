@@ -99,6 +99,22 @@ class TestCreateDebt:
         assert "payoff_months" in body
         assert "total_interest_remaining" in body
         assert "debt_id" in body
+        # original_balance defaults to balance
+        assert body["original_balance"] == "15000"
+        assert body["total_months"] == body["payoff_months"]
+
+    def test_original_balance_stored(self, tbls):
+        r = crud.create_debt(USER, {
+            "name": "Mortgage", "type": "mortgage",
+            "original_balance": "300000", "balance": "250000",
+            "apr": "3.5", "monthly_payment": "1500",
+        })
+        assert r["statusCode"] == 201
+        body = json.loads(r["body"])
+        assert body["original_balance"] == "300000"
+        assert body["total_months"] is not None
+        # total_months > payoff_months since original > current balance
+        assert body["total_months"] > body["payoff_months"]
 
     def test_apr_zero_allowed(self, tbls):
         r = crud.create_debt(USER, {"name": "Interest-free", "balance": "1000", "apr": "0", "monthly_payment": "100"})

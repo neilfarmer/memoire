@@ -4895,17 +4895,23 @@
       </div>
       <div class="field-row">
         <div class="field">
+          <label for="debt-original-balance">Original loan amount</label>
+          <input type="number" id="debt-original-balance" min="0.01" step="0.01" placeholder="e.g. 25000" />
+        </div>
+        <div class="field">
           <label for="debt-balance">Current balance <span style="color:var(--danger)">*</span></label>
           <input type="number" id="debt-balance" min="0.01" step="0.01" placeholder="0.00" />
         </div>
+      </div>
+      <div class="field-row">
         <div class="field">
           <label for="debt-apr">Interest rate (APR %) <span style="color:var(--danger)">*</span></label>
           <input type="number" id="debt-apr" min="0" step="0.01" placeholder="e.g. 7.99" />
         </div>
-      </div>
-      <div class="field">
-        <label for="debt-payment">Monthly payment <span style="color:var(--danger)">*</span></label>
-        <input type="number" id="debt-payment" min="0.01" step="0.01" placeholder="0.00" />
+        <div class="field">
+          <label for="debt-payment">Monthly payment <span style="color:var(--danger)">*</span></label>
+          <input type="number" id="debt-payment" min="0.01" step="0.01" placeholder="0.00" />
+        </div>
       </div>
       <div class="field">
         <label for="debt-notes">Notes</label>
@@ -8702,21 +8708,33 @@
           const annualInt = d.annual_interest ? `${finances.fmt(d.annual_interest)}/yr interest` : "";
           let timelineHTML = "";
           if (d.payoff_months != null) {
-            const pm = d.payoff_months;
+            const pm       = d.payoff_months;
+            const tm       = d.total_months || pm;
+            const origBal  = parseFloat(d.original_balance || d.balance);
+            const curBal   = parseFloat(d.balance);
+            const paid     = Math.max(0, origBal - curBal);
+            const fillPct  = origBal > 0 ? Math.min(100, paid / origBal * 100) : 0;
+
             const pd = new Date();
             pd.setMonth(pd.getMonth() + pm);
             const endStr = pd.toLocaleDateString("en-US", {month:"short", year:"numeric"});
-            const numYrs = Math.ceil(pm / 12);
+
+            // tick lines spaced across total loan duration
+            const numYrs = Math.ceil(tm / 12);
             let tickLines = "";
             for (let y = 1; y < numYrs; y++) {
-              const pct = (y * 12 / pm * 100).toFixed(1);
-              tickLines += `<div class="fin-payoff-tick-line" style="left:${pct}%"></div>`;
+              const p = (y * 12 / tm * 100).toFixed(1);
+              tickLines += `<div class="fin-payoff-tick-line" style="left:${p}%"></div>`;
             }
+
+            const paidLbl = fillPct > 0 ? `${fillPct.toFixed(0)}% paid` : "0% paid";
+            const totalLbl = tm !== pm ? `${tm}-month loan` : "";
             timelineHTML = `
               <div class="fin-payoff-timeline">
-                <div class="fin-debt-bar-wrap"><div class="fin-debt-bar-fill"></div>${tickLines}</div>
+                ${totalLbl ? `<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">${totalLbl}</div>` : ""}
+                <div class="fin-debt-bar-wrap"><div class="fin-debt-bar-fill" style="width:${fillPct.toFixed(1)}%"></div>${tickLines}</div>
                 <div class="fin-payoff-labels">
-                  <span>Now</span>
+                  <span>${paidLbl}</span>
                   <span class="fin-pl-end">Paid off ${endStr}</span>
                 </div>
               </div>`;
@@ -8797,16 +8815,17 @@
         const d = (finances.summary?.debts || []).find(d => d.debt_id === debtId);
         if (!d) return;
         $("debt-modal-title").textContent = "Edit debt";
-        $("debt-name").value    = d.name;
-        $("debt-type").value    = d.type;
-        $("debt-balance").value = d.balance;
-        $("debt-apr").value     = d.apr;
-        $("debt-payment").value = d.monthly_payment;
-        $("debt-notes").value   = d.notes || "";
+        $("debt-name").value             = d.name;
+        $("debt-type").value             = d.type;
+        $("debt-original-balance").value = d.original_balance || "";
+        $("debt-balance").value          = d.balance;
+        $("debt-apr").value              = d.apr;
+        $("debt-payment").value          = d.monthly_payment;
+        $("debt-notes").value            = d.notes || "";
         $("debt-delete-btn").classList.remove("hidden");
       } else {
         $("debt-modal-title").textContent = "Add debt";
-        $("debt-name").value = $("debt-balance").value = $("debt-apr").value = $("debt-payment").value = $("debt-notes").value = "";
+        $("debt-name").value = $("debt-original-balance").value = $("debt-balance").value = $("debt-apr").value = $("debt-payment").value = $("debt-notes").value = "";
         $("debt-type").value = "auto_loan";
         $("debt-delete-btn").classList.add("hidden");
       }
@@ -8834,7 +8853,9 @@
     if (apr === "" || parseFloat(apr) < 0)    { showError("debt-modal-error", "APR must be 0 or greater."); return; }
     if (!payment || parseFloat(payment) <= 0) { showError("debt-modal-error", "Monthly payment must be greater than zero."); return; }
 
+    const origBal = $("debt-original-balance").value.trim();
     const body = { name, type: $("debt-type").value, balance, apr, monthly_payment: payment, notes: $("debt-notes").value.trim() };
+    if (origBal) body.original_balance = origBal;
     $("debt-save-btn").disabled = true; $("debt-save-btn").textContent = "Saving...";
     try {
       if (finances.editingId) {
