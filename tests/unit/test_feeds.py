@@ -74,7 +74,8 @@ class TestListFeeds:
         assert json.loads(result["body"]) == []
 
     def test_returns_added_feeds(self, tbls):
-        crud.add_feed(USER, {"url": "https://example.com/feed.rss"})
+        with patch.object(crud, "_discover_feed_url", side_effect=lambda u: (u, None)):
+            crud.add_feed(USER, {"url": "https://example.com/feed.rss"})
         result = crud.list_feeds(USER)
         feeds = json.loads(result["body"])
         assert len(feeds) == 1
@@ -91,7 +92,8 @@ class TestAddFeed:
         assert result["statusCode"] == 400
 
     def test_adds_valid_feed(self, tbls):
-        result = crud.add_feed(USER, {"url": "https://example.com/feed.rss"})
+        with patch.object(crud, "_discover_feed_url", side_effect=lambda u: (u, None)):
+            result = crud.add_feed(USER, {"url": "https://example.com/feed.rss"})
         assert result["statusCode"] == 201
         body = json.loads(result["body"])
         assert body["url"] == "https://example.com/feed.rss"
@@ -99,8 +101,9 @@ class TestAddFeed:
 
     def test_duplicate_returns_error(self, tbls):
         url = "https://example.com/feed.rss"
-        crud.add_feed(USER, {"url": url})
-        result = crud.add_feed(USER, {"url": url})
+        with patch.object(crud, "_discover_feed_url", side_effect=lambda u: (u, None)):
+            crud.add_feed(USER, {"url": url})
+            result = crud.add_feed(USER, {"url": url})
         assert result["statusCode"] == 400
 
 
@@ -110,7 +113,8 @@ class TestDeleteFeed:
         assert result["statusCode"] == 404
 
     def test_deletes_existing_feed(self, tbls):
-        added = json.loads(crud.add_feed(USER, {"url": "https://example.com/f.rss"})["body"])
+        with patch.object(crud, "_discover_feed_url", side_effect=lambda u: (u, None)):
+            added = json.loads(crud.add_feed(USER, {"url": "https://example.com/f.rss"})["body"])
         result = crud.delete_feed(USER, added["feed_id"])
         assert result["statusCode"] == 204
         assert json.loads(crud.list_feeds(USER)["body"]) == []
@@ -235,7 +239,8 @@ class TestFetchFeed:
 
 class TestGetArticlesWithFetch:
     def test_fetches_and_caches_when_no_cache(self, tbls):
-        crud.add_feed(USER, {"url": "https://example.com/rss"})
+        with patch.object(crud, "_discover_feed_url", side_effect=lambda u: (u, None)):
+            crud.add_feed(USER, {"url": "https://example.com/rss"})
         with patch.object(crud, "_fetch_feed", return_value=[{
             "feed_id": "f1", "feed_title": "T", "title": "A",
             "url": "https://example.com/1", "description": "d",
@@ -343,11 +348,13 @@ class TestRouter:
         assert router.route("GET /feeds", USER, {}, {})["statusCode"] == 200
 
     def test_add_feed(self, tbls):
-        r = router.route("POST /feeds", USER, {"url": "https://example.com/f.rss"}, {})
+        with patch.object(crud, "_discover_feed_url", side_effect=lambda u: (u, None)):
+            r = router.route("POST /feeds", USER, {"url": "https://example.com/f.rss"}, {})
         assert r["statusCode"] == 201
 
     def test_delete_feed(self, tbls):
-        added = json.loads(router.route("POST /feeds", USER, {"url": "https://x.com/f.rss"}, {})["body"])
+        with patch.object(crud, "_discover_feed_url", side_effect=lambda u: (u, None)):
+            added = json.loads(router.route("POST /feeds", USER, {"url": "https://x.com/f.rss"}, {})["body"])
         r = router.route("DELETE /feeds/{id}", USER, {}, {"id": added["feed_id"]})
         assert r["statusCode"] == 204
 
