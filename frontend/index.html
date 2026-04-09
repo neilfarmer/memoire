@@ -1142,6 +1142,7 @@
     .fin-card-meta span { white-space: nowrap; }
     .fin-payoff-timeline { margin-top: 12px; }
     .fin-debt-bar-wrap {
+      position: relative;
       height: 6px;
       background: var(--border);
       border-radius: 99px;
@@ -1150,29 +1151,24 @@
     .fin-debt-bar-fill {
       height: 100%;
       border-radius: 99px;
-      background: linear-gradient(90deg, #dc2626, #f87171);
+      background: linear-gradient(90deg, var(--primary-h), var(--primary));
       width: 100%;
     }
-    html[data-theme="dark"] .fin-debt-bar-fill { background: linear-gradient(90deg, #fca5a5, #dc2626); }
+    .fin-payoff-tick-line {
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 1px;
+      background: rgba(255,255,255,0.3);
+    }
     .fin-payoff-labels {
-      position: relative;
-      height: 20px;
-      margin-top: 3px;
-      font-size: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-top: 4px;
+      font-size: 11px;
       color: var(--muted);
     }
-    .fin-payoff-labels .fin-pl-now {
-      position: absolute;
-      left: 0;
-    }
-    .fin-payoff-labels .fin-pl-yr {
-      position: absolute;
-      transform: translateX(-50%);
-    }
     .fin-payoff-labels .fin-pl-end {
-      position: absolute;
-      right: 0;
-      font-size: 11px;
       font-weight: 600;
       color: var(--text);
       white-space: nowrap;
@@ -8711,19 +8707,16 @@
             pd.setMonth(pd.getMonth() + pm);
             const endStr = pd.toLocaleDateString("en-US", {month:"short", year:"numeric"});
             const numYrs = Math.ceil(pm / 12);
-            let ticks = "";
+            let tickLines = "";
             for (let y = 1; y < numYrs; y++) {
               const pct = (y * 12 / pm * 100).toFixed(1);
-              const yr = new Date();
-              yr.setFullYear(yr.getFullYear() + y);
-              ticks += `<span class="fin-pl-yr" style="left:${pct}%">${yr.getFullYear()}</span>`;
+              tickLines += `<div class="fin-payoff-tick-line" style="left:${pct}%"></div>`;
             }
             timelineHTML = `
               <div class="fin-payoff-timeline">
-                <div class="fin-debt-bar-wrap"><div class="fin-debt-bar-fill"></div></div>
+                <div class="fin-debt-bar-wrap"><div class="fin-debt-bar-fill"></div>${tickLines}</div>
                 <div class="fin-payoff-labels">
-                  <span class="fin-pl-now">Now</span>
-                  ${ticks}
+                  <span>Now</span>
                   <span class="fin-pl-end">Paid off ${endStr}</span>
                 </div>
               </div>`;
