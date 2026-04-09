@@ -5,12 +5,13 @@ import os
 import uuid
 from decimal import Decimal, InvalidOperation
 
-import boto3
+from botocore.exceptions import ClientError
 from response import ok, created, no_content, error, not_found
 import db
 from utils import now_iso, build_update_expression
 
-_dynamodb_client = boto3.client("dynamodb")
+def _is_conditional_check_failed(exc: ClientError) -> bool:
+    return exc.response["Error"]["Code"] == "ConditionalCheckFailedException"
 
 DEBTS_TABLE    = os.environ["DEBTS_TABLE"]
 INCOME_TABLE   = os.environ["INCOME_TABLE"]
@@ -234,7 +235,9 @@ def update_debt(user_id: str, debt_id: str, body: dict) -> dict:
             ConditionExpression="attribute_exists(debt_id)",
             ReturnValues="ALL_NEW",
         )
-    except _dynamodb_client.exceptions.ConditionalCheckFailedException:
+    except ClientError as e:
+        if not _is_conditional_check_failed(e):
+            raise
         return not_found("Debt")
 
     item = result["Attributes"]
@@ -253,7 +256,9 @@ def delete_debt(user_id: str, debt_id: str) -> dict:
             Key={"user_id": user_id, "debt_id": debt_id},
             ConditionExpression="attribute_exists(debt_id)",
         )
-    except _dynamodb_client.exceptions.ConditionalCheckFailedException:
+    except ClientError as e:
+        if not _is_conditional_check_failed(e):
+            raise
         return not_found("Debt")
     return no_content()
 
@@ -329,6 +334,8 @@ def update_income(user_id: str, income_id: str, body: dict) -> dict:
 
     if "notes" in fields:
         fields["notes"] = (fields["notes"] or "").strip()
+        if len(fields["notes"]) > MAX_NOTES_LEN:
+            return error(f"notes exceeds maximum length of {MAX_NOTES_LEN}")
 
     fields["updated_at"] = now_iso()
     update_expr, names, values = build_update_expression(fields)
@@ -342,7 +349,9 @@ def update_income(user_id: str, income_id: str, body: dict) -> dict:
             ConditionExpression="attribute_exists(income_id)",
             ReturnValues="ALL_NEW",
         )
-    except _dynamodb_client.exceptions.ConditionalCheckFailedException:
+    except ClientError as e:
+        if not _is_conditional_check_failed(e):
+            raise
         return not_found("Income source")
 
     item = result["Attributes"]
@@ -356,7 +365,9 @@ def delete_income(user_id: str, income_id: str) -> dict:
             Key={"user_id": user_id, "income_id": income_id},
             ConditionExpression="attribute_exists(income_id)",
         )
-    except _dynamodb_client.exceptions.ConditionalCheckFailedException:
+    except ClientError as e:
+        if not _is_conditional_check_failed(e):
+            raise
         return not_found("Income source")
     return no_content()
 
@@ -467,6 +478,8 @@ def update_expense(user_id: str, expense_id: str, body: dict) -> dict:
 
     if "notes" in fields:
         fields["notes"] = (fields["notes"] or "").strip()
+        if len(fields["notes"]) > MAX_NOTES_LEN:
+            return error(f"notes exceeds maximum length of {MAX_NOTES_LEN}")
 
     fields["updated_at"] = now_iso()
     update_expr, names, values = build_update_expression(fields)
@@ -480,7 +493,9 @@ def update_expense(user_id: str, expense_id: str, body: dict) -> dict:
             ConditionExpression="attribute_exists(expense_id)",
             ReturnValues="ALL_NEW",
         )
-    except _dynamodb_client.exceptions.ConditionalCheckFailedException:
+    except ClientError as e:
+        if not _is_conditional_check_failed(e):
+            raise
         return not_found("Expense")
 
     item = result["Attributes"]
@@ -494,7 +509,9 @@ def delete_expense(user_id: str, expense_id: str) -> dict:
             Key={"user_id": user_id, "expense_id": expense_id},
             ConditionExpression="attribute_exists(expense_id)",
         )
-    except _dynamodb_client.exceptions.ConditionalCheckFailedException:
+    except ClientError as e:
+        if not _is_conditional_check_failed(e):
+            raise
         return not_found("Expense")
     return no_content()
 

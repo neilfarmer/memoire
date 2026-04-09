@@ -6226,10 +6226,17 @@
 
   $("home-finances-toggle").addEventListener("change", async function() {
     const enabled = this.checked;
-    const updated = await api.updateSettings({ home_finances_widget: enabled });
-    state.settings = updated;
-    if (enabled && !finances.summary) finances.load();
-    if (pages.current === "home") renderHomeDashboard();
+    this.disabled = true;
+    try {
+      const updated = await api.updateSettings({ home_finances_widget: enabled });
+      state.settings = { ...state.settings, ...updated };
+      if (enabled && !finances.summary) finances.load();
+      if (pages.current === "home") renderHomeDashboard();
+    } catch (e) {
+      this.checked = !enabled; // revert on failure
+    } finally {
+      this.disabled = false;
+    }
   });
 
   // ── Color themes ─────────────────────────────────────────────────────────────
@@ -8765,7 +8772,7 @@
             timelineHTML = `<div class="fin-payoff-timeline" style="font-size:11px;color:#dc2626;margin-top:8px;">Payment does not cover interest — debt will not pay off</div>`;
           }
           return `
-            <div class="fin-card" onclick="debtModal.open('${d.debt_id}')">
+            <div class="fin-card" role="button" tabindex="0" onclick="debtModal.open('${d.debt_id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();debtModal.open('${d.debt_id}');}">
               <div class="fin-card-header">
                 <div class="fin-card-name">${escHtml(d.name)}</div>
                 <div class="fin-card-amount">${finances.fmt(d.balance)}</div>
@@ -8789,7 +8796,7 @@
         incList.innerHTML = `<div class="fin-empty">No income sources added yet.</div>`;
       } else {
         incList.innerHTML = s.income.map(i => `
-          <div class="fin-card" onclick="incomeModal.open('${i.income_id}')">
+          <div class="fin-card" role="button" tabindex="0" onclick="incomeModal.open('${i.income_id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();incomeModal.open('${i.income_id}');}">
             <div class="fin-card-header">
               <div class="fin-card-name">${escHtml(i.name)}</div>
               <div class="fin-card-amount pos" style="color:#16a34a;">${finances.fmt(i.monthly_amount)}<span style="font-size:11px;font-weight:400;color:var(--muted);">/mo</span></div>
@@ -8812,7 +8819,7 @@
         expList.innerHTML = `<div class="fin-empty">No fixed expenses added yet.</div>`;
       } else {
         expList.innerHTML = s.expenses.map(e => `
-          <div class="fin-card" onclick="expenseModal.open('${e.expense_id}')">
+          <div class="fin-card" role="button" tabindex="0" onclick="expenseModal.open('${e.expense_id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();expenseModal.open('${e.expense_id}');}">
             <div class="fin-card-header">
               <div class="fin-card-name">${escHtml(e.name)}</div>
               <div class="fin-card-amount">${finances.fmt(e.monthly_amount)}<span style="font-size:11px;font-weight:400;color:var(--muted);">/mo</span></div>
@@ -9009,7 +9016,14 @@
 
     const dueDayRaw = $("expense-due-day").value.trim();
     const body = { name, amount, frequency: $("expense-frequency").value, category: $("expense-category").value, notes: $("expense-notes").value.trim() };
-    if (dueDayRaw !== "") body.due_day = parseInt(dueDayRaw, 10);
+    if (dueDayRaw !== "") {
+      const dueDay = Number(dueDayRaw);
+      if (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31) {
+        showError("expense-modal-error", "Due day must be a number between 1 and 31.");
+        return;
+      }
+      body.due_day = dueDay;
+    }
     $("expense-save-btn").disabled = true; $("expense-save-btn").textContent = "Saving...";
     try {
       if (finances.editingId) {
