@@ -42,8 +42,60 @@ def _read_table():
 
 # ── Feed management ───────────────────────────────────────────────────────────
 
+def _real_feeds(items: list) -> list:
+    """Strip internal cache entries from a feed list."""
+    return [f for f in items if f.get("feed_id") != CACHE_ITEM_KEY]
+
+
+def _discover_feed_url(url: str) -> tuple[str | None, str | None]:
+    """Try to resolve a URL to a valid RSS/Atom feed.
+
+    Returns (resolved_url, error_message). On success error_message is None;
+    on failure resolved_url is None.
+    """
+    try:
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "Memoire/1.0 RSS Reader"}
+        )
+        with urllib.request.urlopen(req, timeout=FETCH_TIMEOUT) as resp:  # nosec B310
+            content = resp.read(500_000)
+    except Exception as exc:
+        return None, f"Could not reach {url}: {exc}"
+
+    # Try parsing as XML directly
+    try:
+        ET.fromstring(content)  # nosec B314
+        return url, None        # valid XML feed
+    except ET.ParseError:
+        pass
+
+    # Not XML — look for RSS/Atom autodiscovery links in the HTML
+    html = content.decode("utf-8", errors="ignore")
+    pattern = re.compile(
+        r'<link[^>]+type=["\']application/(?:rss|atom)\+xml["\'][^>]*href=["\']([^"\']+)["\']'
+        r'|<link[^>]+href=["\']([^"\']+)["\'][^>]*type=["\']application/(?:rss|atom)\+xml["\']',
+        re.IGNORECASE,
+    )
+    for m in pattern.finditer(html):
+        discovered = m.group(1) or m.group(2)
+        if discovered:
+            discovered = urllib.parse.urljoin(url, discovered)
+            # Verify the discovered URL is a parseable feed
+            try:
+                req2 = urllib.request.Request(
+                    discovered, headers={"User-Agent": "Memoire/1.0 RSS Reader"}
+                )
+                with urllib.request.urlopen(req2, timeout=FETCH_TIMEOUT) as resp2:  # nosec B310
+                    ET.fromstring(resp2.read(500_000))  # nosec B314
+                return discovered, None
+            except Exception:
+                continue
+
+    return None, "No RSS or Atom feed found at that URL"
+
+
 def list_feeds(user_id: str) -> dict:
-    items = db.query_by_user(_table(), user_id)
+    items = _real_feeds(db.query_by_user(_table(), user_id))
     items.sort(key=lambda x: x.get("created_at", ""))
     return ok(items)
 
@@ -55,17 +107,24 @@ def add_feed(user_id: str, body: dict) -> dict:
     if not url.startswith(("http://", "https://")):
         return error("url must start with http:// or https://")
 
-    existing = db.query_by_user(_table(), user_id)
+    existing = _real_feeds(db.query_by_user(_table(), user_id))
     if len(existing) >= MAX_FEEDS:
         return error(f"Maximum of {MAX_FEEDS} feeds allowed")
-    if any(f["url"] == url for f in existing):
+    if any(f.get("url") == url for f in existing):
+        return error("Feed URL already added")
+
+    resolved_url, err = _discover_feed_url(url)
+    if err:
+        return error(err)
+
+    if any(f.get("url") == resolved_url for f in existing):
         return error("Feed URL already added")
 
     feed_id = str(uuid.uuid4())
     item = {
         "user_id":    user_id,
         "feed_id":    feed_id,
-        "url":        url,
+        "url":        resolved_url,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     _table().put_item(Item=item)
