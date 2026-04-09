@@ -4459,6 +4459,19 @@
       </div>
     </div>
     <div class="settings-section">
+      <div class="settings-section-title">Home</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Finances widget</div>
+          <div class="settings-desc">Show a financial summary card on the home dashboard</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="home-finances-toggle" />
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+    <div class="settings-section">
       <div class="settings-section-title">Data</div>
       <div class="settings-row">
         <div>
@@ -5837,6 +5850,7 @@
       health.load();     // preload so journal calendar shows exercise dots
       nutrition.load();  // preload so journal calendar shows nutrition dots
       favs.load();       // preload so heart buttons show correct state on feeds page
+      if (state.settings?.home_finances_widget) finances.load(); // preload for home widget if enabled
       pages.show("home");
     },
 
@@ -6209,6 +6223,14 @@
   };
 
   $("dark-mode-toggle").addEventListener("change", () => theme.toggle());
+
+  $("home-finances-toggle").addEventListener("change", async function() {
+    const enabled = this.checked;
+    const updated = await api.updateSettings({ home_finances_widget: enabled });
+    state.settings = updated;
+    if (enabled && !finances.summary) finances.load();
+    if (pages.current === "home") renderHomeDashboard();
+  });
 
   // ── Color themes ─────────────────────────────────────────────────────────────
 
@@ -8674,6 +8696,7 @@
       try {
         finances.summary = await api.call("GET", "/finances/summary");
         finances.render();
+        if (pages.current === "home" && state.settings?.home_finances_widget) renderHomeDashboard();
       } catch (e) {
         console.error("Failed to load finances:", e);
       } finally {
@@ -9480,6 +9503,40 @@
         }).join("")
       : `<div class="home-widget-empty">${goals.data.length ? "No active goals" : "No goals set"}</div>`;
 
+    // ── Finances widget (optional) ────────────────────────────────────────────
+    let financesWidget = "";
+    if (state.settings?.home_finances_widget) {
+      let financesHtml;
+      const fs = finances.summary;
+      if (!fs) {
+        financesHtml = `<div class="home-widget-empty">Loading...</div>`;
+      } else if (!fs.debts.length && !fs.income.length && !fs.expenses.length) {
+        financesHtml = `<div class="home-widget-empty">No financial data yet</div>`;
+      } else {
+        const net    = parseFloat(fs.net_monthly_cash_flow);
+        const netCol = net >= 0 ? "#16a34a" : "#dc2626";
+        financesHtml = `
+          <div class="home-widget-stat" style="color:${netCol}">${finances.fmtSigned(fs.net_monthly_cash_flow)}</div>
+          <div class="home-widget-sublabel">net monthly cash flow</div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:10px;color:var(--muted);">
+            <span>Income</span><span style="color:var(--text);font-weight:600;">${finances.fmt(fs.total_monthly_income)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px;color:var(--muted);">
+            <span>Outflow</span><span style="color:var(--text);font-weight:600;">${finances.fmt(fs.total_monthly_outflow)}</span>
+          </div>
+          ${fs.total_debt_balance !== "0.00" ? `
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px;color:var(--muted);">
+            <span>Total debt</span><span style="color:var(--text);font-weight:600;">${finances.fmt(fs.total_debt_balance)}</span>
+          </div>` : ""}`;
+      }
+      financesWidget = `
+        <div class="home-widget" onclick="pages.show('finances')" style="cursor:pointer;">
+          <div class="home-widget-title">Finances</div>
+          ${financesHtml}
+          <div class="home-widget-footer"><span class="home-widget-link">View finances →</span></div>
+        </div>`;
+    }
+
     grid.innerHTML = `
       <div class="home-widget">
         <div class="home-widget-title">Tasks</div>
@@ -9500,7 +9557,8 @@
         <div class="home-widget-title">Goals</div>
         ${goalsHtml}
         <div class="home-widget-footer"><span class="home-widget-link" onclick="pages.show('goals')">View all →</span></div>
-      </div>`;
+      </div>
+      ${financesWidget}`;
   }
 
   function renderSettings() {
@@ -9513,6 +9571,7 @@
       : "—";
     $("display-name-input").value = state.settings?.display_name || "";
     $("pal-name-input").value = state.settings?.pal_name || "";
+    $("home-finances-toggle").checked = !!(state.settings?.home_finances_widget);
     loadPatList();
   }
 
