@@ -42,12 +42,12 @@ def _abs_url(base: str, href: str) -> str:
 
 
 def _scrape_metadata(url: str) -> dict:
-    """Fetch *url* and extract title, description, and favicon_url.
+    """Fetch *url* and extract title, description, favicon_url, and thumbnail_url.
 
-    Returns a dict with those three keys (values may be empty strings).
+    Returns a dict with those four keys (values may be empty strings).
     Never raises — failures produce empty strings.
     """
-    result = {"title": "", "description": "", "favicon_url": ""}
+    result = {"title": "", "description": "", "favicon_url": "", "thumbnail_url": ""}
     try:
         req = urllib.request.Request(
             url,
@@ -75,6 +75,20 @@ def _scrape_metadata(url: str) -> dict:
         if m:
             result["description"] = re.sub(r"\s+", " ", m.group(1)).strip()
             break
+
+    # thumbnail — og:image first, then twitter:image
+    for pat in (
+        r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image',
+        r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image',
+    ):
+        m = re.search(pat, chunk, re.IGNORECASE)
+        if m:
+            thumb = _abs_url(final_url, m.group(1).strip())
+            if thumb:
+                result["thumbnail_url"] = thumb
+                break
 
     # favicon — <link rel="icon"> or <link rel="shortcut icon">
     for pat in (
@@ -186,24 +200,26 @@ def create_bookmark(user_id: str, body: dict) -> dict:
 
     # Scrape metadata; allow caller to override title/description
     meta = _scrape_metadata(url)
-    title       = (body.get("title") or meta["title"] or url).strip()[:MAX_TITLE_LEN]
-    description = (body.get("description") or meta["description"] or "").strip()
-    favicon_url = meta["favicon_url"]
+    title         = (body.get("title") or meta["title"] or url).strip()[:MAX_TITLE_LEN]
+    description   = (body.get("description") or meta["description"] or "").strip()
+    favicon_url   = meta["favicon_url"]
+    thumbnail_url = meta["thumbnail_url"]
 
     now = datetime.now(timezone.utc).isoformat()
     item = {
-        "user_id":     user_id,
-        "bookmark_id": str(uuid.uuid4()),
-        "url":         url,
-        "title":       title,
-        "description": description,
-        "favicon_url": favicon_url,
-        "tags":        tags,
-        "note":        note,
-        "archived":    False,
-        "favourited":  False,
-        "created_at":  now,
-        "updated_at":  now,
+        "user_id":       user_id,
+        "bookmark_id":   str(uuid.uuid4()),
+        "url":           url,
+        "title":         title,
+        "description":   description,
+        "favicon_url":   favicon_url,
+        "thumbnail_url": thumbnail_url,
+        "tags":          tags,
+        "note":          note,
+        "archived":      False,
+        "favourited":    False,
+        "created_at":    now,
+        "updated_at":    now,
     }
     # Remove empty strings so DynamoDB is clean (keep booleans and lists)
     item = {k: v for k, v in item.items() if v != ""}
@@ -236,9 +252,9 @@ def update_bookmark(user_id: str, bookmark_id: str, body: dict) -> dict:
             body = {**body, "title": meta["title"]}
         if "description" not in body:
             body = {**body, "description": meta["description"]}
-        body = {**body, "favicon_url": meta["favicon_url"]}
+        body = {**body, "favicon_url": meta["favicon_url"], "thumbnail_url": meta["thumbnail_url"]}
 
-    updatable = {"url", "title", "description", "favicon_url", "note",
+    updatable = {"url", "title", "description", "favicon_url", "thumbnail_url", "note",
                  "archived", "favourited"}
     fields: dict = {}
     for k in updatable:

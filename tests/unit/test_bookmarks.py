@@ -23,6 +23,7 @@ SAMPLE_HTML = b"""<!DOCTYPE html>
 <head>
   <title>Example Page</title>
   <meta name="description" content="A great example page.">
+  <meta property="og:image" content="https://example.com/thumb.jpg">
   <link rel="icon" href="/favicon.ico">
 </head>
 <body>Hello</body>
@@ -72,10 +73,15 @@ class TestScrapeMetadata:
             meta = crud._scrape_metadata("https://example.com/page")
         assert meta["favicon_url"] == "https://example.com/favicon.ico"
 
+    def test_extracts_thumbnail(self):
+        with patch("urllib.request.urlopen", return_value=_mock_urlopen()):
+            meta = crud._scrape_metadata("https://example.com/")
+        assert meta["thumbnail_url"] == "https://example.com/thumb.jpg"
+
     def test_returns_empty_on_network_error(self):
         with patch("urllib.request.urlopen", side_effect=Exception("timeout")):
             meta = crud._scrape_metadata("https://example.com/")
-        assert meta == {"title": "", "description": "", "favicon_url": ""}
+        assert meta == {"title": "", "description": "", "favicon_url": "", "thumbnail_url": ""}
 
     def test_og_description_preferred(self):
         html = b"""<html><head>
