@@ -6102,12 +6102,12 @@
         return;
       }
       container.innerHTML = tokens.map(t => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);">
-          <div>
-            <div style="font-size:13px;font-weight:500;">${escHtml(t.name)}</div>
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--border);">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(t.name)}</div>
             <div style="font-size:12px;color:var(--muted);">Created ${t.created_at ? new Date(t.created_at).toLocaleDateString() : '—'}</div>
           </div>
-          <button class="btn btn-secondary" style="color:var(--danger,#c0392b);" data-token-id="${escHtml(t.token_id)}">Revoke</button>
+          <button class="btn btn-secondary" style="flex-shrink:0;color:var(--danger,#c0392b);" data-token-id="${escHtml(t.token_id)}">Revoke</button>
         </div>
       `).join('');
       container.querySelectorAll('[data-token-id]').forEach(btn => {
