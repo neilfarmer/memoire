@@ -4059,7 +4059,7 @@
     @media (max-width: 480px) {
       header { padding: 0 10px; }
       .search-btn { width: 38px; padding: 5px; overflow: hidden; }
-      #logout-btn { display: none; }
+      #logout-btn { width: 38px; padding: 5px; overflow: hidden; gap: 0; flex-shrink: 0; }
       .login-card { padding: 32px 20px; }
       .field-row { grid-template-columns: 1fr; }
       main { padding: 16px 12px; }
@@ -10871,6 +10871,17 @@
   $("diagram-back-btn").addEventListener("click", () => {
     document.querySelector(".diagrams-body").classList.remove("mobile-diagram-open");
     $("diagram-back-btn").classList.add("hidden");
+  });
+
+  // Reset mobile overlay state when viewport leaves the mobile breakpoint (e.g. rotation/resize)
+  window.matchMedia("(max-width: 768px)").addEventListener("change", e => {
+    if (!e.matches) {
+      $("sidebar").classList.remove("mobile-open");
+      $("sidebar-backdrop").classList.remove("visible");
+      const db = document.querySelector(".diagrams-body");
+      if (db) db.classList.remove("mobile-diagram-open");
+      $("diagram-back-btn").classList.add("hidden");
+    }
   });
 
   // ── Article summary modal ────────────────────────────────────────────────────
