@@ -299,6 +299,14 @@ class TestUpdateExpense:
         assert r["statusCode"] == 200
         assert json.loads(r["body"])["due_day"] == 1
 
+    def test_clears_due_day(self, tbls):
+        exp_id = json.loads(
+            crud.create_expense(USER, {"name": "Hydro", "amount": "80", "frequency": "monthly", "category": "utilities", "due_day": 15})["body"]
+        )["expense_id"]
+        r = crud.update_expense(USER, exp_id, {"due_day": ""})
+        assert r["statusCode"] == 200
+        assert "due_day" not in json.loads(r["body"])
+
     def test_invalid_due_day_returns_400(self, tbls):
         exp_id = self._make(tbls)
         assert crud.update_expense(USER, exp_id, {"due_day": 99})["statusCode"] == 400
@@ -401,3 +409,46 @@ class TestGetSummary:
         crud.create_income(USER, {"name": "Bonus", "amount": "12000", "frequency": "annual"})
         body = json.loads(crud.get_summary(USER)["body"])
         assert float(body["total_monthly_income"]) == pytest.approx(1000.0)
+
+
+# ── Cross-user mutation isolation ─────────────────────────────────────────────
+
+OTHER = "other-user-id"
+
+
+class TestCrossUserIsolation:
+    def test_debt_update_wrong_user_returns_404(self, tbls):
+        debt_id = json.loads(
+            crud.create_debt(USER, {"name": "Car", "balance": "10000", "apr": "7", "monthly_payment": "300"})["body"]
+        )["debt_id"]
+        assert crud.update_debt(OTHER, debt_id, {"balance": "9000"})["statusCode"] == 404
+
+    def test_debt_delete_wrong_user_returns_404(self, tbls):
+        debt_id = json.loads(
+            crud.create_debt(USER, {"name": "Car", "balance": "10000", "apr": "7", "monthly_payment": "300"})["body"]
+        )["debt_id"]
+        assert crud.delete_debt(OTHER, debt_id)["statusCode"] == 404
+
+    def test_income_update_wrong_user_returns_404(self, tbls):
+        inc_id = json.loads(
+            crud.create_income(USER, {"name": "Salary", "amount": "3000", "frequency": "monthly"})["body"]
+        )["income_id"]
+        assert crud.update_income(OTHER, inc_id, {"amount": "4000"})["statusCode"] == 404
+
+    def test_income_delete_wrong_user_returns_404(self, tbls):
+        inc_id = json.loads(
+            crud.create_income(USER, {"name": "Salary", "amount": "3000", "frequency": "monthly"})["body"]
+        )["income_id"]
+        assert crud.delete_income(OTHER, inc_id)["statusCode"] == 404
+
+    def test_expense_update_wrong_user_returns_404(self, tbls):
+        exp_id = json.loads(
+            crud.create_expense(USER, {"name": "Rent", "amount": "1500", "frequency": "monthly", "category": "housing"})["body"]
+        )["expense_id"]
+        assert crud.update_expense(OTHER, exp_id, {"amount": "1600"})["statusCode"] == 404
+
+    def test_expense_delete_wrong_user_returns_404(self, tbls):
+        exp_id = json.loads(
+            crud.create_expense(USER, {"name": "Rent", "amount": "1500", "frequency": "monthly", "category": "housing"})["body"]
+        )["expense_id"]
+        assert crud.delete_expense(OTHER, exp_id)["statusCode"] == 404

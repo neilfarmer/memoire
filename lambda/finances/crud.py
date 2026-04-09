@@ -467,12 +467,14 @@ def update_expense(user_id: str, expense_id: str, body: dict) -> dict:
     if "category" in fields and fields["category"] not in VALID_EXPENSE_CATS:
         return error(f"category must be one of: {', '.join(sorted(VALID_EXPENSE_CATS))}")
 
+    remove_due_day = False
     if "due_day" in fields:
         due_day, err = _validate_due_day(fields["due_day"])
         if err:
             return error(err)
         if due_day is None:
-            fields.pop("due_day")  # clearing it — handled by omitting from update
+            fields.pop("due_day")
+            remove_due_day = True
         else:
             fields["due_day"] = due_day
 
@@ -483,6 +485,10 @@ def update_expense(user_id: str, expense_id: str, body: dict) -> dict:
 
     fields["updated_at"] = now_iso()
     update_expr, names, values = build_update_expression(fields)
+
+    if remove_due_day:
+        names["#due_day"] = "due_day"
+        update_expr += " REMOVE #due_day"
 
     try:
         result = _expenses_table().update_item(

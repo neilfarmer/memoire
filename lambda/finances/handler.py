@@ -20,6 +20,9 @@ def lambda_handler(event: dict, context) -> dict:
         if event.get("body"):
             try:
                 body = json.loads(event["body"])
+                if not isinstance(body, dict):
+                    from response import error
+                    return error("Request body must be a JSON object")
             except (json.JSONDecodeError, TypeError):
                 from response import error
                 return error("Invalid JSON body")
