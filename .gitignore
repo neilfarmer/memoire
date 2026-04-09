@@ -23,6 +23,9 @@ __pycache__/
 # Local scripts (not for version control)
 scripts/deploy-dev.sh
 
+# Claude Code local hooks (not for version control)
+.claude/hooks/
+
 # Test artifacts
 tests/.test-content-ids.json
 htmlcov/
