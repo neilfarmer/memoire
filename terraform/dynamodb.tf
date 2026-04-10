@@ -609,3 +609,34 @@ resource "aws_dynamodb_table" "diagrams" {
     enabled = true
   }
 }
+
+# ── Bookmarks table ───────────────────────────────────────────────────────────
+#
+# PK: user_id      (String) — Cognito sub claim
+# SK: bookmark_id  (String) — UUID generated at creation
+#
+# Access patterns:
+#   List all bookmarks for a user  → Query PK=user_id
+#   Get a single bookmark          → GetItem PK=user_id, SK=bookmark_id
+#   Create / update / delete       → PutItem / UpdateItem / DeleteItem
+
+resource "aws_dynamodb_table" "bookmarks" {
+  name         = "${local.name_prefix}-bookmarks"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "bookmark_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "bookmark_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
