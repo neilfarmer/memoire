@@ -3478,7 +3478,9 @@
       opacity: 0;
       transition: opacity .15s;
     }
-    .bm-card:hover .bm-card-actions { opacity: 1; }
+    .bm-card:hover .bm-card-actions,
+    .bm-card:focus-within .bm-card-actions { opacity: 1; }
+    @media (hover: none) { .bm-card-actions { opacity: 1; } }
     .bm-action-btn {
       background: rgba(0,0,0,.55);
       border: none;
@@ -11123,6 +11125,8 @@
       const grid  = $("bm-grid");
 
       if (!items.length) {
+        const isFiltered = !!(searchVal || this._activeTag);
+        empty.querySelector("p").textContent = isFiltered ? "No bookmarks match your search." : "No bookmarks yet.";
         empty.classList.remove("hidden");
         grid.innerHTML = "";
         return;
@@ -11144,7 +11148,7 @@
       const active = this._activeTag;
       bar.innerHTML = [
         `<button class="bm-tag-btn${!active ? " active" : ""}" onclick="bookmarks._activeTag=null;bookmarks.render()">All</button>`,
-        ...tags.map(t => `<button class="bm-tag-btn${active === t ? " active" : ""}" onclick="bookmarks._activeTag=${JSON.stringify(t)};bookmarks.render()">${escHtml(t)}</button>`)
+        ...tags.map(t => `<button class="bm-tag-btn${active === t ? " active" : ""}" data-tag="${escHtml(t)}" onclick="bookmarks._activeTag=this.dataset.tag;bookmarks.render()">${escHtml(t)}</button>`)
       ].join("");
     },
 
@@ -11241,7 +11245,7 @@
 
       try {
         const body = { url, tags, note };
-        if (title) body.title = title;
+        if (this._editingId || title) body.title = title;
 
         if (this._editingId) {
           const updated = await api.call("PUT", `/bookmarks/${this._editingId}`, body);

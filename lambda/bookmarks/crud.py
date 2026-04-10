@@ -9,13 +9,13 @@ import urllib.error
 from datetime import datetime, timezone
 
 import boto3
+from botocore.exceptions import ClientError
 
 import db
 from response import ok, created, no_content, error, not_found
 from utils import build_update_expression
 
-TABLE_NAME       = os.environ["TABLE_NAME"]
-_dynamodb_client = boto3.client("dynamodb")
+TABLE_NAME = os.environ["TABLE_NAME"]
 SORT_KEY   = "bookmark_id"
 
 FETCH_TIMEOUT   = 8
@@ -253,8 +253,10 @@ def update_bookmark(user_id: str, bookmark_id: str, body: dict) -> dict:
             ConditionExpression="attribute_exists(bookmark_id)",
             ReturnValues="ALL_NEW",
         )
-    except _dynamodb_client.exceptions.ConditionalCheckFailedException:
-        return not_found("Bookmark")
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            return not_found("Bookmark")
+        raise
 
     return ok(result["Attributes"])
 
@@ -267,7 +269,9 @@ def delete_bookmark(user_id: str, bookmark_id: str) -> dict:
             Key={"user_id": user_id, SORT_KEY: bookmark_id},
             ConditionExpression="attribute_exists(bookmark_id)",
         )
-    except _dynamodb_client.exceptions.ConditionalCheckFailedException:
-        return not_found("Bookmark")
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            return not_found("Bookmark")
+        raise
 
     return no_content()
