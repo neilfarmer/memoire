@@ -72,6 +72,9 @@ def _scrape_metadata(url: str) -> dict:
         )
         with urllib.request.urlopen(req, timeout=FETCH_TIMEOUT) as resp:  # nosec B310
             final_url = resp.geturl()
+            # Re-validate after redirects — prevents redirect-chain SSRF bypass
+            if not _is_safe_url(final_url):
+                return result
             chunk = resp.read(131_072).decode("utf-8", errors="ignore")
     except Exception:
         return result
