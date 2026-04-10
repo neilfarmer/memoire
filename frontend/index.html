@@ -3416,6 +3416,13 @@
       transition: border-color .15s, transform .15s;
     }
     .bm-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .bm-card-link {
+      display: block;
+      width: 100%;
+      height: 100%;
+      text-decoration: none;
+      color: inherit;
+    }
     .bm-thumbnail {
       width: 100%;
       height: 100%;
@@ -11146,27 +11153,31 @@
       const editIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
 
       const actions = `<div class="bm-card-actions">
-        <button class="bm-action-btn${b.favourited ? " active" : ""}" title="Favourite" onclick="event.preventDefault();event.stopPropagation();bookmarks.toggleFav(${id})">${favIcon}</button>
-        <button class="bm-action-btn" title="Edit" onclick="event.preventDefault();event.stopPropagation();bookmarks.openEdit(${id})">${editIcon}</button>
+        <button class="bm-action-btn${b.favourited ? " active" : ""}" title="Favourite" onclick="bookmarks.toggleFav(${id})">${favIcon}</button>
+        <button class="bm-action-btn" title="Edit" onclick="bookmarks.openEdit(${id})">${editIcon}</button>
       </div>`;
 
       if (b.thumbnail_url) {
-        return `<a class="bm-card" href="${escHtml(b.url)}" target="_blank" rel="noopener noreferrer">
-          <img class="bm-thumbnail" src="${escHtml(b.thumbnail_url)}" onerror="this.style.display='none'" alt="">
-          <div class="bm-card-label">${escHtml(label)}</div>
+        return `<div class="bm-card">
+          <a class="bm-card-link" href="${escHtml(b.url)}" target="_blank" rel="noopener noreferrer">
+            <img class="bm-thumbnail" src="${escHtml(b.thumbnail_url)}" onerror="this.style.display='none'" alt="">
+            <div class="bm-card-label">${escHtml(label)}</div>
+          </a>
           ${actions}
-        </a>`;
+        </div>`;
       }
       const favicon = b.favicon_url
         ? `<img class="bm-favicon" src="${escHtml(b.favicon_url)}" onerror="this.style.display='none'" alt="">`
         : "";
-      return `<a class="bm-card" href="${escHtml(b.url)}" target="_blank" rel="noopener noreferrer">
-        <div class="bm-card-no-thumb">
-          ${favicon}
-          <span class="bm-card-label-plain">${escHtml(label)}</span>
-        </div>
+      return `<div class="bm-card">
+        <a class="bm-card-link" href="${escHtml(b.url)}" target="_blank" rel="noopener noreferrer">
+          <div class="bm-card-no-thumb">
+            ${favicon}
+            <span class="bm-card-label-plain">${escHtml(label)}</span>
+          </div>
+        </a>
         ${actions}
-      </a>`;
+      </div>`;
     },
 
     async toggleFav(id) {
