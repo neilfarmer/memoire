@@ -42,12 +42,12 @@ def _abs_url(base: str, href: str) -> str:
 
 
 def _scrape_metadata(url: str) -> dict:
-    """Fetch *url* and extract title, description, favicon_url, and thumbnail_url.
+    """Fetch *url* and extract favicon_url and thumbnail_url.
 
-    Returns a dict with those four keys (values may be empty strings).
+    Returns a dict with those two keys (values may be empty strings).
     Never raises — failures produce empty strings.
     """
-    result = {"title": "", "description": "", "favicon_url": "", "thumbnail_url": ""}
+    result = {"favicon_url": "", "thumbnail_url": ""}
     try:
         req = urllib.request.Request(
             url,
@@ -58,23 +58,6 @@ def _scrape_metadata(url: str) -> dict:
             chunk = resp.read(131_072).decode("utf-8", errors="ignore")
     except Exception:
         return result
-
-    # title
-    m = re.search(r"<title[^>]*>([^<]{1,500})</title>", chunk, re.IGNORECASE)
-    if m:
-        result["title"] = re.sub(r"\s+", " ", m.group(1)).strip()
-
-    # description — og:description first, then name="description"
-    for pat in (
-        r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\']{1,500})',
-        r'<meta[^>]+content=["\']([^"\']{1,500})["\'][^>]+property=["\']og:description',
-        r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']{1,500})',
-        r'<meta[^>]+content=["\']([^"\']{1,500})["\'][^>]+name=["\']description',
-    ):
-        m = re.search(pat, chunk, re.IGNORECASE)
-        if m:
-            result["description"] = re.sub(r"\s+", " ", m.group(1)).strip()
-            break
 
     # thumbnail — og:image first, then twitter:image
     for pat in (
@@ -138,22 +121,11 @@ def _validate_tags(tags) -> tuple[list | None, str | None]:
 def list_bookmarks(user_id: str, query_params: dict) -> dict:
     items = db.query_by_user(_table(), user_id)
 
-    tag_filter      = (query_params.get("tag") or "").strip().lower()
-    search_query    = (query_params.get("q") or "").strip().lower()
-    archived_param  = query_params.get("archived", "").lower()
+    tag_filter   = (query_params.get("tag") or "").strip().lower()
+    search_query = (query_params.get("q") or "").strip().lower()
 
     results = []
     for item in items:
-        archived = bool(item.get("archived"))
-
-        # archived filter: "true" shows only archived; anything else hides archived
-        if archived_param == "true":
-            if not archived:
-                continue
-        else:
-            if archived:
-                continue
-
         if tag_filter:
             tags_lower = [t.lower() for t in (item.get("tags") or [])]
             if tag_filter not in tags_lower:
@@ -198,10 +170,9 @@ def create_bookmark(user_id: str, body: dict) -> dict:
     if len(note) > MAX_NOTE_LEN:
         return error(f"note exceeds maximum length of {MAX_NOTE_LEN}")
 
-    # Scrape metadata; allow caller to override title/description
+    # Scrape favicon and thumbnail only; title/description are user-provided
     meta = _scrape_metadata(url)
-    title         = (body.get("title") or meta["title"] or url).strip()[:MAX_TITLE_LEN]
-    description   = (body.get("description") or meta["description"] or "").strip()
+    title         = (body.get("title") or "").strip()[:MAX_TITLE_LEN]
     favicon_url   = meta["favicon_url"]
     thumbnail_url = meta["thumbnail_url"]
 
@@ -211,12 +182,10 @@ def create_bookmark(user_id: str, body: dict) -> dict:
         "bookmark_id":   str(uuid.uuid4()),
         "url":           url,
         "title":         title,
-        "description":   description,
         "favicon_url":   favicon_url,
         "thumbnail_url": thumbnail_url,
         "tags":          tags,
         "note":          note,
-        "archived":      False,
         "favourited":    False,
         "created_at":    now,
         "updated_at":    now,
@@ -248,14 +217,9 @@ def update_bookmark(user_id: str, bookmark_id: str, body: dict) -> dict:
         if len(new_url) > MAX_URL_LEN:
             return error(f"url exceeds maximum length of {MAX_URL_LEN}")
         meta = _scrape_metadata(new_url)
-        if "title" not in body:
-            body = {**body, "title": meta["title"]}
-        if "description" not in body:
-            body = {**body, "description": meta["description"]}
         body = {**body, "favicon_url": meta["favicon_url"], "thumbnail_url": meta["thumbnail_url"]}
 
-    updatable = {"url", "title", "description", "favicon_url", "thumbnail_url", "note",
-                 "archived", "favourited"}
+    updatable = {"url", "title", "favicon_url", "thumbnail_url", "note", "favourited"}
     fields: dict = {}
     for k in updatable:
         if k in body:

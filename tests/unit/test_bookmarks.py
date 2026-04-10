@@ -52,16 +52,6 @@ def tbl():
 # ══════════════════════════════════════════════════════════════════════════════
 
 class TestScrapeMetadata:
-    def test_extracts_title(self):
-        with patch("urllib.request.urlopen", return_value=_mock_urlopen()):
-            meta = crud._scrape_metadata("https://example.com/")
-        assert meta["title"] == "Example Page"
-
-    def test_extracts_description(self):
-        with patch("urllib.request.urlopen", return_value=_mock_urlopen()):
-            meta = crud._scrape_metadata("https://example.com/")
-        assert meta["description"] == "A great example page."
-
     def test_extracts_favicon_from_link_tag(self):
         with patch("urllib.request.urlopen", return_value=_mock_urlopen()):
             meta = crud._scrape_metadata("https://example.com/")
@@ -81,16 +71,7 @@ class TestScrapeMetadata:
     def test_returns_empty_on_network_error(self):
         with patch("urllib.request.urlopen", side_effect=Exception("timeout")):
             meta = crud._scrape_metadata("https://example.com/")
-        assert meta == {"title": "", "description": "", "favicon_url": "", "thumbnail_url": ""}
-
-    def test_og_description_preferred(self):
-        html = b"""<html><head>
-          <meta property="og:description" content="OG desc">
-          <meta name="description" content="Plain desc">
-        </head></html>"""
-        with patch("urllib.request.urlopen", return_value=_mock_urlopen(html)):
-            meta = crud._scrape_metadata("https://example.com/")
-        assert meta["description"] == "OG desc"
+        assert meta == {"favicon_url": "", "thumbnail_url": ""}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -141,13 +122,13 @@ class TestCreateBookmark:
             resp = crud.create_bookmark(USER, {"url": "https://example.com/"})
         assert resp["statusCode"] == 201
         body = json.loads(resp["body"])
-        assert body["title"] == "Example Page"
-        assert body["description"] == "A great example page."
+        assert "description" not in body
+        assert body.get("title", "") == ""
+        assert body["thumbnail_url"] == "https://example.com/thumb.jpg"
         assert body["bookmark_id"]
-        assert body["archived"] is False
         assert body["favourited"] is False
 
-    def test_caller_title_overrides_scraped(self, tbl):
+    def test_user_title_stored(self, tbl):
         with patch("urllib.request.urlopen", return_value=_mock_urlopen()):
             resp = crud.create_bookmark(USER, {"url": "https://example.com/", "title": "My Title"})
         body = json.loads(resp["body"])
@@ -173,31 +154,16 @@ class TestCreateBookmark:
 
 
 class TestListBookmarks:
-    def _create(self, tbl, url="https://example.com/", tags=None, archived=False):
+    def _create(self, tbl, url="https://example.com/", tags=None):
         with patch("urllib.request.urlopen", return_value=_mock_urlopen()):
             body = {"url": url, "tags": tags or []}
             resp = crud.create_bookmark(USER, body)
-        if archived:
-            item_id = json.loads(resp["body"])["bookmark_id"]
-            crud.update_bookmark(USER, item_id, {"archived": True})
         return json.loads(resp["body"])
 
-    def test_list_returns_active(self, tbl):
+    def test_list_returns_bookmarks(self, tbl):
         self._create(tbl)
         resp = crud.list_bookmarks(USER, {})
         assert resp["statusCode"] == 200
-        items = json.loads(resp["body"])
-        assert len(items) == 1
-
-    def test_archived_hidden_by_default(self, tbl):
-        self._create(tbl, archived=True)
-        resp = crud.list_bookmarks(USER, {})
-        items = json.loads(resp["body"])
-        assert items == []
-
-    def test_archived_filter_shows_archived(self, tbl):
-        self._create(tbl, archived=True)
-        resp = crud.list_bookmarks(USER, {"archived": "true"})
         items = json.loads(resp["body"])
         assert len(items) == 1
 
@@ -243,12 +209,6 @@ class TestUpdateBookmark:
         assert resp["statusCode"] == 200
         assert json.loads(resp["body"])["note"] == "My note"
 
-    def test_archive_toggle(self, tbl):
-        with patch("urllib.request.urlopen", return_value=_mock_urlopen()):
-            created = json.loads(crud.create_bookmark(USER, {"url": "https://example.com/"})["body"])
-        resp = crud.update_bookmark(USER, created["bookmark_id"], {"archived": True})
-        assert json.loads(resp["body"])["archived"] is True
-
     def test_favourite_toggle(self, tbl):
         with patch("urllib.request.urlopen", return_value=_mock_urlopen()):
             created = json.loads(crud.create_bookmark(USER, {"url": "https://example.com/"})["body"])
@@ -260,12 +220,12 @@ class TestUpdateBookmark:
         assert resp["statusCode"] == 404
 
     def test_url_change_triggers_rescrape(self, tbl):
-        new_html = b"<html><head><title>New Page</title></head></html>"
+        new_html = b"""<html><head><meta property="og:image" content="https://new.com/new-thumb.jpg"></head></html>"""
         with patch("urllib.request.urlopen", return_value=_mock_urlopen()):
             created = json.loads(crud.create_bookmark(USER, {"url": "https://example.com/"})["body"])
         with patch("urllib.request.urlopen", return_value=_mock_urlopen(new_html, "https://new.com/")):
             resp = crud.update_bookmark(USER, created["bookmark_id"], {"url": "https://new.com/"})
-        assert json.loads(resp["body"])["title"] == "New Page"
+        assert json.loads(resp["body"])["thumbnail_url"] == "https://new.com/new-thumb.jpg"
 
     def test_no_fields_returns_error(self, tbl):
         with patch("urllib.request.urlopen", return_value=_mock_urlopen()):
