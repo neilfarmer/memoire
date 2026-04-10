@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.10.0](https://github.com/neilfarmer/memoire/compare/v0.9.0...v0.10.0) (2026-04-10)
+
+
+### Features
+
+* **assistant:** AI profile — seed and inspect assistant memory ([#83](https://github.com/neilfarmer/memoire/issues/83)) ([f5819ce](https://github.com/neilfarmer/memoire/commit/f5819cecd849a59a5e6705daa1c2bee4bbaf06e9))
+* **bookmarks:** bookmark manager with metadata scraping ([#94](https://github.com/neilfarmer/memoire/issues/94)) ([5bdc77d](https://github.com/neilfarmer/memoire/commit/5bdc77dca3092be0efdfa764afecbe552f976107))
+* **finances:** financial snapshot tracker ([#90](https://github.com/neilfarmer/memoire/issues/90)) ([e0399b2](https://github.com/neilfarmer/memoire/commit/e0399b244d7ddf341a1ba2894bd27faca738eef5))
+* **frontend:** mobile and tablet responsive layout ([#93](https://github.com/neilfarmer/memoire/issues/93)) ([1321d6c](https://github.com/neilfarmer/memoire/commit/1321d6ca2e8ff89b0ccd48e73027851281767299))
+* Split about me and ai analysis page ([#85](https://github.com/neilfarmer/memoire/issues/85)) ([62d4aa4](https://github.com/neilfarmer/memoire/commit/62d4aa4480f866488371447ef2a734b3b65ad40f))
+
+
+### Bug Fixes
+
+* tokens UI, RSS autodiscovery, nutrition float fix, misc ([#92](https://github.com/neilfarmer/memoire/issues/92)) ([725ef81](https://github.com/neilfarmer/memoire/commit/725ef81007808f8979437a0eb86070b20e4f262f))
+
 ## [0.9.0](https://github.com/neilfarmer/memoire/compare/v0.8.0...v0.9.0) (2026-04-07)
 
 
