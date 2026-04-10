@@ -11258,7 +11258,6 @@
 
     async deleteBookmark() {
       if (!this._editingId) return;
-      if (!confirm("Delete this bookmark?")) return;
       try {
         await api.call("DELETE", `/bookmarks/${this._editingId}`);
         this.data = this.data.filter(x => x.bookmark_id !== this._editingId);
