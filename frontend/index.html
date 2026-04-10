@@ -11128,6 +11128,11 @@
         return;
       }
       empty.classList.add("hidden");
+      items.sort((a, b) => {
+        const la = (a.title || new URL(a.url).hostname).toLowerCase();
+        const lb = (b.title || new URL(b.url).hostname).toLowerCase();
+        return la.localeCompare(lb);
+      });
       grid.innerHTML = items.map(b => this._cardHTML(b)).join("");
     },
 
