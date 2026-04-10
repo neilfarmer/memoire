@@ -1,14 +1,15 @@
 """Bookmarks CRUD with server-side metadata scraping."""
 
+import ipaddress
 import os
 import re
+import socket
 import uuid
 import urllib.request
 import urllib.parse
 import urllib.error
 from datetime import datetime, timezone
 
-import boto3
 from botocore.exceptions import ClientError
 
 import db
@@ -41,6 +42,20 @@ def _abs_url(base: str, href: str) -> str:
     return ""
 
 
+def _is_safe_url(url: str) -> bool:
+    """Return False if the URL resolves to a private/link-local/loopback address."""
+    try:
+        hostname = urllib.parse.urlparse(url).hostname or ""
+        addrs = socket.getaddrinfo(hostname, None)
+        for _, _, _, _, sockaddr in addrs:
+            ip = ipaddress.ip_address(sockaddr[0])
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                return False
+        return True
+    except Exception:
+        return False
+
+
 def _scrape_metadata(url: str) -> dict:
     """Fetch *url* and extract favicon_url and thumbnail_url.
 
@@ -48,6 +63,8 @@ def _scrape_metadata(url: str) -> dict:
     Never raises — failures produce empty strings.
     """
     result = {"favicon_url": "", "thumbnail_url": ""}
+    if not _is_safe_url(url):
+        return result
     try:
         req = urllib.request.Request(
             url,
@@ -150,9 +167,10 @@ def list_bookmarks(user_id: str, query_params: dict) -> dict:
 # ── Create ────────────────────────────────────────────────────────────────────
 
 def create_bookmark(user_id: str, body: dict) -> dict:
-    url = (body.get("url") or "").strip()
-    if not url:
+    url = (body.get("url") or "")
+    if not isinstance(url, str) or not url.strip():
         return error("url is required")
+    url = url.strip()
     if not url.startswith(("http://", "https://")):
         return error("url must start with http:// or https://")
     if len(url) > MAX_URL_LEN:
@@ -166,13 +184,20 @@ def create_bookmark(user_id: str, body: dict) -> dict:
     if err:
         return error(err)
 
-    note = (body.get("note") or "").strip()
+    raw_note = body.get("note") or ""
+    if not isinstance(raw_note, str):
+        return error("note must be a string")
+    note = raw_note.strip()
     if len(note) > MAX_NOTE_LEN:
         return error(f"note exceeds maximum length of {MAX_NOTE_LEN}")
 
+    raw_title = body.get("title") or ""
+    if not isinstance(raw_title, str):
+        return error("title must be a string")
+
     # Scrape favicon and thumbnail only; title/description are user-provided
     meta = _scrape_metadata(url)
-    title         = (body.get("title") or "").strip()[:MAX_TITLE_LEN]
+    title         = raw_title.strip()[:MAX_TITLE_LEN]
     favicon_url   = meta["favicon_url"]
     thumbnail_url = meta["thumbnail_url"]
 
@@ -232,10 +257,22 @@ def update_bookmark(user_id: str, bookmark_id: str, body: dict) -> dict:
         fields["tags"] = tags
 
     if "note" in fields:
-        note = (fields["note"] or "").strip()
+        raw_note = fields["note"] or ""
+        if not isinstance(raw_note, str):
+            return error("note must be a string")
+        note = raw_note.strip()
         if len(note) > MAX_NOTE_LEN:
             return error(f"note exceeds maximum length of {MAX_NOTE_LEN}")
         fields["note"] = note
+
+    if "title" in fields:
+        raw_title = fields["title"] or ""
+        if not isinstance(raw_title, str):
+            return error("title must be a string")
+        fields["title"] = raw_title.strip()[:MAX_TITLE_LEN]
+
+    if "favourited" in fields and not isinstance(fields["favourited"], bool):
+        return error("favourited must be a boolean")
 
     if not fields:
         return error("No valid fields provided for update")

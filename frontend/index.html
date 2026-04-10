@@ -3377,6 +3377,11 @@
       outline: none;
     }
     .bm-search:focus { border-color: var(--accent); }
+    @media (max-width: 600px) {
+      #page-bookmarks .toolbar { flex-wrap: wrap; gap: 8px; }
+      .bm-toolbar-right { width: 100%; }
+      .bm-search { flex: 1; width: auto; min-width: 0; }
+    }
     .bm-tag-bar {
       display: flex;
       gap: 8px;
@@ -11216,6 +11221,7 @@
       const b = this.data.find(x => x.bookmark_id === id);
       if (!b) return;
       this._editingId = id;
+      this._editingUrl = b.url || "";
       $("bm-modal-title").textContent = "Edit bookmark";
       $("bm-f-url").value = b.url || "";
       $("bm-f-title").value = b.title || "";
@@ -11244,8 +11250,10 @@
       $("bm-modal-error").classList.add("hidden");
 
       try {
-        const body = { url, tags, note };
+        const body = { tags, note };
         if (this._editingId || title) body.title = title;
+        // Only include url if it changed (avoids unnecessary re-scrape on minor edits)
+        if (!this._editingId || url !== this._editingUrl) body.url = url;
 
         if (this._editingId) {
           const updated = await api.call("PUT", `/bookmarks/${this._editingId}`, body);
