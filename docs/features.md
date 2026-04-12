@@ -123,6 +123,66 @@ Excalidraw (~3MB of React and library assets) is loaded lazily from CDN only whe
 
 ---
 
+## Bookmarks
+
+Save and organise web bookmarks.
+
+- **URL scraping** -- when you add a bookmark, the title, favicon, and thumbnail are automatically fetched from the page
+- **Tags** -- freeform tags per bookmark (max 20); filter by tag in the list view
+- **Search** -- full-text search across title, URL, description, and notes
+- **Notes** -- attach a freeform note (up to 10,000 chars) to any bookmark
+- **Favourite flag** -- mark bookmarks as favourited for quick filtering
+- **Alphabetical sort** -- bookmarks are listed alphabetically by title
+- Max 1,000 bookmarks per user
+
+---
+
+## Feeds
+
+Subscribe to RSS and Atom feeds and read articles in-app.
+
+- **Feed discovery** -- paste a page URL and the app finds the RSS/Atom feed automatically via autodiscovery
+- **Article list** -- articles from all subscribed feeds in a single view, sorted by publish date
+- **Read tracking** -- articles are marked as read when you open them; unread count shown per feed
+- **Article text extraction** -- view a plain-text version of any article without leaving the app
+- **Favourites integration** -- save any article to Favorites with one click
+- Articles are cached for 30 minutes; force-refresh available
+- Max 20 feeds per user
+
+---
+
+## Favorites
+
+Save articles from your feeds for later reference.
+
+- **One-click save** -- favourite an article directly from the feed reader
+- **Tags** -- add and edit tags on saved articles (max 20 per favourite)
+- **Metadata preserved** -- title, feed source, image, description, and publish date are stored
+- Max 500 favourites per user
+
+---
+
+## Finances
+
+Track debts, income, and fixed expenses to understand your monthly cash flow.
+
+- **Debts** -- log debts (mortgage, auto loan, credit card, student loan, personal loan, line of credit, other) with balance, APR, and monthly payment. Payoff timeline and total remaining interest are computed automatically.
+- **Income** -- log income sources with amount and frequency (weekly, biweekly, monthly, annual). All amounts are normalised to a monthly figure.
+- **Fixed expenses** -- log recurring expenses with amount, frequency, category (housing, utilities, subscriptions, insurance, food, transport, healthcare, other), and optional due day.
+- **Summary dashboard** -- total monthly income, total monthly outflow (expenses + debt payments), and net monthly cash flow, all computed from your entries.
+
+---
+
+## Personal Access Tokens
+
+Create long-lived API tokens for programmatic access (scripts, integrations, CI).
+
+- Tokens use the `pat_` prefix and are shown once at creation time -- they are never stored or retrievable after that
+- Token management requires JWT authentication; PAT-authenticated requests cannot create or list tokens
+- Revoke a token at any time to immediately block access
+
+---
+
 ## AI Assistant (Pip)
 
 A conversational assistant powered by Amazon Bedrock (Nova Lite by default, switchable to Nova Pro). Pip can create, read, update, and delete data across every feature using natural language.
