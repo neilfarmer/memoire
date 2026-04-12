@@ -2,10 +2,12 @@ openapi: 3.0.3
 info:
   title: Memoire API
   description: |
-    Personal productivity API for tasks, notes, habits, journal, health, nutrition, and goals.
+    Personal productivity API for tasks, notes, habits, journal, health, nutrition, goals,
+    bookmarks, favorites, feeds, finances, diagrams, and an AI assistant.
 
-    All endpoints require a valid JWT in the `Authorization: Bearer <token>` header.
-    Tokens are issued by Cognito (or your configured OIDC provider).
+    Most endpoints require a valid JWT in the `Authorization: Bearer <token>` header
+    (issued by Cognito) or a Personal Access Token with the `pat_` prefix.
+    Auth endpoints (`/auth/*`) are public.
   version: "1.0.0"
 
 servers:
@@ -671,6 +673,623 @@ components:
               objectCount:
                 type: integer
 
+    # ── Diagrams ──────────────────────────────────────────────────────────────
+
+    Diagram:
+      type: object
+      properties:
+        diagram_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        elements:
+          type: array
+          description: Excalidraw elements array
+          items:
+            type: object
+        app_state:
+          type: object
+          description: Excalidraw application state
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DiagramSummary:
+      type: object
+      description: Returned by list endpoint (no elements or app_state)
+      properties:
+        diagram_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DiagramWrite:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        elements:
+          type: array
+          items:
+            type: object
+        app_state:
+          type: object
+
+    # ── Bookmarks ────────────────────────────────────────────────────────────
+
+    Bookmark:
+      type: object
+      properties:
+        user_id:
+          type: string
+        bookmark_id:
+          type: string
+          format: uuid
+        url:
+          type: string
+        title:
+          type: string
+        favicon_url:
+          type: string
+        thumbnail_url:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        note:
+          type: string
+        favourited:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    BookmarkCreate:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          maxLength: 2048
+          description: HTTP or HTTPS URL
+        title:
+          type: string
+          maxLength: 500
+        note:
+          type: string
+          maxLength: 10000
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 100
+
+    BookmarkUpdate:
+      type: object
+      properties:
+        url:
+          type: string
+          maxLength: 2048
+        title:
+          type: string
+          maxLength: 500
+        note:
+          type: string
+          maxLength: 10000
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 100
+        favourited:
+          type: boolean
+
+    # ── Favorites ────────────────────────────────────────────────────────────
+
+    Favorite:
+      type: object
+      properties:
+        user_id:
+          type: string
+        favorite_id:
+          type: string
+          format: uuid
+        url:
+          type: string
+        title:
+          type: string
+        feed_title:
+          type: string
+        image:
+          type: string
+        description:
+          type: string
+        published:
+          type: string
+          format: date-time
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+
+    FavoriteCreate:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+        title:
+          type: string
+          maxLength: 500
+        feed_title:
+          type: string
+          maxLength: 200
+        image:
+          type: string
+          maxLength: 2000
+        description:
+          type: string
+          maxLength: 500
+        published:
+          type: string
+          format: date-time
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 50
+
+    FavoriteTagUpdate:
+      type: object
+      required: [tags]
+      properties:
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 50
+
+    # ── Feeds ────────────────────────────────────────────────────────────────
+
+    Feed:
+      type: object
+      properties:
+        user_id:
+          type: string
+        feed_id:
+          type: string
+          format: uuid
+        url:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    FeedCreate:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          description: RSS/Atom feed URL or page URL with feed autodiscovery
+
+    FeedArticle:
+      type: object
+      properties:
+        feed_id:
+          type: string
+        feed_title:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+        description:
+          type: string
+          description: Max 300 chars, HTML stripped
+        image:
+          type: string
+        published:
+          type: string
+
+    ArticleText:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Plain text, max 8000 chars
+        url:
+          type: string
+
+    # ── Finances ─────────────────────────────────────────────────────────────
+
+    Debt:
+      type: object
+      properties:
+        user_id:
+          type: string
+        debt_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum: [auto_loan, mortgage, credit_card, student_loan, personal_loan, line_of_credit, other]
+        balance:
+          type: string
+          description: Decimal string
+        original_balance:
+          type: string
+        apr:
+          type: string
+        monthly_payment:
+          type: string
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        annual_interest:
+          type: string
+          description: Computed, 2 decimal places
+        payoff_months:
+          type: integer
+          nullable: true
+          description: Months until paid off, null if never
+        total_interest_remaining:
+          type: string
+          nullable: true
+        total_months:
+          type: integer
+          nullable: true
+          description: Months from original balance (for progress tracking)
+
+    DebtWrite:
+      type: object
+      required: [name, type, balance, apr, monthly_payment]
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        type:
+          type: string
+          enum: [auto_loan, mortgage, credit_card, student_loan, personal_loan, line_of_credit, other]
+        balance:
+          type: number
+          exclusiveMinimum: 0
+        apr:
+          type: number
+          minimum: 0
+        monthly_payment:
+          type: number
+          exclusiveMinimum: 0
+        original_balance:
+          type: number
+          description: Defaults to balance if omitted
+        notes:
+          type: string
+          maxLength: 1000
+
+    Income:
+      type: object
+      properties:
+        user_id:
+          type: string
+        income_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        amount:
+          type: string
+          description: Decimal string
+        frequency:
+          type: string
+          enum: [monthly, biweekly, weekly, annual]
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        monthly_amount:
+          type: string
+          description: Computed, normalized to monthly
+
+    IncomeWrite:
+      type: object
+      required: [name, amount, frequency]
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        amount:
+          type: number
+          exclusiveMinimum: 0
+        frequency:
+          type: string
+          enum: [monthly, biweekly, weekly, annual]
+        notes:
+          type: string
+          maxLength: 1000
+
+    FixedExpense:
+      type: object
+      properties:
+        user_id:
+          type: string
+        expense_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        amount:
+          type: string
+          description: Decimal string
+        frequency:
+          type: string
+          enum: [monthly, biweekly, weekly, annual]
+        category:
+          type: string
+          enum: [housing, utilities, subscriptions, insurance, food, transport, healthcare, other]
+        due_day:
+          type: integer
+          minimum: 1
+          maximum: 31
+          nullable: true
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        monthly_amount:
+          type: string
+          description: Computed, normalized to monthly
+
+    FixedExpenseWrite:
+      type: object
+      required: [name, amount, frequency, category]
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        amount:
+          type: number
+          exclusiveMinimum: 0
+        frequency:
+          type: string
+          enum: [monthly, biweekly, weekly, annual]
+        category:
+          type: string
+          enum: [housing, utilities, subscriptions, insurance, food, transport, healthcare, other]
+        due_day:
+          type: integer
+          minimum: 1
+          maximum: 31
+          nullable: true
+        notes:
+          type: string
+          maxLength: 1000
+
+    FinancesSummary:
+      type: object
+      properties:
+        total_monthly_income:
+          type: string
+        total_monthly_expenses:
+          type: string
+        total_monthly_debt_payments:
+          type: string
+        total_monthly_outflow:
+          type: string
+        net_monthly_cash_flow:
+          type: string
+        total_debt_balance:
+          type: string
+        total_annual_interest:
+          type: string
+        debts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Debt'
+        income:
+          type: array
+          items:
+            $ref: '#/components/schemas/Income'
+        expenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/FixedExpense'
+
+    # ── Tokens ───────────────────────────────────────────────────────────────
+
+    Token:
+      type: object
+      properties:
+        user_id:
+          type: string
+        token_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    TokenCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+
+    TokenCreated:
+      type: object
+      description: Returned once on creation; the plaintext token is never shown again
+      properties:
+        user_id:
+          type: string
+        token_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        token:
+          type: string
+          description: "Plaintext PAT with `pat_` prefix (only returned at creation time)"
+
+    # ── Auth ──────────────────────────────────────────────────────────────────
+
+    AuthCallback:
+      type: object
+      required: [code, redirect_uri, code_verifier]
+      properties:
+        code:
+          type: string
+          description: Cognito authorization code
+        redirect_uri:
+          type: string
+        code_verifier:
+          type: string
+          description: PKCE code verifier
+
+    AuthUser:
+      type: object
+      properties:
+        email:
+          type: string
+        sub:
+          type: string
+          description: Cognito user ID
+        exp:
+          type: integer
+          description: JWT expiration (Unix timestamp)
+
+    # ── Assistant ─────────────────────────────────────────────────────────────
+
+    ChatRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        model:
+          type: string
+          enum: ["us.amazon.nova-lite-v1:0", "us.amazon.nova-pro-v1:0"]
+          default: "us.amazon.nova-lite-v1:0"
+        local_date:
+          type: string
+          format: date
+          description: Current date for context
+        no_history:
+          type: boolean
+          description: Skip saving to conversation history
+
+    ChatResponse:
+      type: object
+      properties:
+        reply:
+          type: string
+        tools_used:
+          type: array
+          items:
+            type: string
+
+    ConversationMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+
+    AssistantUsage:
+      type: object
+      properties:
+        model_id:
+          type: string
+        invocations:
+          type: integer
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+
+    AssistantMemory:
+      type: object
+      properties:
+        master_context:
+          type: string
+        facts:
+          type: object
+          additionalProperties:
+            type: string
+        profile:
+          type: object
+          properties:
+            name:
+              type: string
+            occupation:
+              type: string
+            summary:
+              type: string
+        ai_analysis:
+          type: object
+          properties:
+            analysis:
+              type: string
+            generated_at:
+              type: string
+              format: date-time
+
+    AssistantProfile:
+      type: object
+      properties:
+        name:
+          type: string
+        occupation:
+          type: string
+        summary:
+          type: string
+
 # ── Tags (navigation grouping) ────────────────────────────────────────────────
 
 tags:
@@ -694,6 +1313,22 @@ tags:
     description: Dashboard data — AWS cost breakdown
   - name: Admin
     description: Admin-only statistics
+  - name: Diagrams
+    description: Excalidraw diagrams
+  - name: Bookmarks
+    description: Web bookmarks with metadata scraping
+  - name: Favorites
+    description: Saved feed articles
+  - name: Feeds
+    description: RSS/Atom feed subscriptions and articles
+  - name: Finances
+    description: Debts, income, and fixed expenses
+  - name: Tokens
+    description: Personal Access Token management (JWT-only)
+  - name: Auth
+    description: Authentication (public, no token required)
+  - name: Assistant
+    description: AI assistant (Pip) powered by Amazon Bedrock
   - name: Export
     description: Bulk data export
 
@@ -1580,3 +2215,860 @@ paths:
               schema:
                 type: string
                 format: binary
+
+  # ── Diagrams ──────────────────────────────────────────────────────────────────
+
+  /diagrams:
+    get:
+      tags: [Diagrams]
+      summary: List all diagrams
+      description: Returns diagram summaries (no elements or app_state).
+      responses:
+        "200":
+          description: Array of diagram summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DiagramSummary'
+    post:
+      tags: [Diagrams]
+      summary: Create a diagram
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiagramWrite'
+      responses:
+        "201":
+          description: Created diagram
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Diagram'
+
+  /diagrams/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Diagrams]
+      summary: Get a diagram
+      description: Returns full diagram including elements and app_state.
+      responses:
+        "200":
+          description: Diagram with elements
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Diagram'
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags: [Diagrams]
+      summary: Update a diagram
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiagramWrite'
+      responses:
+        "200":
+          description: Updated diagram
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Diagram'
+    delete:
+      tags: [Diagrams]
+      summary: Delete a diagram
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Bookmarks ─────────────────────────────────────────────────────────────────
+
+  /bookmarks:
+    get:
+      tags: [Bookmarks]
+      summary: List all bookmarks
+      description: Returns bookmarks sorted alphabetically by title. Supports filtering by tag and full-text search.
+      parameters:
+        - name: tag
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by tag (case-insensitive)
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search across title, url, description, and note
+      responses:
+        "200":
+          description: Array of bookmarks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bookmark'
+    post:
+      tags: [Bookmarks]
+      summary: Create a bookmark
+      description: Scrapes the URL for title, favicon, and thumbnail metadata.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookmarkCreate'
+      responses:
+        "201":
+          description: Created bookmark
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookmark'
+
+  /bookmarks/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Bookmarks]
+      summary: Get a bookmark
+      responses:
+        "200":
+          description: Bookmark
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookmark'
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags: [Bookmarks]
+      summary: Update a bookmark
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookmarkUpdate'
+      responses:
+        "200":
+          description: Updated bookmark
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookmark'
+    delete:
+      tags: [Bookmarks]
+      summary: Delete a bookmark
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Favorites ─────────────────────────────────────────────────────────────────
+
+  /favorites:
+    get:
+      tags: [Favorites]
+      summary: List all favorites
+      responses:
+        "200":
+          description: Array of favorites
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Favorite'
+    post:
+      tags: [Favorites]
+      summary: Save an article as a favorite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FavoriteCreate'
+      responses:
+        "201":
+          description: Created favorite
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Favorite'
+
+  /favorites/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [Favorites]
+      summary: Update favorite tags
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FavoriteTagUpdate'
+      responses:
+        "200":
+          description: Updated favorite
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Favorite'
+    delete:
+      tags: [Favorites]
+      summary: Remove a favorite
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Feeds ─────────────────────────────────────────────────────────────────────
+
+  /feeds:
+    get:
+      tags: [Feeds]
+      summary: List subscribed feeds
+      responses:
+        "200":
+          description: Array of feeds
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Feed'
+    post:
+      tags: [Feeds]
+      summary: Subscribe to a feed
+      description: Accepts an RSS/Atom URL or a page URL with feed autodiscovery. Max 20 feeds per user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedCreate'
+      responses:
+        "201":
+          description: Created feed subscription
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feed'
+
+  /feeds/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [Feeds]
+      summary: Unsubscribe from a feed
+      responses:
+        "204":
+          description: Deleted
+
+  /feeds/articles:
+    get:
+      tags: [Feeds]
+      summary: Fetch articles from all subscribed feeds
+      description: Articles are cached for 30 minutes. Pass `force=true` to refresh.
+      parameters:
+        - name: force
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["true", "1"]
+          description: Force cache refresh
+      responses:
+        "200":
+          description: Array of articles from all feeds
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FeedArticle'
+
+  /feeds/article-text:
+    get:
+      tags: [Feeds]
+      summary: Get article plain text
+      description: Fetches and extracts plain text from an article URL. Max 8000 chars.
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Article text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleText'
+
+  /feeds/read:
+    get:
+      tags: [Feeds]
+      summary: Get read article URLs
+      responses:
+        "200":
+          description: Array of read article URLs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    url:
+                      type: string
+    post:
+      tags: [Feeds]
+      summary: Mark an article as read
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url:
+                  type: string
+      responses:
+        "200":
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+
+  # ── Finances: Debts ───────────────────────────────────────────────────────────
+
+  /debts:
+    get:
+      tags: [Finances]
+      summary: List all debts
+      responses:
+        "200":
+          description: Array of debts with computed fields
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Debt'
+    post:
+      tags: [Finances]
+      summary: Create a debt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DebtWrite'
+      responses:
+        "201":
+          description: Created debt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Debt'
+
+  /debts/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [Finances]
+      summary: Update a debt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DebtWrite'
+      responses:
+        "200":
+          description: Updated debt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Debt'
+    delete:
+      tags: [Finances]
+      summary: Delete a debt
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Finances: Income ──────────────────────────────────────────────────────────
+
+  /income:
+    get:
+      tags: [Finances]
+      summary: List all income sources
+      responses:
+        "200":
+          description: Array of income sources with computed monthly_amount
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Income'
+    post:
+      tags: [Finances]
+      summary: Create an income source
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncomeWrite'
+      responses:
+        "201":
+          description: Created income
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Income'
+
+  /income/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [Finances]
+      summary: Update an income source
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncomeWrite'
+      responses:
+        "200":
+          description: Updated income
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Income'
+    delete:
+      tags: [Finances]
+      summary: Delete an income source
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Finances: Fixed Expenses ──────────────────────────────────────────────────
+
+  /fixed-expenses:
+    get:
+      tags: [Finances]
+      summary: List all fixed expenses
+      responses:
+        "200":
+          description: Array of expenses with computed monthly_amount
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FixedExpense'
+    post:
+      tags: [Finances]
+      summary: Create a fixed expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FixedExpenseWrite'
+      responses:
+        "201":
+          description: Created expense
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FixedExpense'
+
+  /fixed-expenses/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [Finances]
+      summary: Update a fixed expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FixedExpenseWrite'
+      responses:
+        "200":
+          description: Updated expense
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FixedExpense'
+    delete:
+      tags: [Finances]
+      summary: Delete a fixed expense
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Finances: Summary ─────────────────────────────────────────────────────────
+
+  /finances/summary:
+    get:
+      tags: [Finances]
+      summary: Get financial summary
+      description: Returns all debts, income, and expenses with computed monthly totals and net cash flow.
+      responses:
+        "200":
+          description: Financial summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancesSummary'
+
+  # ── Tokens ────────────────────────────────────────────────────────────────────
+
+  /tokens:
+    get:
+      tags: [Tokens]
+      summary: List personal access tokens
+      description: Returns token metadata only (never exposes the token hash). Requires JWT authentication; PAT-authenticated requests are rejected with 403.
+      responses:
+        "200":
+          description: Array of tokens
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Token'
+    post:
+      tags: [Tokens]
+      summary: Create a personal access token
+      description: The plaintext token (prefixed with `pat_`) is returned once in the response and never stored or shown again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenCreate'
+      responses:
+        "201":
+          description: Created token (includes plaintext PAT)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenCreated'
+
+  /tokens/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [Tokens]
+      summary: Revoke a personal access token
+      responses:
+        "204":
+          description: Revoked
+
+  # ── Auth ──────────────────────────────────────────────────────────────────────
+
+  /auth/callback:
+    post:
+      tags: [Auth]
+      summary: Exchange authorization code for tokens
+      description: Completes the Cognito PKCE OAuth flow. Sets HttpOnly cookies for the JWT and refresh token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthCallback'
+      responses:
+        "200":
+          description: Authenticated user info (tokens set as HttpOnly cookies)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUser'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh the JWT using the refresh token cookie
+      security: []
+      responses:
+        "200":
+          description: Refreshed user info (new JWT cookie set)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUser'
+        "401":
+          description: No refresh token cookie or token expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Clear authentication cookies
+      security: []
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  # ── Assistant ─────────────────────────────────────────────────────────────────
+
+  /assistant/chat:
+    post:
+      tags: [Assistant]
+      summary: Send a message to the AI assistant
+      description: Sends a message to the Bedrock-powered assistant. The assistant can call tools to read and modify tasks, notes, habits, goals, journal, nutrition, and exercise data.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        "200":
+          description: Assistant reply
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+
+  /assistant/history:
+    get:
+      tags: [Assistant]
+      summary: Get conversation history
+      description: Returns the last 20 messages (30-day TTL).
+      responses:
+        "200":
+          description: Array of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConversationMessage'
+    delete:
+      tags: [Assistant]
+      summary: Clear conversation history
+      responses:
+        "204":
+          description: History cleared
+
+  /assistant/usage:
+    get:
+      tags: [Assistant]
+      summary: Get Bedrock token usage
+      responses:
+        "200":
+          description: Per-model usage statistics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssistantUsage'
+
+  /assistant/memory:
+    get:
+      tags: [Assistant]
+      summary: Get assistant memory
+      description: Returns master context, facts, profile, and AI analysis.
+      responses:
+        "200":
+          description: Memory object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantMemory'
+    put:
+      tags: [Assistant]
+      summary: Update master context
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [master_context]
+              properties:
+                master_context:
+                  type: string
+      responses:
+        "200":
+          description: Updated memory
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantMemory'
+
+  /assistant/memory/facts/{key}:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Snake_case fact key (cannot start with __)
+    put:
+      tags: [Assistant]
+      summary: Upsert a memory fact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value]
+              properties:
+                value:
+                  type: string
+      responses:
+        "200":
+          description: Updated memory
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantMemory'
+
+  /assistant/memory/{key}:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+    delete:
+      tags: [Assistant]
+      summary: Delete a memory fact
+      responses:
+        "204":
+          description: Deleted
+
+  /assistant/profile:
+    get:
+      tags: [Assistant]
+      summary: Get user profile
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantProfile'
+    put:
+      tags: [Assistant]
+      summary: Update profile fields
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssistantProfile'
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantProfile'
+
+  /assistant/profile/analyze:
+    post:
+      tags: [Assistant]
+      summary: Generate AI analysis of user profile
+      description: Uses Bedrock to analyze the user's profile and stored facts.
+      responses:
+        "200":
+          description: Analysis result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  analysis:
+                    type: string
+                  generated_at:
+                    type: string
+                    format: date-time
