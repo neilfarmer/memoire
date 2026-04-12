@@ -1,5 +1,6 @@
 """MCP server for the Memoire personal productivity API."""
 
+import base64
 import json
 import os
 
@@ -36,14 +37,17 @@ async def _request(
         return {"error": "MEMOIRE_PAT is not configured"}
 
     url = f"{_BASE_URL}{path}"
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.request(
-            method,
-            url,
-            headers=_headers(),
-            json=body if body else None,
-            params=params,
-        )
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.request(
+                method,
+                url,
+                headers=_headers(),
+                json=body if body else None,
+                params=params,
+            )
+    except httpx.RequestError as exc:
+        return {"error": f"Request failed: {exc}"}
 
     if resp.status_code == 204:
         return {"ok": True}
@@ -51,6 +55,8 @@ async def _request(
     content_type = resp.headers.get("content-type", "")
     if "application/json" in content_type:
         return resp.json()
+    if "application/zip" in content_type or "application/octet-stream" in content_type:
+        return {"binary": True, "base64": base64.b64encode(resp.content).decode(), "content_type": content_type}
     return resp.text
 
 
@@ -319,6 +325,68 @@ async def delete_note_folder(folder_id: str) -> str:
         folder_id: Folder UUID.
     """
     return json.dumps(await _request("DELETE", f"/notes/folders/{folder_id}"))
+
+
+@mcp.tool()
+async def request_note_image_upload(filename: str, content_type: str) -> str:
+    """Request a presigned S3 URL to upload an inline note image.
+
+    Upload the image directly to the returned URL via PUT. Reference the
+    returned key in Markdown as the ?key= query parameter on GET /notes/images.
+
+    Args:
+        filename: Image filename (e.g. screenshot.png).
+        content_type: MIME type (e.g. image/png, image/jpeg).
+    """
+    return json.dumps(await _request(
+        "POST", "/notes/images", body={"filename": filename, "content_type": content_type}
+    ))
+
+
+@mcp.tool()
+async def get_note_image(key: str) -> str:
+    """Get a redirect URL for an inline note image.
+
+    Args:
+        key: S3 object key returned by request_note_image_upload.
+    """
+    return json.dumps(await _request("GET", "/notes/images", params={"key": key}))
+
+
+@mcp.tool()
+async def request_note_attachment_upload(note_id: str, filename: str, content_type: str) -> str:
+    """Request a presigned URL to upload a file attachment to a note.
+
+    Args:
+        note_id: Note UUID.
+        filename: Attachment filename.
+        content_type: MIME type.
+    """
+    return json.dumps(await _request(
+        "POST", f"/notes/{note_id}/attachments", body={"filename": filename, "content_type": content_type}
+    ))
+
+
+@mcp.tool()
+async def get_note_attachment(note_id: str, attachment_id: str) -> str:
+    """Get a redirect URL to download a note attachment.
+
+    Args:
+        note_id: Note UUID.
+        attachment_id: Attachment UUID.
+    """
+    return json.dumps(await _request("GET", f"/notes/{note_id}/attachments/{attachment_id}"))
+
+
+@mcp.tool()
+async def delete_note_attachment(note_id: str, attachment_id: str) -> str:
+    """Delete a file attachment from a note.
+
+    Args:
+        note_id: Note UUID.
+        attachment_id: Attachment UUID.
+    """
+    return json.dumps(await _request("DELETE", f"/notes/{note_id}/attachments/{attachment_id}"))
 
 
 # ---------------------------------------------------------------------------
@@ -1387,18 +1455,30 @@ async def export_data() -> str:
 
 # ---------------------------------------------------------------------------
 # Tokens
+#
+# NOTE: Token management endpoints are JWT-only on the server side.
+# When this MCP server authenticates with a PAT (MEMOIRE_PAT), these
+# tools will return a 403 error. They are included for completeness
+# and will work if a future release adds JWT-based MCP authentication.
 # ---------------------------------------------------------------------------
 
 
 @mcp.tool()
 async def list_tokens() -> str:
-    """List personal access tokens (metadata only, no secrets). Requires JWT auth -- PAT-authenticated requests are rejected."""
+    """List personal access tokens (metadata only, no secrets).
+
+    WARNING: This endpoint requires JWT authentication. It will return 403
+    when the MCP server is configured with a PAT (MEMOIRE_PAT).
+    """
     return json.dumps(await _request("GET", "/tokens"))
 
 
 @mcp.tool()
 async def create_token(name: str) -> str:
     """Create a personal access token. The plaintext token (pat_...) is returned once and never shown again.
+
+    WARNING: This endpoint requires JWT authentication. It will return 403
+    when the MCP server is configured with a PAT (MEMOIRE_PAT).
 
     Args:
         name: Token name (max 100 chars).
@@ -1409,6 +1489,9 @@ async def create_token(name: str) -> str:
 @mcp.tool()
 async def revoke_token(token_id: str) -> str:
     """Revoke a personal access token.
+
+    WARNING: This endpoint requires JWT authentication. It will return 403
+    when the MCP server is configured with a PAT (MEMOIRE_PAT).
 
     Args:
         token_id: Token UUID.

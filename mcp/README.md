@@ -32,7 +32,9 @@ The server reads two environment variables:
 
 ## Usage with Claude Code
 
-Add to your Claude Code MCP config (`~/.claude/settings.json` or project `.claude/settings.json`):
+Add to your Claude Code MCP config. Use `~/.claude/settings.json` (user-level) to
+keep `MEMOIRE_PAT` out of version control. If you use a project-level
+`.claude/settings.json`, make sure it is in `.gitignore` before adding secrets.
 
 ```json
 {
