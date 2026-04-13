@@ -74,3 +74,20 @@ resource "aws_cloudwatch_log_metric_filter" "jwt_rejections" {
     unit      = "Count"
   }
 }
+
+resource "aws_cloudwatch_metric_alarm" "jwt_rejection_rate" {
+  count               = length(var.alert_emails) > 0 ? 1 : 0
+  alarm_name          = "${local.name_prefix}-jwt-rejection-rate"
+  alarm_description   = "More than 20 JWT rejections in 5 minutes — possible token manipulation or expired session abuse."
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "JwtRejections"
+  namespace           = "${local.name_prefix}/Security"
+  period              = 300
+  statistic           = "Sum"
+  threshold           = 20
+  treat_missing_data  = "notBreaching"
+
+  alarm_actions = [aws_sns_topic.alerts[0].arn]
+  ok_actions    = [aws_sns_topic.alerts[0].arn]
+}

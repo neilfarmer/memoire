@@ -141,6 +141,11 @@ def _verify_jwt(token: str) -> str | None:
         logger.warning("JWT rejected: audience mismatch (got %s)", aud)
         return None
 
+    # Only RS256 is supported (used by Cognito JWKS)
+    if header.get("alg") != "RS256":
+        logger.warning("JWT rejected: unsupported algorithm %s", header.get("alg"))
+        return None
+
     # Locate the matching public key by kid
     kid = header.get("kid")
     if not kid:
@@ -183,7 +188,20 @@ def _verify_pat(token: str) -> str | None:
     if not items:
         logger.warning("Auth rejected: PAT hash not found in tokens table")
         return None
-    return items[0].get("user_id")
+    item = items[0]
+    expires_at = item.get("expires_at")
+    if expires_at:
+        from datetime import datetime, timezone
+        try:
+            exp_dt = datetime.fromisoformat(expires_at)
+            if exp_dt.tzinfo is None:
+                exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) > exp_dt:
+                logger.warning("Auth rejected: PAT expired (user_id=%s)", item.get("user_id"))
+                return None
+        except (ValueError, TypeError):
+            pass  # invalid timestamp — treat as no expiry
+    return item.get("user_id")
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

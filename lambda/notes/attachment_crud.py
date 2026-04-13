@@ -84,7 +84,12 @@ def create_attachment(user_id: str, note_id: str, body: dict) -> dict:
 
     upload_url = _s3.generate_presigned_url(
         "put_object",
-        Params={"Bucket": FRONTEND_BUCKET, "Key": key, "ContentType": content_type},
+        Params={
+            "Bucket": FRONTEND_BUCKET,
+            "Key": key,
+            "ContentType": content_type,
+            "ContentDisposition": "attachment",
+        },
         ExpiresIn=300,
     )
 

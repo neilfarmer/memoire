@@ -328,8 +328,9 @@ resource "aws_dynamodb_table" "tokens" {
   }
 
   global_secondary_index {
-    name            = "token-hash-index"
-    projection_type = "KEYS_ONLY"
+    name               = "token-hash-index"
+    projection_type    = "INCLUDE"
+    non_key_attributes = ["expires_at"]
 
     key_schema {
       attribute_name = "token_hash"

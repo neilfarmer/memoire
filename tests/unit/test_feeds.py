@@ -88,24 +88,50 @@ class TestIsFeedRoot:
         assert crud._is_feed_root("html") is False
 
 
+class TestIsSafeUrl:
+    def test_public_ip_is_safe(self):
+        with patch.object(crud.socket, "gethostbyname", return_value="93.184.216.34"):
+            assert crud._is_safe_url("https://example.com/feed") is True
+
+    def test_private_ip_is_unsafe(self):
+        with patch.object(crud.socket, "gethostbyname", return_value="192.168.1.1"):
+            assert crud._is_safe_url("https://internal.example.com/feed") is False
+
+    def test_loopback_is_unsafe(self):
+        with patch.object(crud.socket, "gethostbyname", return_value="127.0.0.1"):
+            assert crud._is_safe_url("https://localhost/feed") is False
+
+    def test_link_local_is_unsafe(self):
+        with patch.object(crud.socket, "gethostbyname", return_value="169.254.169.254"):
+            assert crud._is_safe_url("http://169.254.169.254/latest/meta-data/") is False
+
+    def test_no_hostname_is_unsafe(self):
+        assert crud._is_safe_url("not-a-url") is False
+
+
+# Patch _is_safe_url to return True for all discover/fetch tests since
+# they use mocked URLs that won't resolve in the test environment.
+_safe_url_patch = patch.object(crud, "_is_safe_url", return_value=True)
+
+
 class TestDiscoverFeedUrl:
     def test_valid_rss_feed_returns_url(self):
         mock = _mock_urlopen(RSS_XML, final_url="https://example.com/feed.rss")
-        with patch("urllib.request.urlopen", return_value=mock):
+        with _safe_url_patch, patch("urllib.request.urlopen", return_value=mock):
             url, err = crud._discover_feed_url("https://example.com/feed.rss")
         assert err is None
         assert url == "https://example.com/feed.rss"
 
     def test_returns_post_redirect_url(self):
         mock = _mock_urlopen(RSS_XML, final_url="https://cdn.example.com/feed.rss")
-        with patch("urllib.request.urlopen", return_value=mock):
+        with _safe_url_patch, patch("urllib.request.urlopen", return_value=mock):
             url, err = crud._discover_feed_url("https://example.com/feed")
         assert err is None
         assert url == "https://cdn.example.com/feed.rss"
 
     def test_non_feed_xml_returns_error(self):
         sitemap = b'<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>'
-        with patch("urllib.request.urlopen", return_value=_mock_urlopen(sitemap)):
+        with _safe_url_patch, patch("urllib.request.urlopen", return_value=_mock_urlopen(sitemap)):
             url, err = crud._discover_feed_url("https://example.com/sitemap.xml")
         assert url is None
         assert err == "No RSS or Atom feed found at that URL"
@@ -121,7 +147,7 @@ class TestDiscoverFeedUrl:
             if "feed.rss" in req.full_url:
                 return feed_mock
             return _mock_urlopen(html, final_url="https://example.com/")
-        with patch("urllib.request.urlopen", side_effect=side_effect):
+        with _safe_url_patch, patch("urllib.request.urlopen", side_effect=side_effect):
             url, err = crud._discover_feed_url("https://example.com/")
         assert err is None
         assert url == "https://example.com/feed.rss"
@@ -132,23 +158,29 @@ class TestDiscoverFeedUrl:
             b'<link rel="alternate" type="application/rss+xml" href="file:///etc/passwd">'
             b'</head></html>'
         )
-        with patch("urllib.request.urlopen", return_value=_mock_urlopen(html)):
+        with _safe_url_patch, patch("urllib.request.urlopen", return_value=_mock_urlopen(html)):
             url, err = crud._discover_feed_url("https://example.com/")
         assert url is None
         assert err == "No RSS or Atom feed found at that URL"
 
     def test_network_error_returns_error(self):
-        with patch("urllib.request.urlopen", side_effect=Exception("timeout")):
+        with _safe_url_patch, patch("urllib.request.urlopen", side_effect=Exception("timeout")):
             url, err = crud._discover_feed_url("https://example.com/feed.rss")
         assert url is None
         assert "Could not reach" in err
 
     def test_no_feed_found_returns_error(self):
         html = b'<html><body>No feed here</body></html>'
-        with patch("urllib.request.urlopen", return_value=_mock_urlopen(html)):
+        with _safe_url_patch, patch("urllib.request.urlopen", return_value=_mock_urlopen(html)):
             url, err = crud._discover_feed_url("https://example.com/")
         assert url is None
         assert err == "No RSS or Atom feed found at that URL"
+
+    def test_private_ip_rejected(self):
+        with patch.object(crud, "_is_safe_url", return_value=False):
+            url, err = crud._discover_feed_url("http://169.254.169.254/latest/")
+        assert url is None
+        assert "public IP" in err
 
 
 class TestListFeeds:
@@ -297,7 +329,7 @@ class TestFetchArticleText:
 
 class TestFetchFeed:
     def test_parses_rss(self):
-        with patch("urllib.request.urlopen", return_value=_mock_urlopen(RSS_XML)):
+        with _safe_url_patch, patch("urllib.request.urlopen", return_value=_mock_urlopen(RSS_XML)):
             articles = crud._fetch_feed("feed-1", "https://example.com/rss")
         assert len(articles) == 1
         assert articles[0]["title"] == "Article One"
@@ -305,14 +337,19 @@ class TestFetchFeed:
         assert articles[0]["feed_title"] == "Test Feed"
 
     def test_parses_atom(self):
-        with patch("urllib.request.urlopen", return_value=_mock_urlopen(ATOM_XML)):
+        with _safe_url_patch, patch("urllib.request.urlopen", return_value=_mock_urlopen(ATOM_XML)):
             articles = crud._fetch_feed("feed-2", "https://example.com/atom")
         assert len(articles) == 1
         assert articles[0]["title"] == "Atom Article"
 
     def test_returns_empty_on_network_error(self):
-        with patch("urllib.request.urlopen", side_effect=Exception("timeout")):
+        with _safe_url_patch, patch("urllib.request.urlopen", side_effect=Exception("timeout")):
             articles = crud._fetch_feed("feed-1", "https://example.com/rss")
+        assert articles == []
+
+    def test_returns_empty_on_private_ip(self):
+        with patch.object(crud, "_is_safe_url", return_value=False):
+            articles = crud._fetch_feed("feed-1", "http://169.254.169.254/")
         assert articles == []
 
     def test_returns_empty_on_bad_xml(self):

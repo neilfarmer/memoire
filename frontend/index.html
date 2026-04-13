@@ -7,8 +7,8 @@
   <link rel="icon" type="image/svg+xml" href="/icon.svg"/>
   <link rel="apple-touch-icon" href="/icon.svg"/>
   <script src="/config.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.3.3/purify.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
@@ -9747,7 +9747,7 @@
     const name     = rawName.charAt(0).toUpperCase() + rawName.slice(1);
     const today    = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
     $("home-greeting").innerHTML = `
-      <div class="home-greeting-name">${greeting}${name ? `, ${name}` : ""}.</div>
+      <div class="home-greeting-name">${greeting}${name ? `, ${escHtml(name)}` : ""}.</div>
       <div class="home-greeting-date">${today}</div>
     `;
     renderHomeDashboard();

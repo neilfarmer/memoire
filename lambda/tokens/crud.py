@@ -4,12 +4,15 @@ import hashlib
 import os
 import secrets
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import boto3
 from boto3.dynamodb.conditions import Key
 
 from response import created, no_content, not_found, ok, error
+
+DEFAULT_PAT_EXPIRY_DAYS = 90
+MAX_PAT_EXPIRY_DAYS = 365
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 SORT_KEY   = "token_id"
@@ -47,6 +50,17 @@ def create_token(user_id: str, body: dict) -> dict:
     if len(name) > 100:
         return error("name must be 100 characters or fewer")
 
+    # Expiry: default 90 days, max 365 days, 0 means no expiry
+    expiry_days = body.get("expiry_days", DEFAULT_PAT_EXPIRY_DAYS)
+    try:
+        expiry_days = int(expiry_days)
+    except (ValueError, TypeError):
+        expiry_days = DEFAULT_PAT_EXPIRY_DAYS
+    if expiry_days < 0:
+        return error("expiry_days must be 0 (no expiry) or a positive number")
+    if expiry_days > MAX_PAT_EXPIRY_DAYS:
+        return error(f"expiry_days must be {MAX_PAT_EXPIRY_DAYS} or fewer")
+
     plaintext  = _generate_pat()
     token_hash = hashlib.sha256(plaintext.encode()).hexdigest()
     token_id   = str(uuid.uuid4())
@@ -59,6 +73,10 @@ def create_token(user_id: str, body: dict) -> dict:
         "name":       name,
         "created_at": now,
     }
+
+    if expiry_days > 0:
+        expires_at = (datetime.now(timezone.utc) + timedelta(days=expiry_days)).isoformat()
+        item["expires_at"] = expires_at
 
     _table().put_item(Item=item)
 

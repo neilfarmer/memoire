@@ -1,8 +1,10 @@
 """RSS Feeds CRUD and article fetching."""
 
+import ipaddress
 import json
 import os
 import re
+import socket
 import uuid
 import urllib.request
 import urllib.error
@@ -30,6 +32,20 @@ MAX_WORKERS      = 5
 MAX_DESCRIPTION  = 300
 CACHE_TTL_SECS   = 1800  # 30 minutes
 CACHE_ITEM_KEY   = "__articles_cache__"
+
+
+def _is_safe_url(url: str) -> bool:
+    """Return True only if the URL resolves to a public (non-private) IP address."""
+    try:
+        parsed = urllib.parse.urlparse(url)
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        ip = socket.gethostbyname(hostname)
+        addr = ipaddress.ip_address(ip)
+        return not (addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved)
+    except Exception:
+        return False
 
 
 def _table():
@@ -63,6 +79,9 @@ def _discover_feed_url(url: str) -> tuple[str | None, str | None]:
     Returns (resolved_url, error_message). On success error_message is None;
     on failure resolved_url is None.
     """
+    if not _is_safe_url(url):
+        return None, "Feed URL must resolve to a public IP address"
+
     try:
         req = urllib.request.Request(
             url, headers={"User-Agent": "Memoire/1.0 RSS Reader"}
@@ -95,6 +114,8 @@ def _discover_feed_url(url: str) -> tuple[str | None, str | None]:
         discovered = urllib.parse.urljoin(url, discovered)
         # Reject non-HTTP schemes to prevent SSRF via file://, ftp://, etc.
         if not discovered.startswith(("http://", "https://")):
+            continue
+        if not _is_safe_url(discovered):
             continue
         # Verify the discovered URL is a parseable feed
         try:
@@ -280,6 +301,9 @@ def _find_image(element) -> str:
 
 
 def _fetch_feed(feed_id: str, url: str) -> list[dict]:
+    if not _is_safe_url(url):
+        return []
+
     try:
         req = urllib.request.Request(
             url, headers={"User-Agent": "Memoire/1.0 RSS Reader"}

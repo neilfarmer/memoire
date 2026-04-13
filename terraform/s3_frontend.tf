@@ -137,11 +137,12 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   # openapi.yaml embeds the live API URL — must not be cached
   ordered_cache_behavior {
-    path_pattern           = "/openapi.yaml"
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "s3-frontend"
-    viewer_protocol_policy = "redirect-to-https"
+    path_pattern               = "/openapi.yaml"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    target_origin_id           = "s3-frontend"
+    viewer_protocol_policy     = "redirect-to-https"
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security.id
 
     forwarded_values {
       query_string = false
@@ -155,11 +156,12 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   # config.js must not be cached — it holds API/Cognito config values
   ordered_cache_behavior {
-    path_pattern           = "/config.js"
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "s3-frontend"
-    viewer_protocol_policy = "redirect-to-https"
+    path_pattern               = "/config.js"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    target_origin_id           = "s3-frontend"
+    viewer_protocol_policy     = "redirect-to-https"
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security.id
 
     forwarded_values {
       query_string = false

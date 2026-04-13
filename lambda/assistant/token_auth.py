@@ -94,6 +94,10 @@ def _verify_jwt(token: str) -> str | None:
     elif aud != JWT_AUDIENCE:
         return None
 
+    if header.get("alg") != "RS256":
+        logger.warning("JWT rejected: unsupported algorithm %s", header.get("alg"))
+        return None
+
     kid      = header.get("kid")
     jwks     = _get_jwks()
     key_data = next((k for k in jwks.get("keys", []) if k.get("kid") == kid), None)
@@ -127,7 +131,22 @@ def _verify_pat(token: str) -> str | None:
         Limit=1,
     )
     items = result.get("Items", [])
-    return items[0].get("user_id") if items else None
+    if not items:
+        return None
+    item = items[0]
+    expires_at = item.get("expires_at")
+    if expires_at:
+        from datetime import datetime, timezone
+        try:
+            exp_dt = datetime.fromisoformat(expires_at)
+            if exp_dt.tzinfo is None:
+                exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) > exp_dt:
+                logger.warning("PAT expired (user_id=%s)", item.get("user_id"))
+                return None
+        except (ValueError, TypeError):
+            pass
+    return item.get("user_id")
 
 
 def extract_token(event: dict) -> str:
