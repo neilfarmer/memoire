@@ -11484,7 +11484,7 @@
         return;
       }
       const recog = new SR();
-      recog.continuous = false;
+      recog.continuous = true;
       recog.interimResults = true;
       recog.lang = "en-US";
 
@@ -11527,8 +11527,9 @@
 
       recog.addEventListener("end", () => {
         if (recording) {
-          // auto-restarted if still in recording state (continuous workaround)
-          recog.start();
+          // Restart if browser ended recognition unexpectedly (e.g. silence timeout).
+          // Wrapped in try-catch because start() may require a user gesture in some browsers.
+          try { recog.start(); } catch (_) { stopRecording(); }
         } else {
           palMic.classList.remove("recording");
           palMic.title = "Voice input";
