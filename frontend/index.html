@@ -4213,9 +4213,9 @@
     /* Small phones */
     @media (max-width: 480px) {
       header { padding: 0 10px; }
-      .search-btn { width: 38px; padding: 5px; overflow: hidden; font-size: 0; }
+      .search-btn { width: 38px; padding: 5px; overflow: hidden; font-size: 0; justify-content: center; gap: 0; }
       .search-btn svg { font-size: initial; }
-      #logout-btn { padding: 5px; overflow: hidden; flex-shrink: 0; font-size: 0; }
+      #logout-btn { padding: 5px; overflow: hidden; flex-shrink: 0; font-size: 0; justify-content: center; gap: 0; }
       #logout-btn svg { font-size: initial; width: 18px; height: 18px; }
       .login-card { padding: 32px 20px; }
       .field-row { grid-template-columns: 1fr; }
@@ -7112,10 +7112,9 @@
   function renderNoteMarkdown(text, title) {
     // Strip leading H1 if it matches the note title (avoids duplicate title display)
     if (title && text) {
-      const lines = text.split("\n");
-      const firstLine = lines[0].trim();
-      if (firstLine.startsWith("# ") && firstLine.slice(2).trim() === title.trim()) {
-        text = lines.slice(1).join("\n").replace(/^\n+/, "");
+      const match = text.match(/^(?:\r?\n)*[ \t]*#\s+(.*?)(?:\s+#+)?[ \t]*(?:\r?\n|$)/);
+      if (match && match[1].trim() === title.trim()) {
+        text = text.slice(match[0].length).replace(/^\n+/, "");
       }
     }
     // Replace [[note:id|Label]] and [[task:id|Label]] before passing to marked
@@ -9851,7 +9850,7 @@
     const email    = auth.getEmail();
     const hour     = new Date().getHours();
     const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-    const displayName = state.settings?.display_name;
+    const displayName = (state.settings?.display_name || "").trim();
     let name = "";
     if (displayName) {
       name = displayName;
