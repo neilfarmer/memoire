@@ -545,68 +545,82 @@
     /* ── Diagrams page ── */
     #page-diagrams {
       max-width: none;
-      margin: 0;
       padding: 0;
+      display: flex;
       height: 100%;
-      display: flex;
-      flex-direction: column;
-    }
-    #page-diagrams .toolbar {
-      padding: 16px 24px;
-      margin-bottom: 0;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-      gap: 8px;
-    }
-    #page-diagrams .toolbar h2 { flex: 1; }
-    .diagrams-body {
-      display: flex;
-      flex: 1;
-      min-height: 0;
       overflow: hidden;
     }
-    .diagrams-list-panel {
+    .diagrams-left {
       width: 220px;
       flex-shrink: 0;
       border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .diagrams-left-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 16px 12px;
+      flex-shrink: 0;
+    }
+    .diagrams-left-header h2 { font-size: 17px; font-weight: 700; }
+    .diagrams-list-scroll {
+      flex: 1;
       overflow-y: auto;
-      padding: 8px 0;
-      background: var(--surface);
+      padding: 0 0 16px;
     }
     .diagram-list-item {
-      padding: 9px 14px;
+      padding: 10px 14px;
       cursor: pointer;
-      border-radius: 0;
       font-size: 13px;
       color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      border-bottom: 1px solid var(--border);
       border-left: 3px solid transparent;
+      transition: background .1s, border-color .1s;
     }
-    .diagram-list-item:hover { background: var(--hover); }
+    .diagram-list-item:hover { background: var(--bg); }
     .diagram-list-item.active {
-      background: var(--hover);
+      background: var(--bg);
       border-left-color: var(--primary);
-      color: var(--primary);
-      font-weight: 500;
     }
     .diagram-list-meta {
       font-size: 11px;
       color: var(--muted);
       margin-top: 2px;
     }
-    .diagrams-canvas-panel {
+    .diagrams-right {
       flex: 1;
       min-width: 0;
-      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
       background: var(--bg);
     }
+    .diagrams-editor-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 24px;
+      height: 48px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .diagrams-editor-header .diagram-title {
+      font-size: 14px;
+      font-weight: 600;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .diagrams-placeholder {
+      flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 100%;
       color: var(--muted);
       font-size: 14px;
     }
@@ -3018,10 +3032,14 @@
       padding: 10px 14px;
       cursor: pointer;
       border-bottom: 1px solid var(--border);
-      transition: background .1s;
+      border-left: 3px solid transparent;
+      transition: background .1s, border-color .1s;
     }
     .health-log-item:hover { background: var(--bg); }
-    .health-log-item.active { background: var(--bg); }
+    .health-log-item.active {
+      background: var(--bg);
+      border-left-color: var(--primary);
+    }
     .health-log-date {
       font-size: 11px;
       color: var(--muted);
@@ -4252,16 +4270,16 @@
 
       main { padding: 20px 16px; }
 
-      /* Diagrams: list on top, canvas below */
-      .diagrams-body { flex-direction: column; }
-      .diagrams-list-panel {
+      /* Diagrams: stack vertically on mobile */
+      #page-diagrams { flex-direction: column; }
+      .diagrams-left {
         width: 100%;
         border-right: none;
         border-bottom: 1px solid var(--border);
-        max-height: 180px;
-        overflow-y: auto;
+        max-height: 220px;
+        flex-shrink: 0;
       }
-      .diagrams-body.mobile-diagram-open .diagrams-list-panel { display: none; }
+      #page-diagrams.mobile-diagram-open .diagrams-left { display: none; }
 
       /* Modal as bottom sheet */
       .modal-overlay { align-items: flex-end; padding: 0; }
@@ -4943,23 +4961,28 @@
 
   <!-- Diagrams page -->
   <main id="page-diagrams" class="hidden">
-    <div class="toolbar">
-      <h2>Diagrams</h2>
-      <button class="btn btn-secondary hidden" id="diagram-back-btn">Back to list</button>
-      <button class="btn btn-secondary hidden" id="diagram-rename-btn">Rename</button>
-      <button class="btn btn-danger hidden" id="diagram-delete-btn">Delete</button>
-      <button class="btn btn-secondary hidden" id="diagram-save-btn">Save</button>
-      <button class="btn btn-primary" id="diagram-new-btn">New Diagram</button>
-    </div>
-    <div class="diagrams-body">
-      <div class="diagrams-list-panel">
+    <!-- Left: list -->
+    <div class="diagrams-left">
+      <div class="diagrams-left-header">
+        <h2>Diagrams</h2>
+        <button class="btn btn-primary btn-sm" id="diagram-new-btn">New Diagram</button>
+      </div>
+      <div class="diagrams-list-scroll">
         <div id="diagrams-list"></div>
         <div id="diagrams-list-empty" class="hidden" style="padding:20px 14px;font-size:13px;color:var(--muted);">No diagrams yet.<br>Click "New Diagram" to start.</div>
       </div>
-      <div class="diagrams-canvas-panel">
-        <div id="diagrams-placeholder" class="diagrams-placeholder">Select a diagram or create a new one.</div>
-        <div id="diagrams-canvas"></div>
+    </div>
+    <!-- Right: canvas -->
+    <div class="diagrams-right">
+      <div class="diagrams-editor-header hidden" id="diagrams-editor-header">
+        <span class="diagram-title" id="diagram-title-label"></span>
+        <button class="btn btn-secondary hidden" id="diagram-back-btn">Back to list</button>
+        <button class="btn btn-secondary btn-sm" id="diagram-rename-btn">Rename</button>
+        <button class="btn btn-danger btn-sm" id="diagram-delete-btn">Delete</button>
+        <button class="btn btn-secondary btn-sm" id="diagram-save-btn">Save</button>
       </div>
+      <div id="diagrams-placeholder" class="diagrams-placeholder">Select a diagram or create a new one.</div>
+      <div id="diagrams-canvas" style="position:relative;flex:1;min-height:0;"></div>
     </div>
   </main>
 
@@ -10561,9 +10584,11 @@
         });
       }
       const hasSelection = !!this._current;
-      $("diagram-save-btn").classList.toggle("hidden", !hasSelection);
-      $("diagram-rename-btn").classList.toggle("hidden", !hasSelection);
-      $("diagram-delete-btn").classList.toggle("hidden", !hasSelection);
+      $("diagrams-editor-header").classList.toggle("hidden", !hasSelection);
+      if (hasSelection) {
+        const sel = this.data.find(d => d.diagram_id === this._current);
+        $("diagram-title-label").textContent = sel ? sel.title : "";
+      }
     },
 
     async select(diagram_id) {
@@ -10584,7 +10609,7 @@
       this._unsaved = false;
       $("diagrams-placeholder").style.display = "none";
       if (window.innerWidth <= 768) {
-        document.querySelector(".diagrams-body").classList.add("mobile-diagram-open");
+        $("page-diagrams").classList.add("mobile-diagram-open");
         $("diagram-back-btn").classList.remove("hidden");
       }
       await this._mountCanvas(this._pendingElements, this._pendingAppState);
@@ -10827,8 +10852,7 @@
       }
       // Reset diagrams mobile state when leaving diagrams
       if (name !== "diagrams") {
-        const db = document.querySelector(".diagrams-body");
-        if (db) db.classList.remove("mobile-diagram-open");
+        $("page-diagrams").classList.remove("mobile-diagram-open");
         const backBtn = $("diagram-back-btn");
         if (backBtn) backBtn.classList.add("hidden");
       }
@@ -11280,7 +11304,7 @@
   $("diagram-rename-btn").addEventListener("click", () => diagrams.rename());
   $("diagram-delete-btn").addEventListener("click", () => diagrams.deleteCurrent());
   $("diagram-back-btn").addEventListener("click", () => {
-    document.querySelector(".diagrams-body").classList.remove("mobile-diagram-open");
+    $("page-diagrams").classList.remove("mobile-diagram-open");
     $("diagram-back-btn").classList.add("hidden");
   });
 
@@ -11289,8 +11313,7 @@
     if (!e.matches) {
       $("sidebar").classList.remove("mobile-open");
       $("sidebar-backdrop").classList.remove("visible");
-      const db = document.querySelector(".diagrams-body");
-      if (db) db.classList.remove("mobile-diagram-open");
+      $("page-diagrams").classList.remove("mobile-diagram-open");
       $("diagram-back-btn").classList.add("hidden");
     }
   });
