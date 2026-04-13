@@ -2515,10 +2515,17 @@
     .tree-children {
       display: grid;
       grid-template-rows: 0fr;
-      transition: grid-template-rows .15s ease;
+      transition: grid-template-rows .15s ease, visibility 0s linear .15s;
+      visibility: hidden;
+      pointer-events: none;
     }
     .tree-children > div { overflow: hidden; position: relative; }
-    .tree-children.open { grid-template-rows: 1fr; }
+    .tree-children.open {
+      grid-template-rows: 1fr;
+      visibility: visible;
+      pointer-events: auto;
+      transition: grid-template-rows .15s ease;
+    }
 
     .tree-inline-input {
       flex: 1;
@@ -6721,6 +6728,28 @@
 
     // ── Tree ───────────────────────────────────────────────────────────────
 
+    _buildLookups() {
+      const childrenByParent = {};
+      const notesByFolder = {};
+      for (const f of notesApp.folders) {
+        const pid = f.parent_id || "__root__";
+        (childrenByParent[pid] || (childrenByParent[pid] = [])).push(f);
+      }
+      for (const n of notesApp.notes) {
+        (notesByFolder[n.folder_id] || (notesByFolder[n.folder_id] = [])).push(n);
+      }
+      const noteCountCache = {};
+      const countNotes = (folderId) => {
+        if (noteCountCache[folderId] != null) return noteCountCache[folderId];
+        const direct = (notesByFolder[folderId] || []).length;
+        const sub = (childrenByParent[folderId] || []).reduce((s, f) => s + countNotes(f.folder_id), 0);
+        return (noteCountCache[folderId] = direct + sub);
+      };
+      notesApp._childrenOf = (id) => childrenByParent[id] || [];
+      notesApp._notesOf = (id) => notesByFolder[id] || [];
+      notesApp._noteCount = countNotes;
+    },
+
     renderTree() {
       const container = $("notes-tree");
       const roots     = notesApp.folders.filter(f => !f.parent_id);
@@ -6728,18 +6757,19 @@
         container.innerHTML = `<div class="empty-state"><p>No folders yet.</p></div>`;
         return;
       }
+      notesApp._buildLookups();
       container.innerHTML = roots.map(f => notesApp.renderFolder(f, 0)).join("");
     },
 
     renderFolder(folder, depth) {
       const isOpen   = notesApp.expanded.has(folder.folder_id);
-      const children = notesApp.folders.filter(f => f.parent_id === folder.folder_id);
-      const notes    = notesApp.notes.filter(n => n.folder_id === folder.folder_id);
+      const children = notesApp._childrenOf(folder.folder_id);
+      const notes    = notesApp._notesOf(folder.folder_id);
       const padLeft  = depth * 18 + 6;
       const indent   = `style="padding-left:${padLeft}px"`;
       const guideLeft = padLeft + 13;
       const hasItems = children.length > 0 || notes.length > 0;
-      const totalNotes = notesApp.countNotesRecursive(folder.folder_id);
+      const totalNotes = notesApp._noteCount(folder.folder_id);
 
       const folderClosed = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5a1.5 1.5 0 0 1 1.5-1.5h3L8 5h4.5A1.5 1.5 0 0 1 14 6.5v5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5V5z"/></svg>`;
       const folderOpen = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5a1.5 1.5 0 0 1 1.5-1.5h3L8 5h4.5A1.5 1.5 0 0 1 14 6.5V7H3.5a1.5 1.5 0 0 0-1.45 1.1L1 13V5z"/><path d="M2.05 8.1A1.5 1.5 0 0 1 3.5 7H14v.5l-1.5 5.5H3.5L1.5 13l.55-4.9z"/></svg>`;
@@ -6781,12 +6811,6 @@
           </div>
           <div class="tree-children ${isOpen ? 'open' : ''}" style="--guide-left:${guideLeft}px"><div>${childrenHtml}</div></div>
         </div>`;
-    },
-
-    countNotesRecursive(folderId) {
-      const direct = notesApp.notes.filter(n => n.folder_id === folderId).length;
-      const subfolders = notesApp.folders.filter(f => f.parent_id === folderId);
-      return direct + subfolders.reduce((sum, sf) => sum + notesApp.countNotesRecursive(sf.folder_id), 0);
     },
 
     renderNote(note, depth) {
