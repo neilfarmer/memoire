@@ -4466,9 +4466,14 @@
             <button type="button" class="md-btn" data-action="bold" title="Bold"><b>B</b></button>
             <button type="button" class="md-btn" data-action="italic" title="Italic"><i>I</i></button>
             <button type="button" class="md-btn" data-action="heading" title="Heading">H</button>
-            <button type="button" class="md-btn" data-action="link" title="Link">&#128279;</button>
+            <button type="button" class="md-btn" data-action="link" title="Link">Link</button>
             <button type="button" class="md-btn" data-action="code" title="Inline code">&#96;&#96;</button>
             <button type="button" class="md-btn" data-action="ul" title="Bullet list">&#8226; List</button>
+            <button type="button" class="md-btn" data-action="ol" title="Numbered list">1. List</button>
+            <button type="button" class="md-btn" data-action="blockquote" title="Blockquote">&gt; Quote</button>
+            <button type="button" class="md-btn" data-action="codeblock" title="Code block">&lt;/&gt;</button>
+            <button type="button" class="md-btn" data-action="hr" title="Horizontal rule">&mdash;</button>
+            <button type="button" class="md-btn" data-action="table" title="Table">&#8862; Table</button>
           </div>
           <textarea class="entry-textarea" id="notes-body-input" placeholder="Write something..."></textarea>
           <div class="entry-preview" id="notes-preview-pane"></div>
@@ -5053,6 +5058,19 @@
       <button class="mood-pill" data-mood="terrible">Terrible</button>
     </div>
     <input type="text" class="entry-title-input" id="entry-title" placeholder="Title (optional)" />
+    <div class="md-toolbar" id="entry-md-toolbar">
+      <button type="button" class="md-btn" data-action="bold" title="Bold"><b>B</b></button>
+      <button type="button" class="md-btn" data-action="italic" title="Italic"><i>I</i></button>
+      <button type="button" class="md-btn" data-action="heading" title="Heading">H</button>
+      <button type="button" class="md-btn" data-action="link" title="Link">Link</button>
+      <button type="button" class="md-btn" data-action="code" title="Inline code">&#96;&#96;</button>
+      <button type="button" class="md-btn" data-action="ul" title="Bullet list">&#8226; List</button>
+      <button type="button" class="md-btn" data-action="ol" title="Numbered list">1. List</button>
+      <button type="button" class="md-btn" data-action="blockquote" title="Blockquote">&gt; Quote</button>
+      <button type="button" class="md-btn" data-action="codeblock" title="Code block">&lt;/&gt;</button>
+      <button type="button" class="md-btn" data-action="hr" title="Horizontal rule">&mdash;</button>
+      <button type="button" class="md-btn" data-action="table" title="Table">&#8862; Table</button>
+    </div>
     <textarea class="entry-textarea" id="entry-body-input" placeholder="Write anything..."></textarea>
     <div class="entry-preview" id="entry-preview-pane"></div>
     <div class="field" style="margin-top:16px;">
@@ -5062,6 +5080,7 @@
   </div>
   <div class="entry-footer">
     <span class="entry-status" id="entry-status"></span>
+    <span class="md-hint">Markdown supported</span>
   </div>
 </div>
 
@@ -7439,31 +7458,37 @@
   $("notes-preview-btn").addEventListener("click", () => notesApp.togglePreview());
 
   // Markdown toolbar
-  $("notes-md-toolbar").addEventListener("click", e => {
-    const btn = e.target.closest(".md-btn");
-    if (!btn) return;
-    const ta  = $("notes-body-input");
-    const start = ta.selectionStart, end = ta.selectionEnd;
-    const sel = ta.value.slice(start, end);
-    const actions = {
-      bold:    { wrap: ["**", "**"],   placeholder: "bold text" },
-      italic:  { wrap: ["_", "_"],     placeholder: "italic text" },
-      heading: { wrap: ["## ", ""],    placeholder: "Heading", linePrefix: true },
-      link:    { wrap: ["[", "](url)"], placeholder: "link text" },
-      code:    { wrap: ["`", "`"],      placeholder: "code" },
-      ul:      { wrap: ["- ", ""],      placeholder: "list item", linePrefix: true },
-    };
-    const action = actions[btn.dataset.action];
-    if (!action) return;
-    let insert;
-    if (action.linePrefix) {
-      insert = action.wrap[0] + (sel || action.placeholder) + action.wrap[1];
-    } else {
-      insert = action.wrap[0] + (sel || action.placeholder) + action.wrap[1];
-    }
-    ta.focus();
-    document.execCommand("insertText", false, insert);
-  });
+  function applyToolbarAction(toolbar, textarea, scheduleSaveFn) {
+    toolbar.addEventListener("click", e => {
+      const btn = e.target.closest(".md-btn");
+      if (!btn) return;
+      const start = textarea.selectionStart, end = textarea.selectionEnd;
+      const sel = textarea.value.slice(start, end);
+      const actions = {
+        bold:       { wrap: ["**", "**"],   placeholder: "bold text" },
+        italic:     { wrap: ["_", "_"],     placeholder: "italic text" },
+        heading:    { prefixLines: "## ",   placeholder: "Heading" },
+        link:       { wrap: ["[", "](url)"], placeholder: "link text" },
+        code:       { wrap: ["`", "`"],      placeholder: "code" },
+        ul:         { prefixLines: "- ",    placeholder: "list item" },
+        ol:         { prefixLines: "1. ",   placeholder: "list item" },
+        blockquote: { prefixLines: "> ",    placeholder: "quote" },
+        codeblock:  { wrap: ["```\n", "\n```"], placeholder: "code" },
+        hr:         { wrap: ["---\n", ""],  placeholder: "" },
+        table:      { wrap: ["| Col 1 | Col 2 |\n|-------|-------|\n| Cell  | Cell  |\n", ""], placeholder: "" },
+      };
+      const action = actions[btn.dataset.action];
+      if (!action) return;
+      const insert = action.prefixLines
+        ? (sel || action.placeholder).split("\n").map(line => action.prefixLines + line).join("\n")
+        : action.wrap[0] + (sel || action.placeholder) + action.wrap[1];
+      textarea.focus();
+      document.execCommand("insertText", false, insert);
+      scheduleSaveFn();
+    });
+  }
+
+  applyToolbarAction($("notes-md-toolbar"), $("notes-body-input"), () => notesApp.scheduleSave());
   $("notes-attach-btn").addEventListener("click",  () => $("notes-attach-input").click());
   $("notes-attach-input").addEventListener("change", async e => {
     const files = Array.from(e.target.files);
@@ -7481,7 +7506,7 @@
     slashCmd.check($("notes-body-input"));
   });
 
-  function continueList(e, textarea) {
+  function continueList(e, textarea, scheduleSaveFn) {
     if (e.key !== "Enter" || e.shiftKey || e.ctrlKey || e.metaKey) return false;
     if (textarea.selectionStart !== textarea.selectionEnd) return false;
 
@@ -7533,7 +7558,7 @@
       const newVal = val.slice(0, lineStart) + val.slice(pos);
       textarea.value = newVal;
       textarea.setSelectionRange(lineStart, lineStart);
-      notesApp.scheduleSave();
+      scheduleSaveFn();
       return true;
     }
 
@@ -7542,13 +7567,58 @@
     textarea.value  = val.slice(0, pos) + insert + val.slice(pos);
     const newCursor = pos + insert.length;
     textarea.setSelectionRange(newCursor, newCursor);
-    notesApp.scheduleSave();
+    scheduleSaveFn();
+    return true;
+  }
+
+  function handleTabIndent(e, textarea, scheduleSaveFn) {
+    if (e.key !== "Tab") return false;
+    e.preventDefault();
+
+    const start = textarea.selectionStart;
+    const end   = textarea.selectionEnd;
+    const val   = textarea.value;
+
+    // Multi-line selection: indent/outdent each line
+    if (start !== end && val.slice(start, end).includes("\n")) {
+      const blockStart = val.lastIndexOf("\n", start - 1) + 1;
+      const blockEnd   = end;
+      const block      = val.slice(blockStart, blockEnd);
+      let newBlock;
+      if (e.shiftKey) {
+        newBlock = block.replace(/^( {1,2}|\t)/gm, "");
+      } else {
+        newBlock = block.replace(/^/gm, "  ");
+      }
+      textarea.value = val.slice(0, blockStart) + newBlock + val.slice(blockEnd);
+      textarea.setSelectionRange(blockStart, blockStart + newBlock.length);
+    } else if (e.shiftKey) {
+      // Outdent current line
+      const lineStart = val.lastIndexOf("\n", start - 1) + 1;
+      const lineText  = val.slice(lineStart);
+      const match     = lineText.match(/^( {1,2}|\t)/);
+      if (match) {
+        const removed = match[0].length;
+        textarea.value = val.slice(0, lineStart) + lineText.slice(removed);
+        textarea.setSelectionRange(Math.max(lineStart, start - removed), Math.max(lineStart, end - removed));
+      }
+    } else if (start !== end) {
+      // Single-line selection: indent without replacing selected text
+      textarea.value = val.slice(0, start) + "  " + val.slice(start);
+      textarea.setSelectionRange(start + 2, end + 2);
+    } else {
+      // Insert two spaces at cursor
+      textarea.focus();
+      document.execCommand("insertText", false, "  ");
+    }
+    scheduleSaveFn();
     return true;
   }
 
   $("notes-body-input").addEventListener("keydown", e => {
     if (slashCmd.handleKey(e, $("notes-body-input"))) return;
-    if (continueList(e, $("notes-body-input"))) return;
+    if (handleTabIndent(e, $("notes-body-input"), () => notesApp.scheduleSave())) return;
+    if (continueList(e, $("notes-body-input"), () => notesApp.scheduleSave())) return;
     notesRef.handleKey(e, $("notes-body-input"));
   });
 
@@ -7732,6 +7802,7 @@
       $("entry-preview-btn").textContent = "Preview";
       $("entry-body-input").classList.remove("hide");
       $("entry-preview-pane").classList.remove("show");
+      $("entry-md-toolbar").classList.remove("hidden");
       document.querySelectorAll(".mood-pill").forEach(p => p.classList.remove("selected"));
 
       const sidebarW = $("sidebar").classList.contains("collapsed") ? 0 : 240;
@@ -7941,10 +8012,12 @@
         $("entry-preview-pane").innerHTML = DOMPurify.sanitize(marked.parse($("entry-body-input").value || ""));
         $("entry-preview-pane").classList.add("show");
         $("entry-body-input").classList.add("hide");
+        $("entry-md-toolbar").classList.add("hidden");
         $("entry-preview-btn").textContent = "Edit";
       } else {
         $("entry-preview-pane").classList.remove("show");
         $("entry-body-input").classList.remove("hide");
+        $("entry-md-toolbar").classList.remove("hidden");
         $("entry-preview-btn").textContent = "Preview";
       }
     },
@@ -8043,6 +8116,14 @@
   $("entry-preview-btn").addEventListener("click", () => journal.togglePreview());
   $("entry-body-input").addEventListener("input",  () => { journal.isDirty = true; $("entry-status").textContent = "Unsaved"; });
   $("entry-title").addEventListener("input",       () => { journal.isDirty = true; $("entry-status").textContent = "Unsaved"; });
+
+  applyToolbarAction($("entry-md-toolbar"), $("entry-body-input"), () => { journal.isDirty = true; $("entry-status").textContent = "Unsaved"; });
+
+  const journalMarkDirty = () => { journal.isDirty = true; $("entry-status").textContent = "Unsaved"; };
+  $("entry-body-input").addEventListener("keydown", e => {
+    if (handleTabIndent(e, $("entry-body-input"), journalMarkDirty)) return;
+    continueList(e, $("entry-body-input"), journalMarkDirty);
+  });
 
   document.querySelectorAll(".mood-pill").forEach(pill => {
     pill.addEventListener("click", () => {
