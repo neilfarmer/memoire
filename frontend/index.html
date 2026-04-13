@@ -530,6 +530,7 @@
       flex: 1;
       min-width: 0;
       overflow-y: auto;
+      overflow-x: hidden;
       background-color: var(--bg);
       background-image: radial-gradient(circle, rgba(26,22,18,.055) 1px, transparent 1px);
       background-size: 22px 22px;
@@ -619,6 +620,8 @@
       align-items: center;
       justify-content: space-between;
       margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
     .toolbar h2 { font-size: 18px; }
@@ -1005,6 +1008,8 @@
       align-items: center;
       justify-content: space-between;
       padding: 14px 18px;
+      gap: 16px;
+      flex-wrap: wrap;
     }
 
     .settings-row + .settings-row {
@@ -1012,7 +1017,7 @@
     }
 
     .settings-label { font-size: 14px; font-weight: 500; }
-    .settings-desc  { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .settings-desc  { font-size: 13px; color: var(--muted); margin-top: 2px; max-width: 320px; }
 
     html[data-theme="dark"] .task-card {
       background: linear-gradient(to bottom, var(--bg), var(--surface));
@@ -3441,13 +3446,14 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 10px;
       padding: 12px;
+      background: linear-gradient(135deg, var(--surface) 0%, var(--bg) 100%);
     }
     .bm-favicon {
-      width: 24px;
-      height: 24px;
-      border-radius: 4px;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
       flex-shrink: 0;
     }
     .bm-card-label {
@@ -3466,13 +3472,16 @@
       line-height: 1.3;
     }
     .bm-card-label-plain {
-      font-size: 11px;
-      color: var(--muted);
+      font-size: 12px;
+      color: var(--text);
       text-align: center;
-      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
       width: 100%;
+      opacity: .75;
     }
     .bm-card-actions {
       position: absolute;
@@ -4136,9 +4145,14 @@
     #sidebar-backdrop {
       display: none;
       position: fixed;
-      inset: 0;
-      background: rgba(26,22,18,.45);
+      top: 56px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(26,22,18,.55);
       z-index: 150;
+      -webkit-backdrop-filter: blur(2px);
+      backdrop-filter: blur(2px);
     }
     #sidebar-backdrop.visible { display: block; }
 
@@ -4152,6 +4166,7 @@
       header { padding: 0 12px; }
       .search-btn { width: 160px; }
       .search-btn-hint { display: none; }
+      #logout-btn { white-space: nowrap; flex-shrink: 0; }
 
       #sidebar {
         position: fixed;
@@ -4198,8 +4213,10 @@
     /* Small phones */
     @media (max-width: 480px) {
       header { padding: 0 10px; }
-      .search-btn { width: 38px; padding: 5px; overflow: hidden; }
-      #logout-btn { width: 38px; padding: 5px; overflow: hidden; gap: 0; flex-shrink: 0; }
+      .search-btn { width: 38px; padding: 5px; overflow: hidden; font-size: 0; justify-content: center; gap: 0; }
+      .search-btn svg { font-size: initial; }
+      #logout-btn { padding: 5px; overflow: hidden; flex-shrink: 0; font-size: 0; justify-content: center; gap: 0; }
+      #logout-btn svg { font-size: initial; width: 18px; height: 18px; }
       .login-card { padding: 32px 20px; }
       .field-row { grid-template-columns: 1fr; }
       main { padding: 16px 12px; }
@@ -6911,7 +6928,7 @@
         $("notes-delete-sep").classList.remove("hidden");
         $("notes-attach-btn").classList.remove("hidden");
         $("notes-preview-btn").textContent = "Edit";
-        $("notes-preview-pane").innerHTML  = renderNoteMarkdown(note.body || "");
+        $("notes-preview-pane").innerHTML  = renderNoteMarkdown(note.body || "", note.title);
         resolveNoteImages($("notes-preview-pane"));
         $("notes-preview-pane").classList.add("show");
         $("notes-body-input").classList.add("hide");
@@ -6953,7 +6970,7 @@
     togglePreview() {
       notesApp.isPreviewing = !notesApp.isPreviewing;
       if (notesApp.isPreviewing) {
-        $("notes-preview-pane").innerHTML = renderNoteMarkdown($("notes-body-input").value);
+        $("notes-preview-pane").innerHTML = renderNoteMarkdown($("notes-body-input").value, $("notes-title-input").value);
         resolveNoteImages($("notes-preview-pane"));
         $("notes-preview-pane").classList.add("show");
         $("notes-body-input").classList.add("hide");
@@ -7007,7 +7024,7 @@
         notesApp.isDirty = false;
         $("notes-save-status").textContent = "Saved";
         if (notesApp.isPreviewing) {
-          $("notes-preview-pane").innerHTML = renderNoteMarkdown(saved.body || "");
+          $("notes-preview-pane").innerHTML = renderNoteMarkdown(saved.body || "", saved.title);
           resolveNoteImages($("notes-preview-pane"));
         }
         notesApp.renderTree();
@@ -7092,7 +7109,14 @@
     }));
   }
 
-  function renderNoteMarkdown(text) {
+  function renderNoteMarkdown(text, title) {
+    // Strip leading H1 if it matches the note title (avoids duplicate title display)
+    if (title && text) {
+      const match = text.match(/^(?:\r?\n)*[ \t]*#\s+(.*?)(?:\s+#+)?[ \t]*(?:\r?\n|$)/);
+      if (match && match[1].trim() === title.trim()) {
+        text = text.slice(match[0].length).replace(/^\n+/, "");
+      }
+    }
     // Replace [[note:id|Label]] and [[task:id|Label]] before passing to marked
     const processed = (text || "").replace(
       /\[\[(note|task):([a-zA-Z0-9_-]+)\|([^\]]*)\]\]/g,
@@ -8145,6 +8169,7 @@
       showLoader("health-loader");
       try {
         health.logs = await api.call("GET", "/health") || [];
+        health.logs.sort((a, b) => b.log_date.localeCompare(a.log_date));
       } catch (e) {
         console.error("Failed to load health logs:", e);
       } finally {
@@ -8407,6 +8432,7 @@
       showLoader("nutrition-loader");
       try {
         nutrition.logs = await api.call("GET", "/nutrition") || [];
+        nutrition.logs.sort((a, b) => b.log_date.localeCompare(a.log_date));
       } catch (e) {
         console.error("Failed to load nutrition logs:", e);
       } finally {
@@ -9824,8 +9850,15 @@
     const email    = auth.getEmail();
     const hour     = new Date().getHours();
     const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-    const rawName  = state.settings?.display_name || (email ? email.split("@")[0].split(".")[0].replace(/\d+$/, "") : "");
-    const name     = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+    const displayName = (state.settings?.display_name || "").trim();
+    let name = "";
+    if (displayName) {
+      name = displayName;
+    } else if (email) {
+      const local = email.split("@")[0].replace(/[\d_]+$/, "").replace(/[._]/g, " ").trim();
+      // Only use derived name if it contains a space (likely a real name), otherwise omit
+      if (local.includes(" ")) name = local.replace(/\b\w/g, c => c.toUpperCase());
+    }
     const today    = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
     $("home-greeting").innerHTML = `
       <div class="home-greeting-name">${greeting}${name ? `, ${name}` : ""}.</div>
@@ -11707,6 +11740,8 @@
     };
 
     function palRenderText(text) {
+      // Strip internal IDs like [id:uuid] from assistant responses
+      text = text.replace(/\s*\[id:[a-f0-9-]+\]/gi, "");
       const rendered = new Set();
       // Replace markdown-style [link text](pal-link:type:id:label) with clickable buttons
       text = text.replace(/\[([^\]]+)\]\(pal-link:(\w+):([^:)]+):([^)]+)\)/g, (_, _linkText, type, id, label) => {
