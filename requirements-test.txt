@@ -4,7 +4,7 @@ boto3==1.42.83
 freezegun==1.5.5
 moto[dynamodb,s3]==5.1.22
 pip-audit==2.10.0
-pytest==9.0.2
+pytest==9.0.3
 pytest-cov==7.1.0
 ruff==0.15.9
 
