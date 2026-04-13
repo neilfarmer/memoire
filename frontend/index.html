@@ -4466,7 +4466,7 @@
             <button type="button" class="md-btn" data-action="bold" title="Bold"><b>B</b></button>
             <button type="button" class="md-btn" data-action="italic" title="Italic"><i>I</i></button>
             <button type="button" class="md-btn" data-action="heading" title="Heading">H</button>
-            <button type="button" class="md-btn" data-action="link" title="Link">&#128279;</button>
+            <button type="button" class="md-btn" data-action="link" title="Link">Link</button>
             <button type="button" class="md-btn" data-action="code" title="Inline code">&#96;&#96;</button>
             <button type="button" class="md-btn" data-action="ul" title="Bullet list">&#8226; List</button>
             <button type="button" class="md-btn" data-action="ol" title="Numbered list">1. List</button>
@@ -5062,7 +5062,7 @@
       <button type="button" class="md-btn" data-action="bold" title="Bold"><b>B</b></button>
       <button type="button" class="md-btn" data-action="italic" title="Italic"><i>I</i></button>
       <button type="button" class="md-btn" data-action="heading" title="Heading">H</button>
-      <button type="button" class="md-btn" data-action="link" title="Link">&#128279;</button>
+      <button type="button" class="md-btn" data-action="link" title="Link">Link</button>
       <button type="button" class="md-btn" data-action="code" title="Inline code">&#96;&#96;</button>
       <button type="button" class="md-btn" data-action="ul" title="Bullet list">&#8226; List</button>
       <button type="button" class="md-btn" data-action="ol" title="Numbered list">1. List</button>
@@ -7467,19 +7467,21 @@
       const actions = {
         bold:       { wrap: ["**", "**"],   placeholder: "bold text" },
         italic:     { wrap: ["_", "_"],     placeholder: "italic text" },
-        heading:    { wrap: ["## ", ""],    placeholder: "Heading", linePrefix: true },
+        heading:    { prefixLines: "## ",   placeholder: "Heading" },
         link:       { wrap: ["[", "](url)"], placeholder: "link text" },
         code:       { wrap: ["`", "`"],      placeholder: "code" },
-        ul:         { wrap: ["- ", ""],      placeholder: "list item", linePrefix: true },
-        ol:         { wrap: ["1. ", ""],      placeholder: "list item", linePrefix: true },
-        blockquote: { wrap: ["> ", ""],       placeholder: "quote", linePrefix: true },
+        ul:         { prefixLines: "- ",    placeholder: "list item" },
+        ol:         { prefixLines: "1. ",   placeholder: "list item" },
+        blockquote: { prefixLines: "> ",    placeholder: "quote" },
         codeblock:  { wrap: ["```\n", "\n```"], placeholder: "code" },
-        hr:         { wrap: ["---\n", ""],    placeholder: "", linePrefix: true },
-        table:      { wrap: ["| Col 1 | Col 2 |\n|-------|-------|\n| Cell  | Cell  |\n", ""], placeholder: "", linePrefix: true },
+        hr:         { wrap: ["---\n", ""],  placeholder: "" },
+        table:      { wrap: ["| Col 1 | Col 2 |\n|-------|-------|\n| Cell  | Cell  |\n", ""], placeholder: "" },
       };
       const action = actions[btn.dataset.action];
       if (!action) return;
-      const insert = action.wrap[0] + (sel || action.placeholder) + action.wrap[1];
+      const insert = action.prefixLines
+        ? (sel || action.placeholder).split("\n").map(line => action.prefixLines + line).join("\n")
+        : action.wrap[0] + (sel || action.placeholder) + action.wrap[1];
       textarea.focus();
       document.execCommand("insertText", false, insert);
       scheduleSaveFn();
@@ -7600,6 +7602,10 @@
         textarea.value = val.slice(0, lineStart) + lineText.slice(removed);
         textarea.setSelectionRange(Math.max(lineStart, start - removed), Math.max(lineStart, end - removed));
       }
+    } else if (start !== end) {
+      // Single-line selection: indent without replacing selected text
+      textarea.value = val.slice(0, start) + "  " + val.slice(start);
+      textarea.setSelectionRange(start + 2, end + 2);
     } else {
       // Insert two spaces at cursor
       textarea.focus();
