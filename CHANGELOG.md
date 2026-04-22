@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.11.0](https://github.com/neilfarmer/memoire/compare/v0.10.0...v0.11.0) (2026-04-22)
+
+
+### Features
+
+* **notes,journal:** expand markdown toolbar and add tab indentation ([#99](https://github.com/neilfarmer/memoire/issues/99)) ([7c13fde](https://github.com/neilfarmer/memoire/commit/7c13fde78842bac28aca647acbd161fc6d187436))
+
+
+### Bug Fixes
+
+* **assistant:** speech recognition mic failing in recent Chrome ([#96](https://github.com/neilfarmer/memoire/issues/96)) ([6329850](https://github.com/neilfarmer/memoire/commit/63298507c3b37976905d1828a92aaa0f5770c66e))
+* **frontend:** resolve multiple UX issues from frontend audit ([#100](https://github.com/neilfarmer/memoire/issues/100)) ([96de03b](https://github.com/neilfarmer/memoire/commit/96de03b6cfd02e1c5ae5186435e1274468e999ff))
+* **notes:** improve folder tree UX and stop auto-expanding ([#101](https://github.com/neilfarmer/memoire/issues/101)) ([08fffa7](https://github.com/neilfarmer/memoire/commit/08fffa725205411bafeb5066db7b604779c84526))
+
 ## [0.10.0](https://github.com/neilfarmer/memoire/compare/v0.9.0...v0.10.0) (2026-04-10)
 
 
