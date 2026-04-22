@@ -638,12 +638,12 @@
     .sb-section-hdr {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 8px 8px 8px 10px;
+      gap: 8px;
+      padding: 9px 8px 9px 10px;
       cursor: pointer;
       border-radius: var(--radius);
       margin: 1px 4px;
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 600;
       color: var(--text);
       letter-spacing: 0.01em;
@@ -660,14 +660,14 @@
     }
 
     .sb-icon {
-      width: 18px;
+      width: 20px;
       flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
       color: var(--muted);
     }
-    .sb-icon svg { width: 16px; height: 16px; }
+    .sb-icon svg { width: 18px; height: 18px; }
     .sb-section.active > .sb-section-hdr .sb-icon { color: var(--primary); }
 
     .sb-arrow {
@@ -739,9 +739,9 @@
       background: none;
       border: none;
       border-left: 2px solid transparent;
-      padding: 7px 10px 7px 18px;
+      padding: 8px 10px 8px 22px;
       border-radius: var(--radius);
-      font-size: 12px;
+      font-size: 13px;
       color: var(--muted);
       cursor: pointer;
       text-align: left;
@@ -3251,7 +3251,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 12px;
+      gap: 16px;
       color: var(--muted);
       font-size: 14px;
       padding: 40px;
@@ -3259,10 +3259,18 @@
     }
     .health-empty-state .empty-icon {
       font-size: 40px;
-      opacity: 0.3;
+      opacity: 0.55;
       line-height: 1;
+      width: 88px;
+      height: 88px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--primary) 8%, transparent);
+      border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
     }
-    .health-empty-state p { line-height: 1.5; }
+    .health-empty-state p { line-height: 1.55; max-width: 280px; }
 
     .health-editor-header {
       display: flex;
@@ -3374,21 +3382,26 @@
     .btn-add-set:hover { border-color: var(--primary); color: var(--primary); }
 
     .health-log-item {
-      padding: 10px 14px;
+      padding: 12px 14px;
       cursor: pointer;
       border-bottom: 1px solid var(--border);
-      transition: background .1s;
+      border-left: 3px solid transparent;
+      transition: background .1s, border-color .1s;
     }
     .health-log-item:hover { background: var(--bg); }
-    .health-log-item.active { background: var(--bg); }
+    .health-log-item.active {
+      background: color-mix(in srgb, var(--primary) 8%, transparent);
+      border-left-color: var(--primary);
+    }
     .health-log-date {
       font-size: 11px;
       color: var(--muted);
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: .03em;
-      margin-bottom: 2px;
+      margin-bottom: 3px;
     }
+    .health-log-item.active .health-log-date { color: var(--primary); }
     .health-log-summary {
       font-size: 13px;
       white-space: nowrap;
@@ -3399,18 +3412,31 @@
     /* ── Nutrition ── */
     .nutrition-totals {
       display: flex;
-      gap: 12px;
-      margin-bottom: 16px;
+      gap: 10px;
+      margin-bottom: 20px;
       flex-wrap: wrap;
     }
     .nutrition-total-pill {
-      background: var(--bg);
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 6px 12px;
-      font-size: 12px;
+      padding: 10px 14px;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      font-weight: 600;
+      min-width: 72px;
     }
-    .nutrition-total-pill strong { font-size: 15px; display: block; }
+    .nutrition-total-pill strong {
+      font-size: 18px;
+      display: block;
+      color: var(--text);
+      font-weight: 700;
+      margin-bottom: 2px;
+      text-transform: none;
+      letter-spacing: 0;
+    }
 
     .meal-card {
       background: var(--surface);
@@ -4566,6 +4592,157 @@
     }
     .pal-model-btn:hover .pal-tooltip { display: block; }
 
+    /* ── Sidebar AI Pal avatar (pixel sphere) ── */
+    .sb-pal {
+      padding: 14px 16px 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 6px;
+    }
+    .sb-pal-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      padding: 8px 10px;
+      cursor: pointer;
+      color: var(--text);
+      text-align: left;
+      transition: background 0.2s, border-color 0.2s, transform 0.2s;
+      position: relative;
+    }
+    .sb-pal-btn:hover {
+      background: color-mix(in srgb, var(--primary) 8%, transparent);
+      border-color: color-mix(in srgb, var(--primary) 24%, transparent);
+    }
+    .sb-pal-btn:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+    .sb-pal-orb {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%,
+        color-mix(in srgb, var(--primary) 14%, transparent) 0%,
+        color-mix(in srgb, var(--primary) 4%, transparent) 60%,
+        transparent 100%);
+      transition: filter 0.25s ease, transform 0.25s ease;
+    }
+    .sb-pal-orb canvas {
+      display: block;
+      width: 44px;
+      height: 44px;
+      filter: drop-shadow(0 0 4px color-mix(in srgb, var(--primary) 35%, transparent));
+      transition: filter 0.25s ease;
+    }
+    .sb-pal-btn:hover .sb-pal-orb {
+      transform: scale(1.06);
+    }
+    .sb-pal-btn:hover .sb-pal-orb canvas {
+      filter: drop-shadow(0 0 6px color-mix(in srgb, var(--primary) 60%, transparent))
+              drop-shadow(0 0 12px color-mix(in srgb, var(--primary) 35%, transparent));
+    }
+    .sb-pal-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      flex: 1;
+    }
+    .sb-pal-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .sb-pal-status {
+      font-size: 10.5px;
+      color: var(--muted);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .sb-pal-status::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--positive);
+      box-shadow: 0 0 4px color-mix(in srgb, var(--positive) 70%, transparent);
+    }
+    /* Active/talking state: stronger glow + pulse */
+    .sb-pal-btn.is-active .sb-pal-orb,
+    .sb-pal-btn.is-talking .sb-pal-orb {
+      animation: pal-orb-pulse 2.2s ease-in-out infinite;
+    }
+    .sb-pal-btn.is-active .sb-pal-orb canvas,
+    .sb-pal-btn.is-talking .sb-pal-orb canvas {
+      filter: drop-shadow(0 0 8px color-mix(in srgb, var(--primary) 70%, transparent))
+              drop-shadow(0 0 18px color-mix(in srgb, var(--primary) 45%, transparent))
+              drop-shadow(0 0 28px color-mix(in srgb, var(--primary) 25%, transparent));
+    }
+    .sb-pal-btn.is-talking .sb-pal-status::before {
+      background: var(--primary);
+      box-shadow: 0 0 6px var(--primary);
+      animation: pal-dot-blink 0.9s ease-in-out infinite;
+    }
+    @keyframes pal-orb-pulse {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.08); }
+    }
+    @keyframes pal-dot-blink {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.35; }
+    }
+    /* Collapsed sidebar: hide the labels, keep orb visible */
+    #sidebar.collapsed .sb-pal {
+      padding: 10px 8px;
+    }
+    #sidebar.collapsed .sb-pal-text {
+      display: none;
+    }
+    /* Thought-bubble tail on the chat window when open from sidebar */
+    #pal-window.from-sidebar {
+      bottom: auto;
+      right: auto;
+      top: 74px;
+      left: 256px;
+      height: min(520px, 70vh);
+    }
+    #pal-window.from-sidebar::before {
+      content: "";
+      position: absolute;
+      left: -8px;
+      top: 26px;
+      width: 14px;
+      height: 14px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      transform: rotate(45deg);
+    }
+    @media (max-width: 768px) {
+      #pal-window.from-sidebar {
+        top: 72px;
+        left: 12px;
+        right: 12px;
+        width: auto;
+      }
+      #pal-window.from-sidebar::before { display: none; }
+    }
+
     /* ── Mobile / Tablet Responsive ─────────────────────────────────────────── */
 
     #sidebar-backdrop {
@@ -4708,6 +4885,17 @@
   <div class="app-body">
     <nav id="sidebar" aria-label="Primary">
       <div class="sb-scroll">
+        <div class="sb-pal" id="sb-pal">
+          <button type="button" class="sb-pal-btn" id="sb-pal-btn" aria-label="Chat with your AI pal" aria-haspopup="dialog" aria-expanded="false">
+            <span class="sb-pal-orb" aria-hidden="true">
+              <canvas id="pal-sphere" width="44" height="44"></canvas>
+            </span>
+            <span class="sb-pal-text">
+              <span class="sb-pal-name" id="sb-pal-name">AI Pal</span>
+              <span class="sb-pal-status" id="sb-pal-status">Online</span>
+            </span>
+          </button>
+        </div>
         <div class="sb-section" id="sb-home">
           <div class="sb-section-hdr" onclick="sidebar.navigate('home')">
             <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
@@ -5028,7 +5216,7 @@
         <div class="empty-icon">&#127939;</div>
         <p>Select a day from the calendar<br>to log your workout.</p>
       </div>
-      <div id="health-editor" class="hidden" class="u-stretch-col">
+      <div id="health-editor" class="hidden u-stretch-col">
         <div class="health-editor-header">
           <span class="health-date-label" id="health-date-label"></span>
           <button class="btn btn-danger hidden" id="health-delete-btn">Delete</button>
@@ -5068,7 +5256,7 @@
         <div class="empty-icon">&#127829;</div>
         <p>Select a day from the calendar<br>to log your meals.</p>
       </div>
-      <div id="nutrition-editor" class="hidden" class="u-stretch-col">
+      <div id="nutrition-editor" class="hidden u-stretch-col">
         <div class="health-editor-header">
           <span class="health-date-label" id="nutrition-date-label"></span>
           <button class="btn btn-danger hidden" id="nutrition-delete-btn">Delete</button>
@@ -6923,6 +7111,10 @@
   function applyPalName(name) {
     const label = name.trim() || "AI Pal";
     $("pal-header-name").textContent = label;
+    const sbName = $("sb-pal-name");
+    if (sbName) sbName.textContent = label;
+    const sbBtn = $("sb-pal-btn");
+    if (sbBtn) sbBtn.setAttribute("aria-label", "Chat with " + label);
   }
 
   $("pal-name-save-btn").addEventListener("click", async () => {
@@ -11351,6 +11543,15 @@
     all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "bookmarks", "diagrams", "finances", "settings", "admin", "profile"],
 
     show(name) {
+      // Auto-close any open journal entry overlay so sidebar navigation works
+      // while editing an entry. Save pending changes first so nothing is lost.
+      const entryOverlay = document.getElementById("entry-overlay");
+      if (entryOverlay && !entryOverlay.classList.contains("hidden")) {
+        if (journal.isDirty && journal.currentDate) {
+          try { journal.save(); } catch (e) { console.error("autosave failed:", e); }
+        }
+        journal.closeEntry();
+      }
       pages.current = name;
       // habits, goals, health, nutrition, finances are now top-level sections; favorites is a sub-section of feeds
       const sbSection = name === "favorites" ? "feeds" : name;
@@ -12331,9 +12532,16 @@
       }
     }
 
+    const sbPalBtn = document.getElementById("sb-pal-btn");
+
     function palToggle() {
       palOpen = !palOpen;
       palWindow.classList.toggle("hidden", !palOpen);
+      palWindow.classList.toggle("from-sidebar", palOpen);
+      if (sbPalBtn) {
+        sbPalBtn.classList.toggle("is-active", palOpen);
+        sbPalBtn.setAttribute("aria-expanded", palOpen ? "true" : "false");
+      }
       if (palOpen) {
         palInput.focus();
         palLoadHistory();
@@ -12598,6 +12806,7 @@
     }
 
     palBtn.addEventListener("click", palToggle);
+    if (sbPalBtn) sbPalBtn.addEventListener("click", palToggle);
     palClose.addEventListener("click", palToggle);
     palClear.addEventListener("click", palClearHistory);
 
@@ -12617,13 +12826,145 @@
     });
 
     // Show/hide based on auth state
-    document.addEventListener("pal:hide", () => { palBtn.classList.add("hidden"); palWindow.classList.add("hidden"); palOpen = false; });
-    document.addEventListener("pal:show", () => palBtn.classList.remove("hidden"));
+    document.addEventListener("pal:hide", () => {
+      palBtn.classList.add("hidden");
+      palWindow.classList.add("hidden");
+      palOpen = false;
+      const sbPal = document.getElementById("sb-pal");
+      if (sbPal) sbPal.classList.add("hidden");
+    });
+    document.addEventListener("pal:show", () => {
+      // Sidebar avatar is the primary trigger now; keep the floating FAB hidden.
+      const sbPal = document.getElementById("sb-pal");
+      if (sbPal) sbPal.classList.remove("hidden");
+    });
 
     // In case pal:show already fired before this script ran (app was already loaded)
     if (!document.getElementById("app-view").classList.contains("hidden")) {
-      palBtn.classList.remove("hidden");
+      const sbPal = document.getElementById("sb-pal");
+      if (sbPal) sbPal.classList.remove("hidden");
     }
+
+    // ── Pixel sphere renderer ────────────────────────────────────────────────
+    (function initPalSphere() {
+      const canvas = document.getElementById("pal-sphere");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const size = 44;
+      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
+      canvas.style.width = size + "px";
+      canvas.style.height = size + "px";
+      ctx.scale(dpr, dpr);
+
+      // Generate uniformly distributed points on a unit sphere (Fibonacci lattice)
+      const N = 180;
+      const points = [];
+      const golden = Math.PI * (3 - Math.sqrt(5));
+      for (let i = 0; i < N; i++) {
+        const y = 1 - (i / (N - 1)) * 2;
+        const r = Math.sqrt(1 - y * y);
+        const theta = golden * i;
+        points.push({
+          x: Math.cos(theta) * r,
+          y: y,
+          z: Math.sin(theta) * r,
+        });
+      }
+
+      const cx = size / 2;
+      const cy = size / 2;
+      const R  = size * 0.42;
+      const tStart = performance.now();
+
+      // Cache the theme color; refresh when it may have changed
+      let cachedColor = null;
+      function getThemeColor() {
+        const raw = getComputedStyle(document.documentElement)
+          .getPropertyValue("--primary").trim();
+        return raw || "#8b5cf6";
+      }
+      function refreshColor() { cachedColor = getThemeColor(); }
+      refreshColor();
+
+      // Re-read color whenever theme data attr changes
+      const themeObserver = new MutationObserver(refreshColor);
+      themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["data-theme", "class", "style"],
+      });
+      // Also refresh when the system toggles (reduced motion media change, etc.)
+      window.addEventListener("themechange", refreshColor);
+
+      // Track talking state (sending in flight)
+      function isTalking() {
+        // palSend.disabled is true while a message is being sent / streaming
+        return palSend.disabled;
+      }
+
+      function render() {
+        const t = (performance.now() - tStart) / 1000;
+        const talking = isTalking();
+        const active = palOpen;
+
+        // Sync CSS state class
+        if (sbPalBtn) {
+          sbPalBtn.classList.toggle("is-talking", talking);
+        }
+
+        // Rotation & tilt speeds
+        const rotSpeed  = talking ? 1.9 : 0.55;
+        const tiltSpeed = 0.17;
+        const angleY = t * rotSpeed;
+        const angleX = Math.sin(t * tiltSpeed) * 0.35;
+
+        const say = Math.sin(angleY), cay = Math.cos(angleY);
+        const sax = Math.sin(angleX), cax = Math.cos(angleX);
+
+        // Gentle breathing pulse; stronger when talking
+        const pulse = 1 + Math.sin(t * (talking ? 4.2 : 1.2)) * (talking ? 0.07 : 0.025);
+
+        ctx.clearRect(0, 0, size, size);
+        ctx.fillStyle = cachedColor;
+
+        // Project & sort by depth back-to-front
+        const proj = new Array(points.length);
+        for (let i = 0; i < points.length; i++) {
+          const p = points[i];
+          // Rotate around Y
+          const x1 = p.x * cay - p.z * say;
+          const z1 = p.x * say + p.z * cay;
+          const y1 = p.y;
+          // Rotate around X
+          const y2 = y1 * cax - z1 * sax;
+          const z2 = y1 * sax + z1 * cax;
+          proj[i] = { x: x1, y: y2, z: z2 };
+        }
+        proj.sort((a, b) => a.z - b.z);
+
+        // Highlight offset (specular pixel-art feel): slightly shift toward top-left
+        for (let i = 0; i < proj.length; i++) {
+          const p = proj[i];
+          const px = cx + p.x * R * pulse;
+          const py = cy + p.y * R * pulse;
+          // Depth-based alpha (back = dim, front = bright)
+          const d = (p.z + 1) / 2; // 0..1
+          let alpha = 0.15 + d * 0.80;
+          // Front-lit fake highlight: bonus alpha where point is toward top-left
+          const lit = Math.max(0, -p.x * 0.5 - p.y * 0.5 + p.z * 0.8);
+          alpha = Math.min(1, alpha + lit * 0.22);
+          // Size: closer pixels larger (pixel-art chunky feel)
+          const s = 1.4 + d * 1.6;
+          ctx.globalAlpha = alpha;
+          ctx.fillRect(px - s / 2, py - s / 2, s, s);
+        }
+        ctx.globalAlpha = 1;
+
+        requestAnimationFrame(render);
+      }
+      requestAnimationFrame(render);
+    })();
   })();
 </script>
 </body>
