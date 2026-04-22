@@ -2569,7 +2569,7 @@
     .notes-left-header h2 { font-size: var(--text-xl); font-weight: var(--weight-bold); }
 
     .notes-search { padding: 0 12px 10px; flex-shrink: 0; }
-    .notes-search input { font-size: 13px; }
+    .notes-search input { font-size: 14px; }
 
     .notes-tree-scroll {
       flex: 1;
@@ -2767,7 +2767,7 @@
     /* ── Notes tree ──*/
     .notes-search { margin-bottom: 0; }
 
-    .tree { font-size: 13px; padding: 2px 0; }
+    .tree { font-size: 14px; padding: 2px 0; }
 
     .tree-folder { position: relative; }
 
@@ -2788,8 +2788,8 @@
     .tree-folder-row {
       display: flex;
       align-items: center;
-      gap: 5px;
-      padding: 5px 6px;
+      gap: 6px;
+      padding: 7px 7px;
       border-radius: var(--radius);
       cursor: pointer;
       user-select: none;
@@ -2800,34 +2800,34 @@
 
     .tree-arrow {
       color: var(--muted);
-      width: 14px;
-      height: 14px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform .15s ease;
-    }
-    .tree-arrow svg { width: 8px; height: 8px; }
-    .tree-arrow.open { transform: rotate(90deg); }
-
-    .tree-folder-icon {
       width: 16px;
       height: 16px;
       flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: transform .15s ease;
+    }
+    .tree-arrow svg { width: 10px; height: 10px; }
+    .tree-arrow.open { transform: rotate(90deg); }
+
+    .tree-folder-icon {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       color: var(--muted);
     }
-    .tree-folder-icon svg { width: 14px; height: 14px; }
+    .tree-folder-icon svg { width: 16px; height: 16px; }
     .tree-folder-row:hover .tree-folder-icon { color: var(--primary); }
     .tree-arrow.open + .tree-folder-icon { color: var(--primary); }
 
     .tree-folder-name {
       flex: 1;
-      font-weight: 500;
-      font-size: 13px;
+      font-weight: 600;
+      font-size: 14px;
       color: var(--text);
       white-space: nowrap;
       overflow: hidden;
@@ -2836,9 +2836,9 @@
     }
 
     .tree-folder-count {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--muted);
-      opacity: .6;
+      opacity: .75;
       flex-shrink: 0;
       margin-right: 2px;
     }
@@ -2905,37 +2905,37 @@
     .tree-note-row {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 4px 8px;
+      gap: 7px;
+      padding: 6px 8px;
       border-radius: var(--radius);
       cursor: pointer;
-      color: var(--muted);
+      color: var(--text);
       transition: background .1s, color .1s;
     }
     .tree-note-row:hover { background: var(--hover); color: var(--text); }
     .tree-note-row.active { background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary); }
     .tree-note-icon {
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
       flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      opacity: .5;
+      opacity: .65;
     }
-    .tree-note-icon svg { width: 12px; height: 12px; }
-    .tree-note-row:hover .tree-note-icon { opacity: .8; }
+    .tree-note-icon svg { width: 14px; height: 14px; }
+    .tree-note-row:hover .tree-note-icon { opacity: .9; }
     .tree-note-row.active .tree-note-icon { opacity: 1; color: var(--primary); }
     .tree-note-name {
       flex: 1;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      font-size: 13px;
-      font-weight: 400;
+      font-size: 14px;
+      font-weight: 500;
       color: inherit;
     }
-    .tree-note-date { font-size: 11px; opacity: .5; flex-shrink: 0; }
+    .tree-note-date { font-size: 11px; opacity: .6; flex-shrink: 0; color: var(--muted); }
 
     /* Notes search results */
     .notes-search-result {
@@ -4594,9 +4594,9 @@
 
     /* ── Sidebar AI Pal avatar (pixel sphere) ── */
     .sb-pal {
-      padding: 14px 16px 16px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 6px;
+      padding: 12px 10px 10px;
+      border-top: 1px solid var(--border);
+      margin-top: 6px;
     }
     .sb-pal-btn {
       width: 100%;
@@ -4715,9 +4715,10 @@
     }
     /* Thought-bubble tail on the chat window when open from sidebar */
     #pal-window.from-sidebar {
-      bottom: auto;
+      top: auto;
       right: auto;
-      top: 74px;
+      /* JS sets bottom to align with the pal button; fallback keeps it near bottom */
+      bottom: 20px;
       left: 256px;
       height: min(520px, 70vh);
     }
@@ -4725,7 +4726,8 @@
       content: "";
       position: absolute;
       left: -8px;
-      top: 26px;
+      /* Tail sits near the bottom of the window, pointing back at the pal avatar */
+      bottom: 28px;
       width: 14px;
       height: 14px;
       background: var(--surface);
@@ -4735,7 +4737,8 @@
     }
     @media (max-width: 768px) {
       #pal-window.from-sidebar {
-        top: 72px;
+        top: auto;
+        bottom: 12px;
         left: 12px;
         right: 12px;
         width: auto;
@@ -4885,17 +4888,6 @@
   <div class="app-body">
     <nav id="sidebar" aria-label="Primary">
       <div class="sb-scroll">
-        <div class="sb-pal" id="sb-pal">
-          <button type="button" class="sb-pal-btn" id="sb-pal-btn" aria-label="Chat with your AI pal" aria-haspopup="dialog" aria-expanded="false">
-            <span class="sb-pal-orb" aria-hidden="true">
-              <canvas id="pal-sphere" width="44" height="44"></canvas>
-            </span>
-            <span class="sb-pal-text">
-              <span class="sb-pal-name" id="sb-pal-name">AI Pal</span>
-              <span class="sb-pal-status" id="sb-pal-status">Online</span>
-            </span>
-          </button>
-        </div>
         <div class="sb-section" id="sb-home">
           <div class="sb-section-hdr" onclick="sidebar.navigate('home')">
             <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
@@ -4995,6 +4987,17 @@
           </div>
         </div>
         <div class="sb-spacer"></div>
+        <div class="sb-pal" id="sb-pal">
+          <button type="button" class="sb-pal-btn" id="sb-pal-btn" aria-label="Chat with your AI pal" aria-haspopup="dialog" aria-expanded="false">
+            <span class="sb-pal-orb" aria-hidden="true">
+              <canvas id="pal-sphere" width="44" height="44"></canvas>
+            </span>
+            <span class="sb-pal-text">
+              <span class="sb-pal-name" id="sb-pal-name">AI Pal</span>
+              <span class="sb-pal-status" id="sb-pal-status">Online</span>
+            </span>
+          </button>
+        </div>
         <div class="sb-section" id="sb-settings">
           <div class="sb-section-hdr" onclick="sidebar.navigate('settings')">
             <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
@@ -12543,14 +12546,30 @@
         sbPalBtn.setAttribute("aria-expanded", palOpen ? "true" : "false");
       }
       if (palOpen) {
+        // Anchor the chat window so its tail aligns with the pal button's center.
+        // Only applies on desktop (mobile uses full-width bottom-anchored sheet).
+        if (sbPalBtn && window.innerWidth > 768) {
+          const rect = sbPalBtn.getBoundingClientRect();
+          const vh = window.innerHeight;
+          const palCenterFromBottom = vh - (rect.top + rect.height / 2);
+          // Tail is 28px above the window's bottom edge, so offset by that so
+          // the tail points at the pal button's vertical center.
+          const desired = Math.max(12, palCenterFromBottom - 28);
+          palWindow.style.bottom = desired + "px";
+        } else {
+          palWindow.style.bottom = "";
+        }
         palInput.focus();
         palLoadHistory();
-      } else if (palShowingUsage) {
-        // Reset usage view when closing
-        palShowingUsage = false;
-        palUsageBtn.classList.remove("active");
-        palUsagePanel.classList.add("hidden");
-        palMsgs.classList.remove("hidden");
+      } else {
+        palWindow.style.bottom = "";
+        if (palShowingUsage) {
+          // Reset usage view when closing
+          palShowingUsage = false;
+          palUsageBtn.classList.remove("active");
+          palUsagePanel.classList.add("hidden");
+          palMsgs.classList.remove("hidden");
+        }
       }
     }
 

@@ -1,65 +1,50 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#1a0b02"/>
-      <stop offset="100%" stop-color="#0a0400"/>
+      <stop offset="0%"   stop-color="#1a1512"/>
+      <stop offset="100%" stop-color="#0a0603"/>
     </linearGradient>
-    <linearGradient id="f1" x1=".5" y1="1" x2=".5" y2="0">
-      <stop offset="0%"   stop-color="#7c2d12"/>
-      <stop offset="30%"  stop-color="#c2410c"/>
-      <stop offset="65%"  stop-color="#f97316"/>
-      <stop offset="100%" stop-color="#fbbf24"/>
-    </linearGradient>
-    <linearGradient id="f2" x1=".5" y1="1" x2=".5" y2="0">
-      <stop offset="0%"   stop-color="#ea580c"/>
-      <stop offset="50%"  stop-color="#fb923c"/>
-      <stop offset="100%" stop-color="#fef08a"/>
-    </linearGradient>
-    <linearGradient id="f3" x1=".5" y1="1" x2=".5" y2="0">
-      <stop offset="0%"   stop-color="#fcd34d"/>
-      <stop offset="100%" stop-color="#fefce8"/>
-    </linearGradient>
-    <filter id="glow" x="-20%" y="-10%" width="140%" height="130%">
-      <feGaussianBlur stdDeviation="8" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
+    <radialGradient id="bloom" cx=".5" cy=".5" r=".5">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="60%"  stop-color="#ffffff" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb" cx=".38" cy=".33" r=".72">
+      <stop offset="0%"   stop-color="#ffffff"/>
+      <stop offset="55%"  stop-color="#f5f5f4"/>
+      <stop offset="100%" stop-color="#a8a29e"/>
+    </radialGradient>
   </defs>
 
-  <!-- Background -->
+  <!-- Rounded dark background -->
   <rect width="512" height="512" rx="108" fill="url(#bg)"/>
 
-  <!-- Outer flame — wide base, tapers to a tip, slight organic curl on each side -->
-  <path filter="url(#glow)" fill="url(#f1)" d="
-    M 256,438
-    C 192,402 152,334 166,262
-    C 176,208 198,166 218,128
-    C 215,158 230,172 236,157
-    C 240,112 249,80 256,58
-    C 263,80 272,112 276,157
-    C 282,172 297,158 294,128
-    C 314,166 336,208 346,262
-    C 360,334 320,402 256,438 Z
-  "/>
+  <!-- Soft bloom behind the orb -->
+  <circle cx="256" cy="238" r="210" fill="url(#bloom)"/>
 
-  <!-- Middle flame -->
-  <path fill="url(#f2)" d="
-    M 256,415
-    C 212,382 188,324 202,268
-    C 212,228 228,196 242,168
-    C 240,192 252,206 255,190
-    C 257,156 259,130 256,106
-    C 261,130 265,156 269,190
-    C 272,206 284,192 282,168
-    C 296,196 312,228 322,268
-    C 336,324 312,382 256,415 Z
-  "/>
+  <!-- Horizon line: two-tone white for depth -->
+  <line x1="68"  y1="392" x2="444" y2="392" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.28"/>
+  <line x1="128" y1="392" x2="384" y2="392" stroke="#ffffff" stroke-width="1" stroke-linecap="round" opacity="0.55"/>
 
-  <!-- Inner flame — bright core -->
-  <path fill="url(#f3)" d="
-    M 256,388
-    C 240,362 232,334 240,306
-    C 245,286 253,268 256,252
-    C 259,268 267,286 272,306
-    C 280,334 272,362 256,388 Z
-  "/>
+  <!-- The orb -->
+  <circle cx="256" cy="238" r="132" fill="url(#orb)"/>
+
+  <!-- Pixel specular highlights on the orb -->
+  <rect x="204" y="170" width="14" height="14" fill="#ffffff" opacity="0.95"/>
+  <rect x="226" y="192" width="9"  height="9"  fill="#ffffff" opacity="0.85"/>
+  <rect x="192" y="198" width="7"  height="7"  fill="#ffffff" opacity="0.7"/>
+  <rect x="246" y="174" width="7"  height="7"  fill="#ffffff" opacity="0.68"/>
+  <rect x="216" y="210" width="5"  height="5"  fill="#ffffff" opacity="0.55"/>
+
+  <!-- Drifting pixel-sparkles — flecks of memory floating around the orb -->
+  <rect x="88"  y="144" width="8" height="8" fill="#ffffff" opacity="0.88"/>
+  <rect x="78"  y="168" width="5" height="5" fill="#ffffff" opacity="0.55"/>
+  <rect x="108" y="120" width="4" height="4" fill="#ffffff" opacity="0.5"/>
+  <rect x="420" y="170" width="8" height="8" fill="#ffffff" opacity="0.88"/>
+  <rect x="432" y="152" width="5" height="5" fill="#ffffff" opacity="0.55"/>
+  <rect x="404" y="124" width="4" height="4" fill="#ffffff" opacity="0.5"/>
+  <rect x="122" y="322" width="6" height="6" fill="#ffffff" opacity="0.7"/>
+  <rect x="388" y="328" width="6" height="6" fill="#ffffff" opacity="0.7"/>
+  <rect x="70"  y="252" width="4" height="4" fill="#ffffff" opacity="0.5"/>
+  <rect x="440" y="260" width="4" height="4" fill="#ffffff" opacity="0.5"/>
 </svg>
