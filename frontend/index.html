@@ -45,6 +45,19 @@
       --weight-semibold: 600;
       --weight-bold:     700;
 
+      /* Font stacks */
+      --font-sans:    'Sora', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+      --font-mono:    'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+
+      /* Semantic colors (light) */
+      --positive: #16a34a;
+      --positive-soft: #15803d;
+      --negative: #dc2626;
+      --negative-soft: #b91c1c;
+      --warning:  #d97706;
+      --warning-soft: #b45309;
+
       /* Spacing scale (4px grid) */
       --space-0: 0;
       --space-1: 4px;
@@ -144,6 +157,14 @@
       --badge-high-fg:            #fecaca;
       --status-danger-bg:         rgba(248,113,113,.15);
       --status-danger-fg:         #fca5a5;
+
+      /* Semantic colors — dark variant (-soft = safe text color on dark surface) */
+      --positive:      #4ade80;
+      --positive-soft: #86efac;
+      --negative:      #f87171;
+      --negative-soft: #fca5a5;
+      --warning:       #f59e0b;
+      --warning-soft:  #fbbf24;
     }
 
     /* ── Color themes ──────────────────────────────────────────────────────── */
@@ -319,16 +340,56 @@
     }
 
     body {
-      font-family: 'Sora', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: var(--font-sans);
       background: var(--bg);
       color: var(--text);
-      font-size: 15px;
+      font-size: var(--text-lg);
       line-height: 1.5;
       font-feature-settings: "cv02", "cv03", "cv04", "cv11";
       -webkit-font-smoothing: antialiased;
     }
 
+    /* ── Base typography ── */
+    h1, h2, h3, h4, h5, h6 {
+      font-family: var(--font-display);
+      font-weight: var(--weight-semibold);
+      letter-spacing: -0.2px;
+      line-height: 1.2;
+      color: var(--text);
+      margin: 0;
+    }
+    h1 { font-size: var(--text-3xl); font-weight: var(--weight-bold); letter-spacing: -0.5px; }
+    h2 { font-size: var(--text-2xl); }
+    h3 { font-size: var(--text-xl); }
+    h4 { font-size: var(--text-lg); }
+    h5 { font-size: var(--text-md); }
+    h6 { font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-family: var(--font-sans); font-weight: var(--weight-semibold); }
+
+    /* Utility: monospace */
+    .mono { font-family: var(--font-mono); font-size: var(--text-sm); }
+
     .hidden { display: none !important; }
+
+    /* ── Utility classes (to replace inline styles) ── */
+    .u-muted        { color: var(--muted); }
+    .u-danger       { color: var(--danger); }
+    .u-pointer      { cursor: pointer; }
+    .u-flex1        { flex: 1; }
+    .u-text-right   { text-align: right; }
+    .u-text-sm      { font-size: var(--text-sm); }
+    .u-text-xs      { font-size: var(--text-xs); }
+    .u-text-label   { font-size: var(--text-xs); color: var(--muted); }
+    .u-text-meta    { font-size: var(--text-xs); color: var(--muted); margin-bottom: 2px; }
+    .u-strong       { font-weight: var(--weight-semibold); }
+    .u-bold         { font-weight: var(--weight-bold); }
+    .u-stretch-col  { display: flex; flex-direction: column; height: 100%; }
+    .u-row          { display: flex; align-items: center; gap: var(--space-2); }
+    .u-row-sm       { display: flex; align-items: center; gap: 5px; }
+    .u-col          { display: flex; flex-direction: column; gap: var(--space-2); }
+    .u-mb-3         { margin-bottom: var(--space-3); }
+    .u-mb-4         { margin-bottom: var(--space-4); }
+    .u-mb-5         { margin-bottom: var(--space-5); }
+    .u-hero-num     { font-size: var(--text-lg); font-weight: var(--weight-bold); }
 
     /* ── Accessibility: keyboard focus ring ── */
     *:focus { outline: none; }
@@ -394,14 +455,13 @@
     }
 
     .login-card h1 {
-      font-family: 'Fraunces', serif;
-      font-size: 36px;
-      font-weight: 700;
+      font-size: var(--text-4xl);
+      font-weight: var(--weight-bold);
       letter-spacing: -0.5px;
-      margin-bottom: 8px;
+      margin-bottom: var(--space-2);
       line-height: 1.05;
     }
-    .login-card p  { color: var(--muted); margin-bottom: 32px; font-size: 14px; }
+    .login-card p  { color: var(--muted); margin-bottom: var(--space-7); font-size: var(--text-md); }
 
     /* ── Forms ── */
     label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 5px; }
@@ -461,6 +521,30 @@
     .btn-ghost { background: none; color: var(--muted); border-color: transparent; }
     .btn-ghost:hover:not(:disabled) { background: var(--hover); color: var(--text); }
 
+    .btn-ghost-danger { background: none; color: var(--danger); border-color: transparent; }
+    .btn-ghost-danger:hover:not(:disabled) { background: var(--status-danger-bg); color: var(--danger); }
+
+    /* Settings list row */
+    .settings-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-2) 0;
+      border-top: 1px solid var(--border);
+    }
+    .settings-row-main { flex: 1; min-width: 0; }
+    .settings-row-title {
+      font-size: var(--text-sm);
+      font-weight: var(--weight-medium);
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .settings-row-sub { font-size: var(--text-xs); color: var(--muted); }
+    .settings-empty { font-size: var(--text-sm); color: var(--muted); padding: var(--space-1) 0; }
+    .settings-load-error { font-size: var(--text-sm); color: var(--danger); }
+
     .btn-xs { font-size: var(--text-xs); padding: 3px var(--space-2); border-radius: var(--radius-sm); }
     .btn-sm { font-size: var(--text-sm); padding: 5px var(--space-3); }
     .btn-lg { font-size: var(--text-lg); padding: var(--space-3) var(--space-6); }
@@ -482,7 +566,7 @@
       z-index: 10;
     }
 
-    .logo { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; letter-spacing: -0.2px; }
+    .logo { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--text); display: flex; align-items: center; gap: var(--space-2); letter-spacing: -0.2px; }
     .logo img { width: 28px; height: 28px; display: block; filter: drop-shadow(0 0 8px rgba(217,119,6,.5)); }
 
     .avatar-btn {
@@ -636,6 +720,16 @@
       padding: 8px 20px 3px;
     }
 
+    .sb-group-label {
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      padding: var(--space-4) 10px var(--space-1);
+    }
+    .sb-section-body-inner { padding: 4px 10px 6px; }
+
     .sb-sub-link {
       display: flex;
       align-items: center;
@@ -753,21 +847,18 @@
       gap: var(--space-2);
     }
 
-    .toolbar h2 {
-      font-family: 'Fraunces', serif;
-      font-size: var(--text-2xl);
-      font-weight: var(--weight-semibold);
-      letter-spacing: -0.2px;
-      line-height: 1.2;
-    }
+    /* Toolbar title uses h1 size (primary page heading) */
+    .toolbar h2 { font-size: var(--text-3xl); font-weight: var(--weight-bold); letter-spacing: -0.5px; }
 
     /* ── Filter bar ── */
     .filters {
       display: flex;
-      gap: 8px;
-      margin-bottom: 20px;
+      gap: var(--space-2);
+      margin-bottom: var(--space-5);
       flex-wrap: wrap;
+      align-items: center;
     }
+    .filters-spacer { flex: 1; min-width: 8px; }
 
     .filter-btn {
       padding: 5px var(--space-3);
@@ -780,6 +871,9 @@
       cursor: pointer;
       color: var(--muted);
       transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
     .filter-btn:hover:not(.active) { background: var(--hover); color: var(--text); border-color: var(--muted); }
     .filter-btn.active {
@@ -787,6 +881,75 @@
       border-color: var(--primary);
       color: #fff;
     }
+    .filter-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 18px;
+      padding: 0 6px;
+      border-radius: var(--radius-pill);
+      background: var(--hover);
+      color: var(--muted);
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
+      font-variant-numeric: tabular-nums;
+    }
+    .filter-btn.active .filter-count {
+      background: rgba(255,255,255,0.25);
+      color: #fff;
+    }
+
+    .filter-sort {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: var(--text-sm);
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .filter-sort-select {
+      padding: 4px var(--space-2);
+      border-radius: var(--radius-sm, 6px);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: var(--text-sm);
+      cursor: pointer;
+    }
+    .filter-sort input[type=checkbox] { accent-color: var(--primary); }
+
+    /* Task groups */
+    .task-group { margin-bottom: var(--space-5); }
+    .task-group-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: var(--space-3) 0 var(--space-2) 0;
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .task-group-header::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .task-group-count {
+      padding: 0 6px;
+      border-radius: var(--radius-pill);
+      background: var(--hover);
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .task-group-header.overdue { color: var(--negative-soft); }
+    .task-group-header.today   { color: var(--warning-soft); }
 
     /* ── Pomodoro widget ── */
     .pomodoro-widget {
@@ -805,13 +968,8 @@
     }
 
     .pomodoro-widget.is-break {
-      border-color: #16a34a;
+      border-color: var(--positive);
       box-shadow: 0 0 0 3px rgba(22,163,74,.08), var(--shadow);
-    }
-
-    html[data-theme="dark"] .pomodoro-widget.is-break {
-      border-color: #22c55e;
-      box-shadow: 0 0 0 3px rgba(34,197,94,.1), var(--shadow);
     }
 
     .pomodoro-top {
@@ -867,8 +1025,8 @@
     }
 
     .pomo-tab.active.break-tab {
-      background: #16a34a;
-      border-color: #16a34a;
+      background: var(--positive);
+      border-color: var(--positive);
     }
 
     .pomodoro-time {
@@ -1011,25 +1169,33 @@
     .status-select {
       font-size: var(--text-xs);
       font-weight: var(--weight-semibold);
-      padding: 2px var(--space-2);
+      padding: 2px 22px 2px var(--space-2);
       border-radius: var(--radius-pill);
       border: 1px solid transparent;
       letter-spacing: .3px;
       text-transform: uppercase;
       cursor: pointer;
-      appearance: auto;
       width: fit-content;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 6px center;
+      background-size: 10px 10px;
+      transition: box-shadow .15s ease, border-color .15s ease;
     }
-    .status-select.badge-todo        { border-color: var(--badge-todo-border); }
-    .status-select.badge-in_progress { border-color: var(--badge-in_progress-border); }
-    .status-select.badge-done        { border-color: var(--badge-done-border); }
+    .status-select:hover { filter: brightness(0.96); }
+    .status-select:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); }
+    .status-select.badge-todo        { background-color: var(--badge-todo-bg);        color: var(--badge-todo-fg);        border-color: var(--badge-todo-border); }
+    .status-select.badge-in_progress { background-color: var(--badge-in_progress-bg); color: var(--badge-in_progress-fg); border-color: var(--badge-in_progress-border); }
+    .status-select.badge-done        { background-color: var(--badge-done-bg);        color: var(--badge-done-fg);        border-color: var(--badge-done-border); }
 
     .due-date { font-size: var(--text-sm); color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
     .due-date.overdue   { color: var(--danger); font-weight: var(--weight-semibold); }
     .due-date.overdue::before   { content: "Overdue •"; font-size: var(--text-xs); letter-spacing: .3px; text-transform: uppercase; }
-    .due-date.due-today { color: #b45309; font-weight: var(--weight-semibold); }
+    .due-date.due-today { color: var(--warning-soft); font-weight: var(--weight-semibold); }
     .due-date.due-today::before { content: "Today •"; font-size: var(--text-xs); letter-spacing: .3px; text-transform: uppercase; }
-    html[data-theme="dark"] .due-date.due-today { color: #fbbf24; }
 
     .task-card.is-overdue {
       border-left: 3px solid var(--danger);
@@ -1104,13 +1270,7 @@
       gap: var(--space-3);
     }
 
-    .modal-header h3 {
-      font-family: 'Fraunces', serif;
-      font-size: var(--text-xl);
-      font-weight: var(--weight-semibold);
-      letter-spacing: -0.2px;
-      line-height: 1.2;
-    }
+    /* .modal-header h3 uses h3 base styles */
 
     .modal-close {
       background: none;
@@ -1232,10 +1392,8 @@
       font-weight: 700;
       color: var(--text);
     }
-    .fin-summary-value.pos { color: #16a34a; }
-    .fin-summary-value.neg { color: #dc2626; }
-    html[data-theme="dark"] .fin-summary-value.pos { color: #86efac; }
-    html[data-theme="dark"] .fin-summary-value.neg { color: #fca5a5; }
+    .fin-summary-value.pos { color: var(--positive-soft); }
+    .fin-summary-value.neg { color: var(--negative-soft); }
     .fin-section-title {
       font-size: 12px;
       font-weight: 700;
@@ -1288,6 +1446,9 @@
       white-space: nowrap;
       color: var(--text);
     }
+    .fin-card-amount.pos { color: var(--positive-soft); }
+    .fin-card-amount.neg { color: var(--negative-soft); }
+    .fin-card-amount-suffix { font-size: var(--text-xs); font-weight: 400; color: var(--muted); margin-left: 2px; }
     .fin-card-meta {
       font-size: 12px;
       color: var(--muted);
@@ -1298,6 +1459,7 @@
     }
     .fin-card-meta span { white-space: nowrap; }
     .fin-payoff-timeline { margin-top: 12px; }
+    .fin-payoff-warn { font-size: var(--text-xs); color: var(--negative-soft); margin-top: 8px; }
     .fin-debt-bar-wrap {
       position: relative;
       height: 6px;
@@ -1427,14 +1589,9 @@
       white-space: nowrap;
     }
     .btn-done.is-done {
-      background: #dcfce7;
-      border-color: #86efac;
-      color: #15803d;
-    }
-    html[data-theme="dark"] .btn-done.is-done {
-      background: #14532d;
-      border-color: #166534;
-      color: #86efac;
+      background: var(--badge-done-bg);
+      border-color: var(--badge-done-border);
+      color: var(--badge-done-fg);
     }
 
     .habit-history-toggle {
@@ -1538,7 +1695,7 @@
     }
 
     /* Inline status messages */
-    .msg-ok  { color: #16a34a; }
+    .msg-ok  { color: var(--positive-soft); }
     .msg-err { color: var(--danger); }
 
     /* ── Home page ── */
@@ -1559,9 +1716,9 @@
     }
 
     .home-greeting-name {
-      font-family: 'Fraunces', serif;
+      font-family: var(--font-display);
       font-size: 34px;
-      font-weight: 700;
+      font-weight: var(--weight-bold);
       color: var(--text);
       letter-spacing: -0.5px;
       line-height: 1.15;
@@ -1575,9 +1732,10 @@
 
     .home-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
       gap: 16px;
       margin-top: 8px;
+      grid-auto-rows: 1fr;
     }
 
     .home-widget {
@@ -1587,7 +1745,11 @@
       box-shadow: var(--shadow);
       padding: 20px 20px;
       transition: box-shadow .2s, transform .15s;
+      display: flex;
+      flex-direction: column;
+      min-height: 220px;
     }
+    .home-widget > .home-widget-footer { margin-top: auto; }
     .home-widget:hover {
       box-shadow: var(--shadow-md);
       transform: translateY(-1px);
@@ -1626,12 +1788,27 @@
       letter-spacing: -1px;
       font-variant-numeric: tabular-nums;
     }
+    .home-widget-stat.pos { color: var(--positive-soft); }
+    .home-widget-stat.neg { color: var(--negative-soft); }
+    .home-widget-stat.muted { color: var(--muted); }
+    .home-widget-stat-denom { font-size: 16px; font-weight: 400; color: var(--muted); letter-spacing: 0; }
+    .home-widget-item.is-action { color: var(--primary); font-weight: var(--weight-medium); }
 
     .home-widget-sublabel {
       font-size: 12px;
       color: var(--muted);
       margin-bottom: 12px;
     }
+
+    .home-widget-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-top: 4px;
+      color: var(--muted);
+    }
+    .home-widget-row:first-of-type { margin-top: 10px; }
+    .home-widget-row-val { color: var(--text); font-weight: 600; }
 
     .home-widget-empty {
       font-size: 13px;
@@ -2246,12 +2423,9 @@
       margin-right: 6px;
       vertical-align: middle;
     }
-    .stb-task    { background: #ede9fe; color: #4338ca; }
-    .stb-note    { background: #dcfce7; color: #166534; }
-    .stb-journal { background: #fce7f3; color: #9d174d; }
-    [data-theme="dark"] .stb-task    { background: #1e1b4b; color: #a5b4fc; }
-    [data-theme="dark"] .stb-note    { background: #14532d; color: #86efac; }
-    [data-theme="dark"] .stb-journal { background: #500724; color: #f9a8d4; }
+    .stb-task    { background: var(--badge-in_progress-bg); color: var(--badge-in_progress-fg); }
+    .stb-note    { background: var(--badge-done-bg); color: var(--badge-done-fg); }
+    .stb-journal { background: var(--badge-medium-bg); color: var(--badge-medium-fg); }
     #search-empty { padding: 24px 16px; text-align: center; color: var(--muted); font-size: 14px; }
 
     /* ── Journal streaks ── */
@@ -2312,10 +2486,8 @@
       flex-shrink: 0;
       text-transform: uppercase;
     }
-    .ref-badge-note { background: #ede9fe; color: #4338ca; }
-    .ref-badge-task { background: #dcfce7; color: #15803d; }
-    html[data-theme="dark"] .ref-badge-note { background: #1e1b4b; color: #a5b4fc; }
-    html[data-theme="dark"] .ref-badge-task { background: #14532d; color: #86efac; }
+    .ref-badge-note { background: var(--badge-in_progress-bg); color: var(--badge-in_progress-fg); }
+    .ref-badge-task { background: var(--badge-done-bg); color: var(--badge-done-fg); }
 
     .ref-item-label { flex: 1; min-width: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ref-item-sub   { font-size: 11px; color: var(--muted); flex-shrink: 0; white-space: nowrap; }
@@ -2354,7 +2526,7 @@
       border-radius: 5px;
       font-size: 11px;
       font-weight: 700;
-      font-family: monospace;
+      font-family: var(--font-mono);
       color: var(--text);
       flex-shrink: 0;
     }
@@ -2364,7 +2536,7 @@
     /* Rendered reference links in preview */
     a.note-ref { text-decoration: none; font-weight: 500; border-bottom: 1px solid currentColor; padding-bottom: 1px; }
     a.note-ref-note { color: var(--primary); }
-    a.note-ref-task { color: #16a34a; }
+    a.note-ref-task { color: var(--positive-soft); }
     html[data-theme="dark"] a.note-ref-task { color: #4ade80; }
     a.note-ref:hover { opacity: .75; }
 
@@ -2394,7 +2566,7 @@
       flex-shrink: 0;
     }
 
-    .notes-left-header h2 { font-size: 17px; font-weight: 700; }
+    .notes-left-header h2 { font-size: var(--text-xl); font-weight: var(--weight-bold); }
 
     .notes-search { padding: 0 12px 10px; flex-shrink: 0; }
     .notes-search input { font-size: 13px; }
@@ -2441,6 +2613,41 @@
       margin: 0 4px;
       flex-shrink: 0;
     }
+
+    .notes-overflow-menu { position: relative; }
+    .btn-icon { padding: 6px 8px; min-width: auto; line-height: 0; }
+    .notes-overflow-dropdown {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 4px);
+      min-width: 180px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm, 8px);
+      box-shadow: var(--shadow-md);
+      z-index: 20;
+      padding: 4px;
+    }
+    .notes-overflow-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 8px 12px;
+      background: transparent;
+      border: 0;
+      border-radius: var(--radius-sm, 6px);
+      font-family: inherit;
+      font-size: var(--text-sm);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .notes-overflow-item:hover { background: var(--hover); }
+    .notes-overflow-danger { color: var(--danger); }
+    .notes-overflow-danger:hover { background: var(--status-danger-bg); }
+
+    /* Save button dirty/clean state */
+    #notes-save-btn:disabled { opacity: .6; cursor: default; }
+    #notes-save-btn.is-dirty { opacity: 1; cursor: pointer; }
 
     .notes-editor-body {
       flex: 1;
@@ -2770,7 +2977,7 @@
       padding: 16px 16px 12px;
       flex-shrink: 0;
     }
-    .journal-left-header h2 { font-size: 17px; font-weight: 700; }
+    .journal-left-header h2 { font-size: var(--text-xl); font-weight: var(--weight-bold); }
 
     .journal-left-search { padding: 0 12px 10px; flex-shrink: 0; }
     .journal-left-search input { font-size: 13px; }
@@ -3017,7 +3224,7 @@
       padding: 16px 16px 12px;
       flex-shrink: 0;
     }
-    .health-left-header h2 { font-size: 17px; font-weight: 700; }
+    .health-left-header h2 { font-size: var(--text-xl); font-weight: var(--weight-bold); }
 
     .health-back-link {
       padding: 10px 12px 0;
@@ -4170,7 +4377,7 @@
     }
     .pal-usage-model-name {
       font-size: 11px;
-      font-family: monospace;
+      font-family: var(--font-mono);
       color: var(--muted);
       margin-bottom: 8px;
     }
@@ -4473,7 +4680,7 @@
     <button class="sb-toggle" id="sb-toggle" title="Toggle sidebar" aria-label="Toggle sidebar" aria-controls="sidebar" aria-expanded="true">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <span class="logo" onclick="pages.show('home')" style="cursor:pointer;" role="link" tabindex="0"><img src="/icon.svg" alt="" />Memoire</span>
+    <span class="logo u-pointer" onclick="pages.show('home')" role="link" tabindex="0"><img src="/icon.svg" alt="" />Memoire</span>
     <button class="search-btn" id="search-open-btn" title="Search (/)" aria-label="Search">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       Search
@@ -4538,18 +4745,45 @@
             <span class="sb-arrow"><svg viewBox="0 0 10 10" fill="currentColor"><polygon points="2,1 8,5 2,9"/></svg></span>
           </div>
           <div class="sb-section-body hidden" id="sb-journal-body">
-            <div style="padding:4px 10px 6px;">
+            <div class="sb-section-body-inner">
               <button class="btn btn-secondary btn-sm btn-full" id="journal-today-btn" onclick="event.stopPropagation()">Today's entry</button>
             </div>
-            <div class="sb-sub-label">Tracking</div>
-            <button class="sb-sub-link" data-page="habits" onclick="pages.show('habits')">Habits</button>
-            <button class="sb-sub-link" data-page="goals" onclick="pages.show('goals')">Goals</button>
-            <button class="sb-sub-link" data-page="finances" onclick="pages.show('finances')">Finances</button>
-            <div class="sb-sub-label">Health</div>
-            <button class="sb-sub-link" data-page="health" onclick="pages.show('health')">Exercise</button>
-            <button class="sb-sub-link" data-page="nutrition" onclick="pages.show('nutrition')">Nutrition</button>
           </div>
         </div>
+
+        <div class="sb-group-label">Tracking</div>
+        <div class="sb-section" id="sb-habits">
+          <div class="sb-section-hdr" onclick="sidebar.navigate('habits')">
+            <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+            <span class="sb-hdr-label">Habits</span>
+          </div>
+        </div>
+        <div class="sb-section" id="sb-goals">
+          <div class="sb-section-hdr" onclick="sidebar.navigate('goals')">
+            <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>
+            <span class="sb-hdr-label">Goals</span>
+          </div>
+        </div>
+        <div class="sb-section" id="sb-health">
+          <div class="sb-section-hdr" onclick="sidebar.navigate('health')">
+            <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+            <span class="sb-hdr-label">Exercise</span>
+          </div>
+        </div>
+        <div class="sb-section" id="sb-nutrition">
+          <div class="sb-section-hdr" onclick="sidebar.navigate('nutrition')">
+            <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 0-5 5c0 3 2 5 2 8 0 2-1 4-1 5 0 1 1 2 4 2s4-1 4-2c0-1-1-3-1-5 0-3 2-5 2-8a5 5 0 0 0-5-5z"/></svg></span>
+            <span class="sb-hdr-label">Nutrition</span>
+          </div>
+        </div>
+        <div class="sb-section" id="sb-finances">
+          <div class="sb-section-hdr" onclick="sidebar.navigate('finances')">
+            <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+            <span class="sb-hdr-label">Finances</span>
+          </div>
+        </div>
+
+        <div class="sb-group-label">Library</div>
         <div class="sb-section" id="sb-feeds">
           <div class="sb-section-hdr" onclick="sidebar.navigate('feeds')">
             <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg></span>
@@ -4600,21 +4834,37 @@
   <main id="page-tasks" class="hidden">
     <div class="toolbar">
       <h2>Tasks</h2>
-      <button class="btn btn-secondary" id="pomo-toggle-visibility-btn" style="display:flex;align-items:center;gap:5px;">
+      <button class="btn btn-secondary u-row-sm" id="pomo-toggle-visibility-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         Pomodoro
       </button>
-      <button class="btn btn-secondary" id="task-view-btn" style="display:flex;align-items:center;gap:5px;">
+      <button class="btn btn-secondary u-row-sm" id="task-view-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Calendar
       </button>
       <button class="btn btn-primary" id="new-task-btn">+ New task</button>
     </div>
     <div class="filters">
-      <button class="filter-btn active" data-filter="all">All</button>
-      <button class="filter-btn" data-filter="todo">To Do</button>
-      <button class="filter-btn" data-filter="in_progress">In Progress</button>
-      <button class="filter-btn" data-filter="done">Done</button>
+      <button class="filter-btn active" data-filter="all">All <span class="filter-count" id="fc-all">0</span></button>
+      <button class="filter-btn" data-filter="todo">To Do <span class="filter-count" id="fc-todo">0</span></button>
+      <button class="filter-btn" data-filter="in_progress">In Progress <span class="filter-count" id="fc-in_progress">0</span></button>
+      <button class="filter-btn" data-filter="done">Done <span class="filter-count" id="fc-done">0</span></button>
+      <div class="filters-spacer"></div>
+      <label class="filter-sort">
+        <span>Sort</span>
+        <select id="task-sort" class="filter-sort-select">
+          <option value="smart">Smart (overdue→today→later)</option>
+          <option value="due_asc">Due date (earliest)</option>
+          <option value="due_desc">Due date (latest)</option>
+          <option value="priority">Priority</option>
+          <option value="created">Recently added</option>
+          <option value="title">Title A→Z</option>
+        </select>
+      </label>
+      <label class="filter-sort">
+        <input type="checkbox" id="task-group-toggle" checked>
+        <span>Group</span>
+      </label>
     </div>
     <div class="pomodoro-widget hidden" id="pomodoro-widget">
       <div class="pomodoro-top">
@@ -4686,17 +4936,23 @@
       </div>
 
       <!-- Editor pane (hidden until a note is opened) -->
-      <div id="notes-editor-pane" class="hidden" style="display:flex;flex-direction:column;height:100%;">
+      <div id="notes-editor-pane" class="hidden" class="u-stretch-col">
         <div id="notes-overlay-loader" class="overlay-loader hidden"><div class="spinner"></div></div>
         <div class="notes-editor-header">
           <span class="notes-folder-crumb" id="notes-entry-label"></span>
           <button class="btn btn-secondary" id="notes-preview-btn">Preview</button>
           <button class="btn btn-secondary hidden" id="notes-attach-btn">Attach</button>
           <input type="file" id="notes-attach-input" style="display:none" multiple>
-          <button class="btn btn-primary" id="notes-save-btn">Save</button>
+          <button class="btn btn-primary" id="notes-save-btn" disabled>Saved</button>
           <button class="btn btn-secondary" id="notes-close-btn">Close</button>
-          <span class="notes-toolbar-sep hidden" id="notes-delete-sep"></span>
-          <button class="btn btn-danger hidden" id="notes-delete-btn">Delete</button>
+          <div class="notes-overflow-menu hidden" id="notes-overflow-wrap">
+            <button class="btn btn-secondary btn-icon" id="notes-overflow-btn" aria-label="More actions" title="More actions">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+            </button>
+            <div class="notes-overflow-dropdown hidden" id="notes-overflow-menu" role="menu">
+              <button class="notes-overflow-item notes-overflow-danger" id="notes-delete-btn" role="menuitem">Delete note</button>
+            </div>
+          </div>
         </div>
         <div class="notes-editor-body">
           <input type="text" class="entry-title-input" id="notes-title-input" placeholder="Untitled" />
@@ -4772,7 +5028,7 @@
         <div class="empty-icon">&#127939;</div>
         <p>Select a day from the calendar<br>to log your workout.</p>
       </div>
-      <div id="health-editor" class="hidden" style="display:flex;flex-direction:column;height:100%;">
+      <div id="health-editor" class="hidden" class="u-stretch-col">
         <div class="health-editor-header">
           <span class="health-date-label" id="health-date-label"></span>
           <button class="btn btn-danger hidden" id="health-delete-btn">Delete</button>
@@ -4782,7 +5038,7 @@
           <div id="health-exercises"></div>
           <button class="btn btn-secondary" id="health-add-exercise-btn" style="margin-bottom:20px;">+ Add exercise</button>
           <div class="field">
-            <label style="font-size:12px;color:var(--muted);">Notes</label>
+            <label class="u-text-xs u-muted">Notes</label>
             <textarea id="health-notes" placeholder="How did it go?..." rows="3"></textarea>
           </div>
         </div>
@@ -4812,7 +5068,7 @@
         <div class="empty-icon">&#127829;</div>
         <p>Select a day from the calendar<br>to log your meals.</p>
       </div>
-      <div id="nutrition-editor" class="hidden" style="display:flex;flex-direction:column;height:100%;">
+      <div id="nutrition-editor" class="hidden" class="u-stretch-col">
         <div class="health-editor-header">
           <span class="health-date-label" id="nutrition-date-label"></span>
           <button class="btn btn-danger hidden" id="nutrition-delete-btn">Delete</button>
@@ -4823,7 +5079,7 @@
           <div id="nutrition-meals"></div>
           <button class="btn btn-secondary" id="nutrition-add-meal-btn" style="margin-bottom:20px;">+ Add meal</button>
           <div class="field">
-            <label style="font-size:12px;color:var(--muted);">Notes</label>
+            <label class="u-text-xs u-muted">Notes</label>
             <textarea id="nutrition-notes" placeholder="How was your eating today?..." rows="3"></textarea>
           </div>
         </div>
@@ -4850,7 +5106,7 @@
       <div class="settings-row">
         <div>
           <div class="settings-label">User ID</div>
-          <div class="settings-desc" id="settings-sub" style="font-family:monospace;font-size:12px;">—</div>
+          <div class="settings-desc mono" id="settings-sub">—</div>
         </div>
       </div>
       <div class="settings-row">
@@ -4860,7 +5116,7 @@
         </div>
       </div>
       <div class="settings-row">
-        <div style="flex:1;">
+        <div class="u-flex1">
           <div class="settings-label">Display name</div>
           <div class="settings-desc">Used in greetings throughout the app</div>
         </div>
@@ -4870,7 +5126,7 @@
         </div>
       </div>
       <div class="settings-row">
-        <div style="flex:1;">
+        <div class="u-flex1">
           <div class="settings-label">AI Pal name</div>
           <div class="settings-desc">The name shown in the AI assistant header (default: AI Pal)</div>
         </div>
@@ -4880,7 +5136,7 @@
         </div>
       </div>
       <div class="settings-row">
-        <div style="flex:1;">
+        <div class="u-flex1">
           <div class="settings-label">Profile inference</div>
           <div class="settings-desc">How often the AI scans your tasks, habits, journal, and notes to automatically update your profile</div>
         </div>
@@ -4927,7 +5183,7 @@
           <div class="settings-desc">Enter your ntfy topic URL to receive task notifications (e.g. https://ntfy.sh/my-topic)</div>
         </div>
         <div style="display:flex; gap:8px;">
-          <input type="url" id="ntfy-url" placeholder="https://ntfy.sh/my-topic" style="flex:1;" />
+          <input type="url" id="ntfy-url" placeholder="https://ntfy.sh/my-topic" class="u-flex1" />
           <button class="btn btn-secondary" id="ntfy-save-btn">Save</button>
           <button class="btn btn-secondary" id="ntfy-test-btn">Test</button>
         </div>
@@ -4966,7 +5222,7 @@
           <div class="settings-desc">Use personal access tokens to authenticate API calls from scripts or third-party tools without a browser session. Tokens are shown only once at creation.</div>
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
-          <input type="text" id="pat-name-input" placeholder="Token name (e.g. my-script)" style="flex:1;" maxlength="100" />
+          <input type="text" id="pat-name-input" placeholder="Token name (e.g. my-script)" class="u-flex1" maxlength="100" />
           <button class="btn btn-secondary" id="pat-create-btn">Generate token</button>
         </div>
         <div id="pat-new-token-box" class="hidden" style="background:var(--hover);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;">
@@ -5005,7 +5261,7 @@
           <div class="settings-desc">Add RSS or Atom feed URLs to read in the RSS Feeds page (max 20)</div>
         </div>
         <div style="display:flex; gap:8px;">
-          <input type="url" id="feed-url-input" placeholder="https://example.com/feed.xml" style="flex:1;" />
+          <input type="url" id="feed-url-input" placeholder="https://example.com/feed.xml" class="u-flex1" />
           <button class="btn btn-secondary" id="feed-add-btn">Add feed</button>
         </div>
         <div id="feed-add-msg" class="hidden" style="font-size:13px;"></div>
@@ -5023,7 +5279,7 @@
     <div id="feeds-loader" class="page-loader hidden"><div class="spinner"></div></div>
     <div id="feeds-empty" class="empty-state hidden">
       <p>No feeds added yet.</p>
-      <p style="font-size:13px;color:var(--muted);">Add RSS feed URLs in Settings to get started.</p>
+      <p class="u-text-sm u-muted">Add RSS feed URLs in Settings to get started.</p>
     </div>
     <div id="feeds-filter-bar" class="feeds-filter-bar hidden"></div>
     <div id="feeds-grid" class="feeds-grid"></div>
@@ -5038,7 +5294,7 @@
     <div id="favorites-loader" class="page-loader hidden"><div class="spinner"></div></div>
     <div id="favorites-empty" class="empty-state hidden">
       <p>No favorited articles yet.</p>
-      <p style="font-size:13px;color:var(--muted);">Heart articles on the RSS Feeds page to save them here.</p>
+      <p class="u-text-sm u-muted">Heart articles on the RSS Feeds page to save them here.</p>
     </div>
     <div id="favorites-grid" class="feeds-grid"></div>
   </main>
@@ -5056,7 +5312,7 @@
     <div id="bm-loader" class="page-loader hidden"><div class="spinner"></div></div>
     <div id="bm-empty" class="empty-state hidden">
       <p>No bookmarks yet.</p>
-      <p style="font-size:13px;color:var(--muted);">Click "+ Add bookmark" to save your first URL.</p>
+      <p class="u-text-sm u-muted">Click "+ Add bookmark" to save your first URL.</p>
     </div>
     <div id="bm-grid" class="bm-grid"></div>
   </main>
@@ -5071,7 +5327,7 @@
       <div class="modal-body">
         <div id="bm-modal-error" class="error-msg hidden"></div>
         <div class="field">
-          <label for="bm-f-url">URL <span style="color:var(--danger)">*</span></label>
+          <label for="bm-f-url">URL <span class="u-danger">*</span></label>
           <input type="url" id="bm-f-url" placeholder="https://...">
         </div>
         <div class="field">
@@ -5204,7 +5460,7 @@
         </div>
         <div class="profile-fields-actions">
           <button class="btn btn-primary btn-sm" id="profile-fields-save-btn">Save</button>
-          <span id="profile-fields-msg" class="hidden" style="font-size:13px;color:var(--muted);"></span>
+          <span id="profile-fields-msg" class="hidden" class="u-text-sm u-muted"></span>
         </div>
       </div>
 
@@ -5349,7 +5605,7 @@
     <div class="modal-body">
       <div id="habit-modal-error" class="error-msg hidden"></div>
       <div class="field">
-        <label for="habit-name">Name <span style="color:var(--danger)">*</span></label>
+        <label for="habit-name">Name <span class="u-danger">*</span></label>
         <input type="text" id="habit-name" placeholder="e.g. Morning run, Read 20 minutes" />
       </div>
       <div class="field">
@@ -5387,7 +5643,7 @@
     <div class="modal-body">
       <div id="goal-modal-error" class="error-msg hidden"></div>
       <div class="field">
-        <label for="goal-title">Title <span style="color:var(--danger)">*</span></label>
+        <label for="goal-title">Title <span class="u-danger">*</span></label>
         <input type="text" id="goal-title" placeholder="What do you want to achieve?" />
       </div>
       <div class="field">
@@ -5435,7 +5691,7 @@
       <div id="debt-modal-error" class="error-msg hidden"></div>
       <div class="field-row">
         <div class="field">
-          <label for="debt-name">Name <span style="color:var(--danger)">*</span></label>
+          <label for="debt-name">Name <span class="u-danger">*</span></label>
           <input type="text" id="debt-name" placeholder="e.g. Car loan, Visa, Mortgage" />
         </div>
         <div class="field">
@@ -5457,17 +5713,17 @@
           <input type="number" id="debt-original-balance" min="0.01" step="0.01" placeholder="e.g. 25000" />
         </div>
         <div class="field">
-          <label for="debt-balance">Current balance <span style="color:var(--danger)">*</span></label>
+          <label for="debt-balance">Current balance <span class="u-danger">*</span></label>
           <input type="number" id="debt-balance" min="0.01" step="0.01" placeholder="0.00" />
         </div>
       </div>
       <div class="field-row">
         <div class="field">
-          <label for="debt-apr">Interest rate (APR %) <span style="color:var(--danger)">*</span></label>
+          <label for="debt-apr">Interest rate (APR %) <span class="u-danger">*</span></label>
           <input type="number" id="debt-apr" min="0" step="0.01" placeholder="e.g. 7.99" />
         </div>
         <div class="field">
-          <label for="debt-payment">Monthly payment <span style="color:var(--danger)">*</span></label>
+          <label for="debt-payment">Monthly payment <span class="u-danger">*</span></label>
           <input type="number" id="debt-payment" min="0.01" step="0.01" placeholder="0.00" />
         </div>
       </div>
@@ -5496,12 +5752,12 @@
     <div class="modal-body">
       <div id="income-modal-error" class="error-msg hidden"></div>
       <div class="field">
-        <label for="income-name">Source <span style="color:var(--danger)">*</span></label>
+        <label for="income-name">Source <span class="u-danger">*</span></label>
         <input type="text" id="income-name" placeholder="e.g. Salary, Freelance, Rental" />
       </div>
       <div class="field-row">
         <div class="field">
-          <label for="income-amount">Amount <span style="color:var(--danger)">*</span></label>
+          <label for="income-amount">Amount <span class="u-danger">*</span></label>
           <input type="number" id="income-amount" min="0.01" step="0.01" placeholder="0.00" />
         </div>
         <div class="field">
@@ -5539,12 +5795,12 @@
     <div class="modal-body">
       <div id="expense-modal-error" class="error-msg hidden"></div>
       <div class="field">
-        <label for="expense-name">Name <span style="color:var(--danger)">*</span></label>
+        <label for="expense-name">Name <span class="u-danger">*</span></label>
         <input type="text" id="expense-name" placeholder="e.g. Rent, Hydro, Netflix" />
       </div>
       <div class="field-row">
         <div class="field">
-          <label for="expense-amount">Amount <span style="color:var(--danger)">*</span></label>
+          <label for="expense-amount">Amount <span class="u-danger">*</span></label>
           <input type="number" id="expense-amount" min="0.01" step="0.01" placeholder="0.00" />
         </div>
         <div class="field">
@@ -5601,7 +5857,7 @@
     <div class="modal-body">
       <div id="modal-error" class="error-msg hidden"></div>
       <div class="field">
-        <label for="task-title">Title <span style="color:var(--danger)">*</span></label>
+        <label for="task-title">Title <span class="u-danger">*</span></label>
         <input type="text" id="task-title" placeholder="What needs to be done?" />
       </div>
       <div class="field">
@@ -5839,6 +6095,8 @@
     taskView: "list",
     taskCalMonth: null,
     taskCalSelectedDate: null,
+    taskSort: "smart",
+    taskGroup: true,
   };
 
   // ── UI helpers ───────────────────────────────────────────────────────────────
@@ -5889,6 +6147,79 @@
     return 5;
   }
 
+  function taskCardHtml(task) {
+    const active  = task.status !== "done";
+    const overdue = active && isOverdue(task.due_date);
+    const today   = active && isDueToday(task.due_date);
+    const isFocus = pomodoro.taskId === task.task_id && pomodoro.state !== "idle";
+    let cardClass = overdue ? "task-card is-overdue" : today ? "task-card is-due-today" : "task-card";
+    if (!active) cardClass += " task-card-done";
+    if (isFocus) cardClass += " is-active-focus";
+    const dateClass = overdue ? "due-date overdue" : today ? "due-date due-today" : "due-date";
+
+    return `
+      <div class="${cardClass}" onclick="modal.open('${task.task_id}')">
+        <div class="task-card-body">
+          <div class="task-title ${task.status === 'done' ? 'done-title' : ''}">${escHtml(task.title)}</div>
+          ${task.description ? `<div class="task-desc">${escHtml(task.description)}</div>` : ""}
+          <div class="task-meta">
+            <select class="status-select badge-${task.status}"
+                    onclick="event.stopPropagation()"
+                    onchange="event.stopPropagation(); updateStatus('${task.task_id}', this)">
+              <option value="todo"        ${task.status === 'todo'        ? 'selected' : ''}>To Do</option>
+              <option value="in_progress" ${task.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+              <option value="done"        ${task.status === 'done'        ? 'selected' : ''}>Done</option>
+            </select>
+            <span class="badge badge-${task.priority}">${task.priority}</span>
+            ${task.due_date ? `<span class="${dateClass}">${formatDueDate(task.due_date)}</span>` : ""}
+          </div>
+        </div>
+        ${active ? `<button class="pomo-focus-btn${isFocus ? ' active' : ''}" title="Focus on this task"
+          onclick="event.stopPropagation(); pomodoro.focusTask('${task.task_id}')">&#9654;</button>` : ""}
+      </div>`;
+  }
+
+  function taskBucket(task) {
+    if (task.status === "done") return { key: "done", label: "Done" };
+    if (!task.due_date) return { key: "later", label: "Later" };
+    if (isOverdue(task.due_date)) return { key: "overdue", label: "Overdue" };
+    if (isDueToday(task.due_date)) return { key: "today", label: "Today" };
+    const d = new Date(task.due_date + "T00:00:00");
+    const t = new Date(todayStr() + "T00:00:00");
+    const diffDays = Math.round((d - t) / 86400000);
+    if (diffDays <= 7) return { key: "week", label: "This week" };
+    return { key: "later", label: "Later" };
+  }
+
+  function priorityRank(p) {
+    return { high: 0, medium: 1, low: 2 }[p] ?? 3;
+  }
+
+  function sortTasks(arr) {
+    const by = state.taskSort || "smart";
+    const a = [...arr];
+    const farFuture = "9999-12-31";
+    const cmpDateAsc = (x, y) => (x.due_date || farFuture).localeCompare(y.due_date || farFuture);
+    switch (by) {
+      case "due_asc":   return a.sort(cmpDateAsc);
+      case "due_desc":  return a.sort((x, y) => (y.due_date || "").localeCompare(x.due_date || ""));
+      case "priority":  return a.sort((x, y) => priorityRank(x.priority) - priorityRank(y.priority) || cmpDateAsc(x, y));
+      case "created":   return a.sort((x, y) => (y.created_at || "").localeCompare(x.created_at || ""));
+      case "title":     return a.sort((x, y) => (x.title || "").localeCompare(y.title || ""));
+      case "smart":
+      default:          return a.sort((x, y) => taskUrgency(x) - taskUrgency(y) || cmpDateAsc(x, y));
+    }
+  }
+
+  function updateFilterCounts(folderTasks) {
+    const counts = { all: folderTasks.length, todo: 0, in_progress: 0, done: 0 };
+    folderTasks.forEach(t => { if (counts[t.status] != null) counts[t.status]++; });
+    ["all","todo","in_progress","done"].forEach(k => {
+      const el = $(`fc-${k}`);
+      if (el) el.textContent = counts[k];
+    });
+  }
+
   function renderTasks() {
     if (state.taskView === "calendar") {
       $("task-list").classList.add("hidden");
@@ -5904,10 +6235,13 @@
     const folderTasks = state.currentFolderID
       ? state.tasks.filter(t => t.folder_id === state.currentFolderID || (!t.folder_id && isDefault))
       : state.tasks;
-    const visible = (state.filter === "all"
-      ? [...folderTasks]
-      : folderTasks.filter(t => t.status === state.filter)
-    ).sort((a, b) => taskUrgency(a) - taskUrgency(b));
+
+    updateFilterCounts(folderTasks);
+
+    const visibleUnsorted = state.filter === "all"
+      ? folderTasks
+      : folderTasks.filter(t => t.status === state.filter);
+    const visible = sortTasks(visibleUnsorted);
 
     if (visible.length === 0) {
       list.innerHTML = `
@@ -5918,36 +6252,29 @@
       return;
     }
 
-    list.innerHTML = visible.map(task => {
-      const active  = task.status !== "done";
-      const overdue = active && isOverdue(task.due_date);
-      const today   = active && isDueToday(task.due_date);
-      const isFocus = pomodoro.taskId === task.task_id && pomodoro.state !== "idle";
-      let cardClass = overdue ? "task-card is-overdue" : today ? "task-card is-due-today" : "task-card";
-      if (!active) cardClass += " task-card-done";
-      if (isFocus) cardClass += " is-active-focus";
-      const dateClass = overdue ? "due-date overdue" : today ? "due-date due-today" : "due-date";
+    const grouping = state.taskGroup && (state.taskSort === "smart") && state.filter !== "done";
+    if (!grouping) {
+      list.innerHTML = visible.map(taskCardHtml).join("");
+      return;
+    }
 
+    const order = ["overdue", "today", "week", "later", "done"];
+    const labels = { overdue: "Overdue", today: "Today", week: "This week", later: "Later", done: "Done" };
+    const groups = {};
+    visible.forEach(t => {
+      const b = taskBucket(t);
+      if (!groups[b.key]) groups[b.key] = [];
+      groups[b.key].push(t);
+    });
+    list.innerHTML = order.filter(k => groups[k] && groups[k].length).map(k => {
+      const headerCls = k === "overdue" ? "task-group-header overdue"
+                       : k === "today" ? "task-group-header today"
+                       : "task-group-header";
       return `
-        <div class="${cardClass}" onclick="modal.open('${task.task_id}')">
-          <div class="task-card-body">
-            <div class="task-title ${task.status === 'done' ? 'done-title' : ''}">${escHtml(task.title)}</div>
-            ${task.description ? `<div class="task-desc">${escHtml(task.description)}</div>` : ""}
-            <div class="task-meta">
-              <select class="status-select badge-${task.status}"
-                      onclick="event.stopPropagation()"
-                      onchange="event.stopPropagation(); updateStatus('${task.task_id}', this)">
-                <option value="todo"        ${task.status === 'todo'        ? 'selected' : ''}>To Do</option>
-                <option value="in_progress" ${task.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
-                <option value="done"        ${task.status === 'done'        ? 'selected' : ''}>Done</option>
-              </select>
-              <span class="badge badge-${task.priority}">${task.priority}</span>
-              ${task.due_date ? `<span class="${dateClass}">${formatDueDate(task.due_date)}</span>` : ""}
-            </div>
-          </div>
-          ${active ? `<button class="pomo-focus-btn${isFocus ? ' active' : ''}" title="Focus on this task"
-            onclick="event.stopPropagation(); pomodoro.focusTask('${task.task_id}')">&#9654;</button>` : ""}
-        </div>`;
+        <section class="task-group">
+          <div class="${headerCls}"><span>${labels[k]}</span><span class="task-group-count">${groups[k].length}</span></div>
+          ${groups[k].map(taskCardHtml).join("")}
+        </section>`;
     }).join("");
   }
 
@@ -6466,6 +6793,21 @@
     });
   });
 
+  const taskSortEl = $("task-sort");
+  if (taskSortEl) {
+    taskSortEl.addEventListener("change", () => {
+      state.taskSort = taskSortEl.value;
+      renderTasks();
+    });
+  }
+  const taskGroupToggle = $("task-group-toggle");
+  if (taskGroupToggle) {
+    taskGroupToggle.addEventListener("change", () => {
+      state.taskGroup = taskGroupToggle.checked;
+      renderTasks();
+    });
+  }
+
   $("task-view-btn").addEventListener("click", () => {
     state.taskView = state.taskView === "list" ? "calendar" : "list";
     $("task-view-btn").textContent = state.taskView === "calendar" ? "List" : "Calendar";
@@ -6643,21 +6985,21 @@
     try {
       const tokens = await api.call("GET", "/tokens");
       if (!tokens || tokens.length === 0) {
-        container.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:4px 0;">No tokens yet.</div>';
+        container.innerHTML = '<div class="settings-empty">No tokens yet.</div>';
         return;
       }
       container.innerHTML = tokens.map(t => `
-        <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--border);">
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(t.name)}">${escHtml(t.name)}</div>
-            <div style="font-size:12px;color:var(--muted);">Created ${t.created_at ? new Date(t.created_at).toLocaleDateString() : '—'}</div>
+        <div class="settings-row">
+          <div class="settings-row-main">
+            <div class="settings-row-title" title="${escHtml(t.name)}">${escHtml(t.name)}</div>
+            <div class="settings-row-sub">Created ${t.created_at ? new Date(t.created_at).toLocaleDateString() : '—'}</div>
           </div>
-          <button class="btn btn-secondary" style="flex-shrink:0;color:var(--danger,#c0392b);" data-token-id="${escHtml(t.token_id)}">Revoke</button>
+          <button class="btn btn-ghost-danger" data-token-id="${escHtml(t.token_id)}">Revoke</button>
         </div>
       `).join('');
       container.querySelectorAll('[data-token-id]').forEach(btn => {
         btn.addEventListener('click', async () => {
-          if (!confirm(`Revoke token "${btn.closest('div').querySelector('[style*=font-weight]').textContent}"?`)) return;
+          if (!confirm(`Revoke token "${btn.closest('.settings-row').querySelector('.settings-row-title').textContent}"?`)) return;
           btn.disabled = true;
           try {
             await api.call("DELETE", `/tokens/${btn.dataset.tokenId}`);
@@ -6669,7 +7011,7 @@
         });
       });
     } catch (e) {
-      container.innerHTML = `<div style="font-size:13px;color:var(--danger,#c0392b);">Failed to load tokens: ${escHtml(e.message)}</div>`;
+      container.innerHTML = `<div class="settings-load-error">Failed to load tokens: ${escHtml(e.message)}</div>`;
     }
   }
 
@@ -7145,10 +7487,11 @@
       $("notes-body-input").value   = "";
       $("notes-tags-input").value   = "";
       $("notes-save-status").textContent = "";
-      $("notes-delete-btn").classList.add("hidden");
-      $("notes-delete-sep").classList.add("hidden");
+      $("notes-overflow-wrap").classList.add("hidden");
+      $("notes-overflow-menu").classList.add("hidden");
       $("notes-attach-btn").classList.add("hidden");
       $("notes-preview-btn").textContent = "Preview";
+      notesApp.setSaveState("clean");
       $("notes-body-input").classList.remove("hide");
       $("notes-preview-pane").classList.remove("show");
       $("notes-md-toolbar").classList.remove("hidden");
@@ -7176,9 +7519,9 @@
         $("notes-body-input").value   = note.body  || "";
         $("notes-tags-input").value   = (note.tags || []).join(", ");
         $("notes-save-status").textContent = "";
-        $("notes-delete-btn").classList.remove("hidden");
-        $("notes-delete-sep").classList.remove("hidden");
+        $("notes-overflow-wrap").classList.remove("hidden");
         $("notes-attach-btn").classList.remove("hidden");
+        notesApp.setSaveState("clean");
         $("notes-preview-btn").textContent = "Edit";
         $("notes-preview-pane").innerHTML  = renderNoteMarkdown(note.body || "", note.title);
         resolveNoteImages($("notes-preview-pane"));
@@ -7243,7 +7586,27 @@
 
     scheduleSave() {
       notesApp.isDirty = true;
-      $("notes-save-status").textContent = "Unsaved";
+      $("notes-save-status").textContent = "Unsaved changes";
+      notesApp.setSaveState("dirty");
+    },
+
+    setSaveState(mode) {
+      const btn = $("notes-save-btn");
+      if (!btn) return;
+      if (mode === "dirty") {
+        btn.disabled = false;
+        btn.textContent = "Save";
+        btn.classList.add("is-dirty");
+      } else if (mode === "saving") {
+        btn.disabled = true;
+        btn.textContent = "Saving…";
+        btn.classList.remove("is-dirty");
+      } else {
+        // clean/saved
+        btn.disabled = true;
+        btn.textContent = "Saved";
+        btn.classList.remove("is-dirty");
+      }
     },
 
     async save() {
@@ -7255,8 +7618,7 @@
         folder_id: notesApp.currentNote.folder_id,
       };
 
-      $("notes-save-btn").disabled    = true;
-      $("notes-save-btn").textContent = "Saving...";
+      notesApp.setSaveState("saving");
 
       try {
         let saved;
@@ -7265,8 +7627,7 @@
           notesApp.currentNote = saved;
           notesApp.isNew       = false;
           notesApp.notes.unshift({ ...saved, preview: saved.body.slice(0, 200) });
-          $("notes-delete-btn").classList.remove("hidden");
-          $("notes-delete-sep").classList.remove("hidden");
+          $("notes-overflow-wrap").classList.remove("hidden");
         } else {
           saved = await api.call("PUT", `/notes/${notesApp.currentNote.note_id}`, payload);
           notesApp.currentNote = saved;
@@ -7280,11 +7641,10 @@
           resolveNoteImages($("notes-preview-pane"));
         }
         notesApp.renderTree();
+        notesApp.setSaveState("clean");
       } catch (e) {
         $("notes-save-status").textContent = e.message;
-      } finally {
-        $("notes-save-btn").disabled    = false;
-        $("notes-save-btn").textContent = "Save";
+        notesApp.setSaveState("dirty");
       }
     },
 
@@ -7408,8 +7768,8 @@
           if (a.id === this.confirmingId) return `
             <div class="attachment-item">
               <span class="attachment-name" style="color:var(--text);text-decoration:none;cursor:default">${escHtml(a.name)}</span>
-              <span class="attachment-size" style="color:var(--danger)">Remove?</span>
-              <span class="attachment-del" onclick="noteAttachments.confirmRemove('${escHtml(a.id)}')" title="Yes, remove" style="color:var(--danger)">Yes</span>
+              <span class="attachment-size" class="u-danger">Remove?</span>
+              <span class="attachment-del" onclick="noteAttachments.confirmRemove('${escHtml(a.id)}')" title="Yes, remove" class="u-danger">Yes</span>
               <span class="attachment-del" onclick="noteAttachments.cancelRemove()" title="Cancel">No</span>
             </div>`;
           return `
@@ -7730,8 +8090,18 @@
 
   $("notes-close-btn").addEventListener("click",   () => { notesRef.hide(); notesApp.closeEditor(); });
   $("notes-save-btn").addEventListener("click",    () => notesApp.save());
-  $("notes-delete-btn").addEventListener("click",  () => notesApp.deleteNote());
+  $("notes-delete-btn").addEventListener("click",  () => { $("notes-overflow-menu").classList.add("hidden"); notesApp.deleteNote(); });
   $("notes-preview-btn").addEventListener("click", () => notesApp.togglePreview());
+  $("notes-overflow-btn").addEventListener("click", e => {
+    e.stopPropagation();
+    $("notes-overflow-menu").classList.toggle("hidden");
+  });
+  document.addEventListener("click", e => {
+    const wrap = $("notes-overflow-wrap");
+    if (wrap && !wrap.contains(e.target)) {
+      $("notes-overflow-menu")?.classList.add("hidden");
+    }
+  });
 
   // Markdown toolbar
   function applyToolbarAction(toolbar, textarea, scheduleSaveFn) {
@@ -9416,7 +9786,7 @@
                 </div>
               </div>`;
           } else {
-            timelineHTML = `<div class="fin-payoff-timeline" style="font-size:11px;color:#dc2626;margin-top:8px;">Payment does not cover interest — debt will not pay off</div>`;
+            timelineHTML = `<div class="fin-payoff-timeline fin-payoff-warn">Payment does not cover interest — debt will not pay off</div>`;
           }
           return `
             <div class="fin-card" role="button" tabindex="0" onclick="debtModal.open('${d.debt_id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();debtModal.open('${d.debt_id}');}">
@@ -9446,7 +9816,7 @@
           <div class="fin-card" role="button" tabindex="0" onclick="incomeModal.open('${i.income_id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();incomeModal.open('${i.income_id}');}">
             <div class="fin-card-header">
               <div class="fin-card-name">${escHtml(i.name)}</div>
-              <div class="fin-card-amount pos" style="color:#16a34a;">${finances.fmt(i.monthly_amount)}<span style="font-size:11px;font-weight:400;color:var(--muted);">/mo</span></div>
+              <div class="fin-card-amount pos">${finances.fmt(i.monthly_amount)}<span class="fin-card-amount-suffix">/mo</span></div>
             </div>
             <div class="fin-card-meta">
               <span>${finances.fmt(i.amount)} ${freqLabel[i.frequency] || i.frequency}</span>
@@ -9953,9 +10323,9 @@
           <div class="admin-card" style="grid-column: span 2;">
             <div class="admin-card-title">AWS Costs — ${costs.currency || "USD"}</div>
             <div style="display:flex;gap:24px;margin-bottom:12px;">
-              <div><div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Yesterday</div><div style="font-size:18px;font-weight:700;">${fmtMoney(costs.last_day)}</div></div>
-              <div><div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Last 7 days</div><div style="font-size:18px;font-weight:700;">${fmtMoney(costs.last_week)}</div></div>
-              <div><div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Last 30 days</div><div style="font-size:18px;font-weight:700;">${fmtMoney(costs.last_month)}</div></div>
+              <div><div class="u-text-meta">Yesterday</div><div style="font-size:18px;font-weight:700;">${fmtMoney(costs.last_day)}</div></div>
+              <div><div class="u-text-meta">Last 7 days</div><div style="font-size:18px;font-weight:700;">${fmtMoney(costs.last_week)}</div></div>
+              <div><div class="u-text-meta">Last 30 days</div><div style="font-size:18px;font-weight:700;">${fmtMoney(costs.last_month)}</div></div>
             </div>
             <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:60px;" preserveAspectRatio="none">
               <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--primary)" stop-opacity="0.18"/><stop offset="100%" stop-color="var(--primary)" stop-opacity="0"/></linearGradient></defs>
@@ -9969,7 +10339,7 @@
       // DynamoDB card
       if (stats?.dynamo) {
         const rows = Object.entries(stats.dynamo)
-          .map(([k, v]) => `<div class="admin-stat-row"><span style="color:var(--muted);">${k}</span><span class="admin-stat-value">${v?.toLocaleString() ?? "—"}</span></div>`)
+          .map(([k, v]) => `<div class="admin-stat-row"><span class="u-muted">${k}</span><span class="admin-stat-value">${v?.toLocaleString() ?? "—"}</span></div>`)
           .join("");
         html += `<div class="admin-card"><div class="admin-card-title">DynamoDB Item Counts</div>${rows}</div>`;
       }
@@ -9979,8 +10349,8 @@
         html += `
           <div class="admin-card">
             <div class="admin-card-title">S3 User Storage</div>
-            <div class="admin-stat-row"><span style="color:var(--muted);">Objects</span><span class="admin-stat-value">${stats.s3.objects?.toLocaleString() ?? "—"}</span></div>
-            <div class="admin-stat-row"><span style="color:var(--muted);">Total size</span><span class="admin-stat-value">${stats.s3.bytes != null ? fmtBytes(stats.s3.bytes) : "—"}</span></div>
+            <div class="admin-stat-row"><span class="u-muted">Objects</span><span class="admin-stat-value">${stats.s3.objects?.toLocaleString() ?? "—"}</span></div>
+            <div class="admin-stat-row"><span class="u-muted">Total size</span><span class="admin-stat-value">${stats.s3.bytes != null ? fmtBytes(stats.s3.bytes) : "—"}</span></div>
           </div>`;
       }
 
@@ -9990,8 +10360,8 @@
         html += `
           <div class="admin-card">
             <div class="admin-card-title">Lambda Invocations (7d)</div>
-            <div class="admin-stat-row"><span style="color:var(--muted);">Total</span><span class="admin-stat-value">${total.toLocaleString()}</span></div>
-            ${stats.lambda.slice(-4).map(p => `<div class="admin-stat-row"><span style="color:var(--muted);">${p.date.slice(5)}</span><span class="admin-stat-value">${p.count}</span></div>`).join("")}
+            <div class="admin-stat-row"><span class="u-muted">Total</span><span class="admin-stat-value">${total.toLocaleString()}</span></div>
+            ${stats.lambda.slice(-4).map(p => `<div class="admin-stat-row"><span class="u-muted">${p.date.slice(5)}</span><span class="admin-stat-value">${p.count}</span></div>`).join("")}
           </div>`;
       }
 
@@ -10036,15 +10406,15 @@
             </table>
             <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
               <div>
-                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Lambda invocations (7d)</div>
+                <div class="u-text-meta">Lambda invocations (7d)</div>
                 <div style="font-weight:600;">${lam.invocations_7d?.toLocaleString() ?? "—"}</div>
               </div>
               <div>
-                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Avg duration</div>
+                <div class="u-text-meta">Avg duration</div>
                 <div style="font-weight:600;">${fmtSec(lam.avg_duration_sec)}</div>
               </div>
               <div>
-                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Error rate</div>
+                <div class="u-text-meta">Error rate</div>
                 <div style="font-weight:600;${lam.error_rate_pct > 5 ? 'color:var(--danger)' : ''}">${fmtPct(lam.error_rate_pct)}</div>
               </div>
             </div>
@@ -10075,9 +10445,9 @@
           const label = LABELS[r.model_id] || r.model_id;
           return `
             <div class="admin-stat-row">
-              <span style="color:var(--muted);">${escHtml(label)}</span>
+              <span class="u-muted">${escHtml(label)}</span>
               <span style="display:flex;gap:16px;align-items:center;">
-                <span style="font-size:12px;color:var(--muted);">${r.invocations.toLocaleString()} calls &nbsp;·&nbsp; ${fmtT(r.input_tokens)}↑ ${fmtT(r.output_tokens)}↓</span>
+                <span class="u-text-xs u-muted">${r.invocations.toLocaleString()} calls &nbsp;·&nbsp; ${fmtT(r.input_tokens)}↑ ${fmtT(r.output_tokens)}↓</span>
                 <span class="admin-stat-value" style="color:var(--primary);">${fmtC(cost)}</span>
               </span>
             </div>`;
@@ -10087,8 +10457,8 @@
           <div class="admin-card" style="grid-column: span 2;">
             <div class="admin-card-title">AI Pal — Per-User Model Usage</div>
             <div style="display:flex;gap:24px;margin-bottom:12px;">
-              <div><div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Total invocations</div><div style="font-size:18px;font-weight:700;">${totalInv.toLocaleString()}</div></div>
-              <div><div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Total est. cost</div><div style="font-size:18px;font-weight:700;color:var(--primary);">${fmtC(totalCost)}</div></div>
+              <div><div class="u-text-meta">Total invocations</div><div style="font-size:18px;font-weight:700;">${totalInv.toLocaleString()}</div></div>
+              <div><div class="u-text-meta">Total est. cost</div><div style="font-size:18px;font-weight:700;color:var(--primary);">${fmtC(totalCost)}</div></div>
             </div>
             ${rows}
           </div>`;
@@ -10128,21 +10498,29 @@
     const dueTodayTasks = activeTasks.filter(t => t.due_date === today);
     const inProgress    = activeTasks.filter(t => t.status === "in_progress");
     const taskItems = [...new Map([...dueTodayTasks, ...inProgress].map(t => [t.task_id, t])).values()].slice(0, 5);
-    const tasksHtml = taskItems.length
-      ? taskItems.map(t => `<div class="home-widget-item" onclick="modal.open('${t.task_id}')">${escHtml(t.title)}</div>`).join("")
-      : `<div class="home-widget-empty">${activeTasks.length ? "Nothing due today" : "No active tasks"}</div>`;
+    const overdueCount = activeTasks.filter(t => t.due_date && t.due_date < today).length;
+    const tasksHeroNum = dueTodayTasks.length;
+    const tasksHeroCls = overdueCount > 0 ? "neg" : "";
+    const tasksHtml = `
+      <div class="home-widget-stat ${tasksHeroCls}">${tasksHeroNum}</div>
+      <div class="home-widget-sublabel">due today${overdueCount > 0 ? ` · ${overdueCount} overdue` : ""}</div>
+      ${taskItems.length
+        ? taskItems.map(t => `<div class="home-widget-item" onclick="modal.open('${t.task_id}')">${escHtml(t.title)}</div>`).join("")
+        : `<div class="home-widget-empty">${activeTasks.length ? "Nothing due today" : "No active tasks"}</div>`}`;
 
     // ── Habits widget ─────────────────────────────────────────────────────────
     const totalHabits = habits.data.length;
     const doneToday   = habits.data.filter(h => h.last_completed === today).length;
     const habitsHtml  = totalHabits
-      ? `<div class="home-widget-stat">${doneToday}<span style="font-size:16px;font-weight:400;color:var(--muted)"> / ${totalHabits}</span></div>
+      ? `<div class="home-widget-stat">${doneToday}<span class="home-widget-stat-denom"> / ${totalHabits}</span></div>
          <div class="home-widget-sublabel">completed today</div>
          ${habits.data.slice(0, 5).map(h => {
            const done = h.last_completed === today;
            return `<div class="home-widget-item ${done ? 'muted' : ''}" onclick="pages.show('habits')">${done ? '&#10003; ' : ''}${escHtml(h.name)}</div>`;
          }).join("")}`
-      : `<div class="home-widget-empty">No habits set up</div>`;
+      : `<div class="home-widget-stat muted">0</div>
+         <div class="home-widget-sublabel">habits set up</div>
+         <div class="home-widget-empty">No habits set up</div>`;
 
     // ── Journal widget ────────────────────────────────────────────────────────
     let streak = 0;
@@ -10158,18 +10536,21 @@
     const journalHtml = `
       <div class="home-widget-stat">${streak}</div>
       <div class="home-widget-sublabel">day streak</div>
-      <div class="home-widget-item" onclick="journal.openEntry('${today}')" style="color:var(--primary);font-weight:500;">
+      <div class="home-widget-item is-action" onclick="journal.openEntry('${today}')">
         ${todayEntry ? "Edit today's entry" : "Write today's entry"}
       </div>`;
 
     // ── Goals widget ──────────────────────────────────────────────────────────
     const activeGoals = goals.data.filter(g => g.status === "active");
-    const goalsHtml = activeGoals.length
-      ? activeGoals.slice(0, 5).map(g => {
-          const overdue = g.target_date && g.target_date < today && g.status === "active";
-          return `<div class="home-widget-item${overdue ? " overdue" : ""}" onclick="goalModal.open('${g.goal_id}')">${escHtml(g.title)}</div>`;
-        }).join("")
-      : `<div class="home-widget-empty">${goals.data.length ? "No active goals" : "No goals set"}</div>`;
+    const goalsHtml = `
+      <div class="home-widget-stat">${activeGoals.length}</div>
+      <div class="home-widget-sublabel">active goal${activeGoals.length === 1 ? "" : "s"}</div>
+      ${activeGoals.length
+        ? activeGoals.slice(0, 5).map(g => {
+            const overdue = g.target_date && g.target_date < today && g.status === "active";
+            return `<div class="home-widget-item${overdue ? " overdue" : ""}" onclick="goalModal.open('${g.goal_id}')">${escHtml(g.title)}</div>`;
+          }).join("")
+        : `<div class="home-widget-empty">${goals.data.length ? "No active goals" : "No goals set"}</div>`}`;
 
     // ── Finances widget (optional) ────────────────────────────────────────────
     let financesWidget = "";
@@ -10182,23 +10563,23 @@
         financesHtml = `<div class="home-widget-empty">No financial data yet</div>`;
       } else {
         const net    = parseFloat(fs.net_monthly_cash_flow);
-        const netCol = net >= 0 ? "#16a34a" : "#dc2626";
+        const netCls = net >= 0 ? "pos" : "neg";
         financesHtml = `
-          <div class="home-widget-stat" style="color:${netCol}">${finances.fmtSigned(fs.net_monthly_cash_flow)}</div>
+          <div class="home-widget-stat ${netCls}">${finances.fmtSigned(fs.net_monthly_cash_flow)}</div>
           <div class="home-widget-sublabel">net monthly cash flow</div>
-          <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:10px;color:var(--muted);">
-            <span>Income</span><span style="color:var(--text);font-weight:600;">${finances.fmt(fs.total_monthly_income)}</span>
+          <div class="home-widget-row">
+            <span>Income</span><span class="home-widget-row-val">${finances.fmt(fs.total_monthly_income)}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px;color:var(--muted);">
-            <span>Outflow</span><span style="color:var(--text);font-weight:600;">${finances.fmt(fs.total_monthly_outflow)}</span>
+          <div class="home-widget-row">
+            <span>Outflow</span><span class="home-widget-row-val">${finances.fmt(fs.total_monthly_outflow)}</span>
           </div>
           ${parseFloat(fs.total_debt_balance ?? 0) > 0 ? `
-          <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px;color:var(--muted);">
-            <span>Total debt</span><span style="color:var(--text);font-weight:600;">${finances.fmt(fs.total_debt_balance)}</span>
+          <div class="home-widget-row">
+            <span>Total debt</span><span class="home-widget-row-val">${finances.fmt(fs.total_debt_balance)}</span>
           </div>` : ""}`;
       }
       financesWidget = `
-        <div class="home-widget" onclick="pages.show('finances')" style="cursor:pointer;">
+        <div class="home-widget" onclick="pages.show('finances')" class="u-pointer">
           <div class="home-widget-title">Finances</div>
           ${financesHtml}
           <div class="home-widget-footer"><span class="home-widget-link">View finances →</span></div>
@@ -10939,7 +11320,7 @@
     },
 
     expand(name) {
-      const sections = ["home", "tasks", "notes", "journal", "feeds", "bookmarks", "diagrams", "settings", "admin", "profile"];
+      const sections = ["home", "tasks", "notes", "journal", "habits", "goals", "health", "nutrition", "finances", "feeds", "bookmarks", "diagrams", "settings", "admin", "profile"];
       sections.forEach(s => {
         const sect = $(`sb-${s}`);
         const body = $(`sb-${s}-body`);
@@ -10971,10 +11352,8 @@
 
     show(name) {
       pages.current = name;
-      // habits, goals, health, nutrition, finances are sub-sections of journal; favorites is a sub-section of feeds
-      const sbSection = (name === "habits" || name === "goals" || name === "health" || name === "nutrition" || name === "finances") ? "journal"
-                      : name === "favorites" ? "feeds"
-                      : name;
+      // habits, goals, health, nutrition, finances are now top-level sections; favorites is a sub-section of feeds
+      const sbSection = name === "favorites" ? "feeds" : name;
       sidebar.expand(sbSection);
       // Close mobile sidebar overlay on navigation
       if (window.innerWidth <= 768) {
