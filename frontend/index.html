@@ -2251,6 +2251,60 @@
       margin-top: 6px;
     }
 
+    /* ── AI Pal chats page ── */
+    .pal-chats-page-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .pal-chats-page-list .pal-chat-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .pal-chats-page-list .pal-chat-row:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow);
+    }
+    .pal-chats-page-list .pal-chat-title {
+      flex: 1;
+      text-align: left;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pal-chats-page-list .pal-chat-when {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .pal-chats-page-list .pal-chat-actions {
+      display: flex;
+      gap: 4px;
+    }
+    .pal-chats-page-list .pal-chat-actions button {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .pal-chats-page-list .pal-chat-actions button:hover { color: var(--text); background: var(--hover); }
+
     /* ── Admin page ── */
     .admin-grid {
       display: grid;
@@ -5042,18 +5096,12 @@
           </div>
         </div>
         <div class="sb-section" id="sb-pal-chats">
-          <div class="sb-section-hdr" onclick="palChats.toggleSection(event)">
+          <div class="sb-section-hdr" onclick="sidebar.navigate('pal-chats')">
             <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
             <span class="sb-hdr-label">AI Pal Chats</span>
             <button type="button" class="sb-hdr-action" title="New chat" aria-label="New chat" onclick="event.stopPropagation(); palChats.newChat()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
-            <span class="sb-arrow"><svg viewBox="0 0 10 10" fill="currentColor"><polygon points="2,1 8,5 2,9"/></svg></span>
-          </div>
-          <div class="sb-section-body hidden" id="sb-pal-chats-body">
-            <div class="sb-section-body-inner" id="sb-pal-chats-list">
-              <div class="sb-empty-hint">No chats yet</div>
-            </div>
           </div>
         </div>
         <div class="sb-spacer"></div>
@@ -5783,6 +5831,17 @@
       </div>
 
     </div>
+  </main>
+
+  <!-- AI Pal chats page -->
+  <main id="page-pal-chats" class="hidden">
+    <div class="toolbar">
+      <h2>AI Pal Chats</h2>
+      <button class="btn btn-primary" id="pal-chats-new-btn">New chat</button>
+    </div>
+    <div id="pal-chats-loader" class="page-loader hidden"><div class="spinner"></div></div>
+    <div id="pal-chats-empty" class="u-text-meta hidden" style="padding:24px 0;">No chats yet. Click "New chat" to start one.</div>
+    <div id="pal-chats-page-list" class="pal-chats-page-list"></div>
   </main>
 
   <!-- Admin page -->
@@ -11765,7 +11824,7 @@
 
   const pages = {
     current: "home",
-    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "bookmarks", "diagrams", "finances", "settings", "admin", "profile"],
+    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "bookmarks", "diagrams", "finances", "settings", "admin", "profile", "pal-chats"],
 
     show(name) {
       // Auto-close any open journal entry overlay so sidebar navigation works
@@ -11828,6 +11887,7 @@
       if (name === "diagrams")  { if (!diagrams.loaded) diagrams.load(); else diagrams.render(); }
       if (name === "finances")  { finances.load(); }
       if (name === "profile")   { profilePage.load(); }
+      if (name === "pal-chats") { palChats.loadPage(); }
     },
   };
 
@@ -12233,6 +12293,8 @@
     $("sidebar-backdrop").classList.remove("visible");
   });
   $("admin-refresh-btn").addEventListener("click", () => { admin.loaded = false; admin.load(); });
+  const palChatsNewBtn = document.getElementById("pal-chats-new-btn");
+  if (palChatsNewBtn) palChatsNewBtn.addEventListener("click", () => palChats.newChat());
   $("diagram-new-btn").addEventListener("click", () => diagrams.newDiagram());
   $("diagram-save-btn").addEventListener("click", () => diagrams.save());
   $("diagram-rename-btn").addEventListener("click", () => diagrams.rename());
@@ -12807,8 +12869,6 @@
           palWindow.style.bottom = "";
         }
         palInput.focus();
-        palLoadConversation(palActiveConvoId);
-        palChats.load();
       } else {
         palWindow.style.bottom = "";
         if (palShowingUsage) {
@@ -13104,60 +13164,58 @@
         } catch (e) {
           this.list = [];
         }
-        this.render();
+        this.renderPage();
       },
-      render() {
-        const container = document.getElementById("sb-pal-chats-list");
-        if (!container) return;
-        if (!this.list.length) {
-          container.innerHTML = `<div class="sb-empty-hint">No chats yet</div>`;
-          return;
+      async loadPage() {
+        const loader  = document.getElementById("pal-chats-loader");
+        const empty   = document.getElementById("pal-chats-empty");
+        const listEl  = document.getElementById("pal-chats-page-list");
+        if (loader) loader.classList.remove("hidden");
+        try {
+          const records = await api.call("GET", "/assistant/conversations");
+          this.list = Array.isArray(records) ? records : [];
+        } catch (e) {
+          this.list = [];
         }
-        const fmt = ts => {
-          if (!ts) return "";
-          try {
-            const d = new Date(ts);
-            const now = new Date();
-            const diffMs = now - d;
-            const oneDay = 86400000;
-            if (diffMs < oneDay) return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
-            if (diffMs < 7 * oneDay) return d.toLocaleDateString([], {weekday:"short"});
-            return d.toLocaleDateString([], {month:"short", day:"numeric"});
-          } catch { return ""; }
-        };
-        container.innerHTML = this.list.slice(0, 50).map(c => {
+        if (loader) loader.classList.add("hidden");
+        if (empty)  empty.classList.toggle("hidden", this.list.length > 0);
+        if (!listEl) return;
+        this.renderPage();
+      },
+      _fmtWhen(ts) {
+        if (!ts) return "";
+        try {
+          const d = new Date(ts);
+          const now = new Date();
+          const diffMs = now - d;
+          const oneDay = 86400000;
+          if (diffMs < oneDay) return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+          if (diffMs < 7 * oneDay) return d.toLocaleDateString([], {weekday:"short"});
+          return d.toLocaleDateString([], {month:"short", day:"numeric"});
+        } catch { return ""; }
+      },
+      renderPage() {
+        const listEl = document.getElementById("pal-chats-page-list");
+        const empty  = document.getElementById("pal-chats-empty");
+        if (!listEl) return;
+        if (empty) empty.classList.toggle("hidden", this.list.length > 0);
+        listEl.innerHTML = this.list.slice(0, 500).map(c => {
           const active = c.conversation_id === palActiveConvoId ? " active" : "";
-          const title = escHtml(c.title || "Untitled");
-          const when = escHtml(fmt(c.updated_at));
+          const title  = escHtml(c.title || "Untitled");
+          const when   = escHtml(this._fmtWhen(c.updated_at));
           return `
-            <div class="pal-chat-row${active}" data-id="${escHtml(c.conversation_id)}" title="${when}">
+            <div class="pal-chat-row${active}" data-id="${escHtml(c.conversation_id)}">
               <button class="pal-chat-title" type="button" onclick="palChats.open('${escHtml(c.conversation_id)}')">${title}</button>
+              <span class="pal-chat-when">${when}</span>
               <span class="pal-chat-actions">
-                <button type="button" title="Rename" aria-label="Rename" onclick="palChats.rename('${escHtml(c.conversation_id)}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
-                <button type="button" title="Delete" aria-label="Delete" onclick="palChats.delete('${escHtml(c.conversation_id)}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
+                <button type="button" title="Rename" aria-label="Rename" onclick="palChats.rename('${escHtml(c.conversation_id)}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
+                <button type="button" title="Delete" aria-label="Delete" onclick="palChats.delete('${escHtml(c.conversation_id)}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
               </span>
             </div>
           `;
         }).join("");
       },
-      toggleSection(event) {
-        if (event) event.stopPropagation();
-        const section = document.getElementById("sb-pal-chats");
-        const body    = document.getElementById("sb-pal-chats-body");
-        if (!section || !body) return;
-        const open = !section.classList.contains("open");
-        section.classList.toggle("open", open);
-        body.classList.toggle("hidden", !open);
-        if (open) this.load();
-      },
       async newChat() {
-        // Ensure section is open so the user sees the new chat.
-        const section = document.getElementById("sb-pal-chats");
-        const body    = document.getElementById("sb-pal-chats-body");
-        if (section && !section.classList.contains("open")) {
-          section.classList.add("open");
-          if (body) body.classList.remove("hidden");
-        }
         palActiveConvoId = null;
         palLoadedConvoId = null;
         localStorage.removeItem("pal_active_convo");
@@ -13165,7 +13223,6 @@
         palAddMsg("assistant", PAL_GREETING);
         if (!palOpen) palToggle();
         else palInput.focus();
-        this.render();
       },
       async open(convoId) {
         if (!palOpen) palToggle();
@@ -13205,7 +13262,12 @@
 
     window.palChats = palChats;
 
-    if (sbPalBtn) sbPalBtn.addEventListener("click", palToggle);
+    if (sbPalBtn) sbPalBtn.addEventListener("click", () => {
+      // Clicking the main pal button always starts a fresh chat.
+      // Previous chats are accessible via the AI Pal Chats page.
+      if (palOpen) { palToggle(); return; }
+      palChats.newChat();
+    });
     palClose.addEventListener("click", palToggle);
     palClear.addEventListener("click", palClearHistory);
 

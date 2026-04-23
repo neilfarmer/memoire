@@ -75,6 +75,34 @@ def _clean_reply(text: str) -> str:
     m = re.search(r"<response>(.*?)</response>", text, re.DOTALL)
     if m:
         text = m.group(1)
+    # Strip link artifacts the model sometimes echoes from tool results.
+    # The UI adds the canonical [pal-link:...] tag separately, so any copy
+    # the model emits produces duplicated / broken link text.
+    #   - `[anything](task:<id>:...)` or similar broken markdown link attempts
+    #   - raw `[pal-link:...]` tokens
+    #   - trailing "Open task/note/... →" strings
+    text = re.sub(r"\[[^\]]*\]\((?:task|note|habit|goal|journal|bookmark|feed|favorite|pal-link)[:)].*?\)", "", text)
+    text = re.sub(r"\[pal-link:[^\]]+\]", "", text)
+    text = re.sub(r"\s*Open (?:task|note|habit|goal|journal entry|bookmark|feed|favorite)\s*→\s*", " ", text)
+    # Drop filler sentences that only exist to host a link the UI now renders.
+    text = re.sub(
+        r"\s*(?:You can\s+)?(?:find|view|see|access|check)\s+(?:it|them|the (?:task|note|habit|goal|entry|bookmark))\s+here\s*[.!]?",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    # Trailing "You can find it ." or "find it." left after link removal.
+    text = re.sub(
+        r"\s*(?:You can\s+)?(?:find|view|see)\s+(?:it|them)\s*[.!]\s*$",
+        "",
+        text,
+        flags=re.IGNORECASE | re.MULTILINE,
+    )
+    text = re.sub(r"\s*Here (?:is|are) the link[s]?[^.\n]*[.\n]?", "", text, flags=re.IGNORECASE)
+    # Collapse whitespace and orphaned punctuation left behind.
+    text = re.sub(r"\s+([.,!?])", r"\1", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
 
@@ -89,7 +117,7 @@ What you know about the user:
 CRITICAL RULES — you must follow these exactly:
 1. ALWAYS call the appropriate tool before confirming any action. NEVER claim to have created, updated, listed, deleted, or completed anything without first invoking the tool. The tools are the only way actions actually happen — if you don't call a tool, nothing changes.
 2. Do NOT narrate what you are about to do. Just call the tool immediately.
-3. After the tool returns a result, confirm briefly in 1–2 sentences.
+3. After the tool returns a result, confirm briefly in 1–2 sentences. Do NOT include links, URLs, markdown links like `[here](task:...)`, the string "Open task →", or any `[pal-link:...]` / `[id:...]` tokens in your reply text. The UI adds the correct link automatically from the tool result — if you also write one, the user sees broken duplicate text. Never paste tool-result strings verbatim. Just describe what happened in plain words.
 4. If you learn something meaningful about the user (preferences, routines, goals), call remember_fact.
 5. Be concise and friendly. When listing items, keep it brief.
 6. For delete/complete/toggle/UPDATE operations, always call list_* first to find the correct ID (or reuse an id already shown in this conversation via a [pal-link:...] tag). IDs appear as [id:...] in list_* output — extract and use them directly.

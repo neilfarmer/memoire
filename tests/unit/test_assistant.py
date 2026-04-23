@@ -690,6 +690,29 @@ class TestToolsUpdates:
         assert refreshed["name"] == "morning meditation"
 
 
+class TestCleanReply:
+    def test_strips_broken_markdown_link(self):
+        text = (
+            "I have added a new task for you to buy a shovel, due next Tuesday. "
+            "You can find it [here](task:665e9bee-e2bb-46bc-b7fa-fe3560a769ad:Open task →). Open task →"
+        )
+        assert "task:665e9bee" not in chat._clean_reply(text)
+        assert "Open task" not in chat._clean_reply(text)
+        assert "buy a shovel" in chat._clean_reply(text)
+
+    def test_strips_pal_link_tokens(self):
+        assert "[pal-link" not in chat._clean_reply("Created task. [pal-link:task:abc:Open task →]")
+
+    def test_preserves_plain_text(self):
+        assert chat._clean_reply("Done.") == "Done."
+        # Non-link "You can find it" should survive when it's genuine content
+        out = chat._clean_reply("You can find it in your preferences.")
+        assert "preferences" in out
+
+    def test_strips_filler_here_sentence(self):
+        assert "here" not in chat._clean_reply("Done. You can find the task here.").lower()
+
+
 class TestToolsCoverage:
     def test_journal_list_get_delete(self, tbls):
         tools.handle_tool(USER, "create_journal_entry", {"body": "hello world", "mood": "good"}, local_date="2026-05-01")
