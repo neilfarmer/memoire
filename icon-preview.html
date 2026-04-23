@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Memoire icon preview</title>
+  <style>
+    body { margin: 0; padding: 40px; background: #0f0a07; color: #fde68a; font-family: system-ui, sans-serif; }
+    h1 { font-weight: 600; font-size: 20px; margin: 0 0 24px; color: #fcd34d; }
+    .grid { display: flex; gap: 32px; align-items: flex-end; flex-wrap: wrap; }
+    .swatch { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .swatch img { image-rendering: auto; background: #0a0603; }
+    .swatch .label { font-size: 11px; color: #a8a29e; letter-spacing: 0.05em; text-transform: uppercase; }
+    .row-light { background: #fef3c7; padding: 20px; border-radius: 12px; margin-top: 40px; display: inline-flex; gap: 20px; align-items: center; }
+    .row-dark { background: #1a1210; padding: 20px; border-radius: 12px; margin-top: 20px; display: inline-flex; gap: 20px; align-items: center; }
+    .caption { font-size: 12px; color: #78716c; }
+    .row-light .caption { color: #57534e; }
+  </style>
+</head>
+<body>
+  <h1>Memoire icon — preview</h1>
+  <div class="grid">
+    <div class="swatch">
+      <img src="frontend/icon.svg" width="16"  height="16"  alt="16">
+      <div class="label">16</div>
+    </div>
+    <div class="swatch">
+      <img src="frontend/icon.svg" width="32"  height="32"  alt="32">
+      <div class="label">32</div>
+    </div>
+    <div class="swatch">
+      <img src="frontend/icon.svg" width="64"  height="64"  alt="64">
+      <div class="label">64</div>
+    </div>
+    <div class="swatch">
+      <img src="frontend/icon.svg" width="128" height="128" alt="128">
+      <div class="label">128</div>
+    </div>
+    <div class="swatch">
+      <img src="frontend/icon.svg" width="256" height="256" alt="256">
+      <div class="label">256</div>
+    </div>
+  </div>
+
+  <div class="row-dark">
+    <img src="frontend/icon.svg" width="48" height="48" alt="dark-bg">
+    <div class="caption">On a dark dock/taskbar</div>
+  </div>
+
+  <div class="row-light">
+    <img src="frontend/icon.svg" width="48" height="48" alt="light-bg">
+    <div class="caption">On a light surface (browser tab)</div>
+  </div>
+</body>
+</html>

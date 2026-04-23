@@ -127,6 +127,12 @@ components:
         status:
           type: string
           enum: [active, completed, abandoned]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+          default: 0
+          description: Completion percent (0-100)
         created_at:
           type: string
           format: date-time
@@ -149,6 +155,10 @@ components:
         status:
           type: string
           enum: [active, completed, abandoned]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
 
     # ── Tasks ─────────────────────────────────────────────────────────────────
 
@@ -409,6 +419,11 @@ components:
           example: "08:00"
           description: UTC time in HH:MM (24h) for daily ntfy reminder; empty string disables
           nullable: true
+        time_of_day:
+          type: string
+          enum: [morning, afternoon, evening, anytime]
+          default: anytime
+          description: When the habit is typically performed
         created_at:
           type: string
           format: date
@@ -436,6 +451,9 @@ components:
           type: string
           example: "08:00"
           nullable: true
+        time_of_day:
+          type: string
+          enum: [morning, afternoon, evening, anytime]
 
     # ── Health ────────────────────────────────────────────────────────────────
 
@@ -607,7 +625,7 @@ components:
           default: false
         ntfy_url:
           type: string
-          description: ntfy endpoint for push notifications (e.g. https://ntfy.sh/my-topic)
+          description: ntfy endpoint for push notifications (e.g. https://ntfy.sh/my-topic). HTTPS only; must not resolve to a private or reserved address.
           default: ""
         autosave_seconds:
           type: integer
@@ -617,6 +635,28 @@ components:
           type: string
           description: IANA timezone string (e.g. America/New_York)
           default: ""
+        display_name:
+          type: string
+          description: Name shown in UI greetings
+          default: ""
+        pal_name:
+          type: string
+          description: Custom name for the AI assistant (default "Pip")
+          default: ""
+        profile_inference_hours:
+          type: integer
+          description: Hours between watcher profile-inference runs
+          default: 24
+        home_finances_widget:
+          type: boolean
+          description: Show finances widget on the home dashboard
+          default: false
+        chat_retention_days:
+          type: integer
+          minimum: 0
+          maximum: 3650
+          default: 30
+          description: How long AI Pal chat messages are kept before TTL deletion. 0 = keep forever.
 
     SettingsWrite:
       type: object
@@ -630,6 +670,18 @@ components:
           enum: [60, 120, 300]
         timezone:
           type: string
+        display_name:
+          type: string
+        pal_name:
+          type: string
+        profile_inference_hours:
+          type: integer
+        home_finances_widget:
+          type: boolean
+        chat_retention_days:
+          type: integer
+          minimum: 0
+          maximum: 3650
 
     # ── Home / Admin ──────────────────────────────────────────────────────────
 
@@ -1220,7 +1272,11 @@ components:
           description: Current date for context
         no_history:
           type: boolean
-          description: Skip saving to conversation history
+          description: Skip saving to conversation history (one-shot mode; does not auto-create a thread)
+        conversation_id:
+          type: string
+          format: uuid
+          description: Thread to continue. Omit to auto-create a new thread titled from the first message.
 
     ChatResponse:
       type: object
@@ -1231,6 +1287,11 @@ components:
           type: array
           items:
             type: string
+        conversation_id:
+          type: string
+          format: uuid
+          description: Thread the message was saved under (null when `no_history` was true).
+          nullable: true
 
     ConversationMessage:
       type: object
@@ -1240,6 +1301,51 @@ components:
           enum: [user, assistant]
         content:
           type: string
+        msg_id:
+          type: string
+          description: Stable message identifier within the thread
+
+    ConversationMeta:
+      type: object
+      properties:
+        conversation_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        message_count:
+          type: integer
+
+    ConversationDetail:
+      allOf:
+        - $ref: '#/components/schemas/ConversationMeta'
+        - type: object
+          properties:
+            messages:
+              type: array
+              items:
+                $ref: '#/components/schemas/ConversationMessage'
+
+    ConversationCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+
+    ConversationRename:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          maxLength: 200
 
     AssistantUsage:
       type: object
@@ -1848,6 +1954,9 @@ paths:
                   type: string
                 content_type:
                   type: string
+                size:
+                  type: integer
+                  description: File size in bytes (recommended so the server can enforce quota)
       responses:
         "201":
           description: Attachment record with presigned download URL
@@ -2149,7 +2258,17 @@ paths:
     post:
       tags: [Settings]
       summary: Send a test ntfy notification
-      description: Sends a sample push notification to the `ntfy_url` currently saved in the user's settings. Returns an error if `ntfy_url` is not configured.
+      description: Sends a sample push notification. Uses the optional `ntfy_url` from the request body if provided, otherwise falls back to the saved setting. Returns an error if neither is configured.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ntfy_url:
+                  type: string
+                  description: Optional URL to test; overrides the saved setting.
       responses:
         "200":
           description: Notification sent
@@ -2915,11 +3034,86 @@ paths:
               schema:
                 $ref: '#/components/schemas/ChatResponse'
 
+  /assistant/conversations:
+    get:
+      tags: [Assistant]
+      summary: List saved chat threads
+      description: Returns thread metadata (id, title, timestamps, message count) ordered by most-recent update. Messages themselves are fetched via `GET /assistant/conversations/{id}`.
+      responses:
+        "200":
+          description: Array of thread metadata
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConversationMeta'
+    post:
+      tags: [Assistant]
+      summary: Create an empty chat thread
+      description: Explicit thread creation. Normally a thread is auto-created by `POST /assistant/chat` when no `conversation_id` is supplied.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationCreate'
+      responses:
+        "200":
+          description: New thread metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationMeta'
+
+  /assistant/conversations/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Assistant]
+      summary: Get a chat thread with all messages
+      responses:
+        "200":
+          description: Thread metadata plus ordered message list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationDetail'
+        "404":
+          description: Thread not found
+    patch:
+      tags: [Assistant]
+      summary: Rename a chat thread
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationRename'
+      responses:
+        "200":
+          description: Updated
+        "404":
+          description: Thread not found
+    delete:
+      tags: [Assistant]
+      summary: Delete a chat thread and all of its messages
+      responses:
+        "200":
+          description: Deleted
+        "404":
+          description: Thread not found
+
   /assistant/history:
     get:
       tags: [Assistant]
-      summary: Get conversation history
-      description: Returns the last 20 messages (30-day TTL).
+      summary: Get conversation history (latest thread)
+      description: Returns the ordered messages of the most-recent thread. Prefer `GET /assistant/conversations/{id}` when targeting a specific thread.
       responses:
         "200":
           description: Array of messages

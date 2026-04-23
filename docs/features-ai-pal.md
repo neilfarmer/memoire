@@ -9,11 +9,13 @@ A conversational AI assistant embedded in the Memoire frontend, powered by Amazo
 ```
 Browser (chat UI)
   └── POST /assistant/chat  →  Lambda (assistant)
-                                  ├── Load conversation history (DynamoDB)
+                                  ├── Resolve conversation_id (auto-create if missing)
+                                  ├── Load thread history (DynamoDB, scoped to conversation_id)
                                   ├── Load user memory (DynamoDB)
                                   ├── Bedrock converse() loop (up to 6 tool calls)
                                   │     └── Tool handlers → DynamoDB reads/writes
-                                  ├── Save messages (DynamoDB)
+                                  ├── Save messages under conversation_id (DynamoDB)
+                                  ├── Touch thread metadata (updated_at, message_count)
                                   ├── Update model usage counters (DynamoDB)
                                   └── Update master context summary (Bedrock)
 ```
@@ -31,7 +33,9 @@ The pal panel slides in from the right side of the screen. It is independent of 
 - **Model selector** — toggle between Nova Lite and Nova Pro per-session (stored in `localStorage`)
 - **Clickable item links** — when the AI creates a task, note, goal, or journal entry it appends a `[pal-link:...]` tag; the frontend renders these as links that navigate directly to the created item
 - **Auto-refresh** — after the AI calls a mutating tool (create/update/delete), the relevant UI section (task list, habit list, etc.) refreshes automatically without a page reload
-- **Clear chat** — deletes all stored conversation history for the user via `DELETE /assistant/history`
+- **Saved chats sidebar** — under the Library group in the left pane, the **AI Pal Chats** section lists all saved threads ordered by most-recent activity. Hovering the header reveals a "+" to start a new chat; hovering any row reveals rename/delete actions. The active thread is highlighted.
+- **Auto-threading** — the first message in a new session auto-creates a thread titled from the first user line (truncated to 60 chars). Subsequent messages continue the same thread. Switching threads in the sidebar loads its messages and makes it active.
+- **Delete chat** — the chat header's clear button deletes only the *currently open* thread via `DELETE /assistant/conversations/{id}` (prompts for confirmation). Wiping everything still works via `DELETE /assistant/history`.
 - **Usage stats panel** — shows per-model token counts and estimated cost (Nova Lite/Pro pricing baked in to the frontend)
 - **Voice input button** — uses the browser's Web Speech API to transcribe speech into the input box; auto-restarts on silence to stay active until manually stopped
 
@@ -42,10 +46,11 @@ The pal panel slides in from the right side of the screen. It is independent of 
 Two layers of memory persist across sessions:
 
 ### Short-term: message history
-- Stored in the `assistant_conversations` DynamoDB table
-- Up to 20 most recent messages are loaded as context on each request
-- Consecutive same-role messages are merged (Bedrock requires alternating user/assistant)
-- Messages have a 30-day TTL
+- Stored in the `assistant_conversations` DynamoDB table, keyed by `user_id` (PK) + `msg_id` (SK).
+- Each message row carries a `conversation_id` attribute identifying its thread. Each thread also has a metadata row with `msg_id = __meta__#{conversation_id}` holding `title`, `created_at`, `updated_at`, and `message_count`.
+- Up to 20 most recent messages **from the current thread only** are loaded as Bedrock context on each request.
+- Consecutive same-role messages are merged (Bedrock requires alternating user/assistant).
+- Message TTL is configurable per user via the **Chat retention** setting (default 30 days; `0` = keep forever). Metadata rows are never TTL'd and are only removed when the user deletes the thread.
 
 ### Long-term: user facts + master context
 - **Facts** (`remember_fact` tool): key/value pairs stored in `assistant_memory` table; loaded into the system prompt on each request
@@ -130,6 +135,7 @@ The admin dashboard (`/admin`) also shows a per-user breakdown of model usage ac
 ## Settings
 
 - **Pal name** — configurable in Settings; defaults to "Pip"; stored server-side and rendered in the chat header
+- **Chat retention** — how long chat messages persist before TTL expiry. Options: *Keep forever* (`0`), 7, 30 (default), 90, 180, or 365 days. Stored in the `settings` table as `chat_retention_days`. Changing it only affects messages saved **after** the change; already-persisted rows keep whatever TTL they were written with.
 - **Model selector** — Nova Lite (fast, cheap) or Nova Pro (slower, more capable); persisted in `localStorage`
 
 ---
@@ -172,7 +178,12 @@ The Lambda reads `os.environ["USDA_API_KEY"]` in `lambda/assistant/tools.py`. If
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/assistant/chat` | Send a message; returns reply + tools_used |
-| `GET` | `/assistant/history` | Load conversation history |
-| `DELETE` | `/assistant/history` | Clear conversation history |
-| `GET` | `/assistant/usage` | Load per-model token usage |
+| `POST` | `/assistant/chat` | Send a message. Accepts optional `conversation_id`; auto-creates a thread when omitted. Returns `reply`, `tools_used`, and `conversation_id`. |
+| `GET` | `/assistant/conversations` | List saved threads (metadata only, ordered by most-recent update). |
+| `POST` | `/assistant/conversations` | Explicitly create an empty thread. |
+| `GET` | `/assistant/conversations/{id}` | Fetch a thread's metadata and full message list. |
+| `PATCH` | `/assistant/conversations/{id}` | Rename a thread (`{ "title": "..." }`). |
+| `DELETE` | `/assistant/conversations/{id}` | Delete a single thread and its messages. |
+| `GET` | `/assistant/history` | Load the most-recent thread's messages (legacy; prefer `/assistant/conversations/{id}`). |
+| `DELETE` | `/assistant/history` | Wipe *all* threads and messages for the user. |
+| `GET` | `/assistant/usage` | Load per-model token usage. |

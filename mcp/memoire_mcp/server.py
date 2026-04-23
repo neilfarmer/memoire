@@ -85,6 +85,7 @@ async def create_task(
     priority: str = "medium",
     due_date: str | None = None,
     folder_id: str | None = None,
+    notifications: dict | None = None,
 ) -> str:
     """Create a task.
 
@@ -95,12 +96,16 @@ async def create_task(
         priority: low, medium, or high.
         due_date: Optional due date (YYYY-MM-DD).
         folder_id: Optional folder UUID.
+        notifications: Optional reminder config. Shape: {"before_due": [...], "recurring": "1h"|"1d"|"1w"}.
+            before_due values must be from: "1h", "1d", "3d".
     """
     body: dict = {"title": title, "description": description, "status": status, "priority": priority}
     if due_date:
         body["due_date"] = due_date
     if folder_id:
         body["folder_id"] = folder_id
+    if notifications is not None:
+        body["notifications"] = notifications
     return json.dumps(await _request("POST", "/tasks", body=body))
 
 
@@ -113,6 +118,7 @@ async def update_task(
     priority: str | None = None,
     due_date: str | None = None,
     folder_id: str | None = None,
+    notifications: dict | None = None,
 ) -> str:
     """Update a task. Only provided fields are changed.
 
@@ -124,6 +130,8 @@ async def update_task(
         priority: low, medium, or high.
         due_date: Due date (YYYY-MM-DD) or empty string to clear.
         folder_id: Folder UUID or empty string to clear.
+        notifications: Reminder config {"before_due": [...], "recurring": "1h"|"1d"|"1w"}. Pass {} to clear.
+            before_due values must be from: "1h", "1d", "3d".
     """
     body: dict = {}
     if title is not None:
@@ -138,6 +146,8 @@ async def update_task(
         body["due_date"] = due_date if due_date else None
     if folder_id is not None:
         body["folder_id"] = folder_id if folder_id else None
+    if notifications is not None:
+        body["notifications"] = notifications or None
     return json.dumps(await _request("PUT", f"/tasks/{task_id}", body=body))
 
 
@@ -354,17 +364,24 @@ async def get_note_image(key: str) -> str:
 
 
 @mcp.tool()
-async def request_note_attachment_upload(note_id: str, filename: str, content_type: str) -> str:
+async def request_note_attachment_upload(
+    note_id: str,
+    filename: str,
+    content_type: str,
+    size: int | None = None,
+) -> str:
     """Request a presigned URL to upload a file attachment to a note.
 
     Args:
         note_id: Note UUID.
         filename: Attachment filename.
         content_type: MIME type.
+        size: File size in bytes (recommended so the server can enforce quota).
     """
-    return json.dumps(await _request(
-        "POST", f"/notes/{note_id}/attachments", body={"filename": filename, "content_type": content_type}
-    ))
+    body: dict = {"filename": filename, "content_type": content_type}
+    if size is not None:
+        body["size"] = size
+    return json.dumps(await _request("POST", f"/notes/{note_id}/attachments", body=body))
 
 
 @mcp.tool()
@@ -481,6 +498,7 @@ async def create_goal(
     description: str = "",
     target_date: str | None = None,
     status: str = "active",
+    progress: int | None = None,
 ) -> str:
     """Create a goal.
 
@@ -489,10 +507,13 @@ async def create_goal(
         description: Goal description.
         target_date: Optional target date (YYYY-MM-DD).
         status: active, completed, or abandoned.
+        progress: Completion percent (0-100). Defaults to 0.
     """
     payload: dict = {"title": title, "description": description, "status": status}
     if target_date:
         payload["target_date"] = target_date
+    if progress is not None:
+        payload["progress"] = progress
     return json.dumps(await _request("POST", "/goals", body=payload))
 
 
@@ -503,6 +524,7 @@ async def update_goal(
     description: str | None = None,
     target_date: str | None = None,
     status: str | None = None,
+    progress: int | None = None,
 ) -> str:
     """Update a goal. Only provided fields are changed.
 
@@ -512,6 +534,7 @@ async def update_goal(
         description: New description.
         target_date: Target date (YYYY-MM-DD) or empty string to clear.
         status: active, completed, or abandoned.
+        progress: Completion percent (0-100).
     """
     payload: dict = {}
     if title is not None:
@@ -522,6 +545,8 @@ async def update_goal(
         payload["target_date"] = target_date if target_date else None
     if status is not None:
         payload["status"] = status
+    if progress is not None:
+        payload["progress"] = progress
     return json.dumps(await _request("PUT", f"/goals/{goal_id}", body=payload))
 
 
@@ -547,33 +572,49 @@ async def list_habits() -> str:
 
 
 @mcp.tool()
-async def create_habit(name: str, notify_time: str | None = None) -> str:
+async def create_habit(
+    name: str,
+    notify_time: str | None = None,
+    time_of_day: str | None = None,
+) -> str:
     """Create a habit.
 
     Args:
         name: Habit name (required).
         notify_time: Optional daily reminder time in HH:MM (24h UTC). Empty string disables.
+        time_of_day: When habit is typically done. One of: morning, afternoon, evening, anytime.
+            Defaults to "anytime".
     """
     payload: dict = {"name": name}
     if notify_time is not None:
         payload["notify_time"] = notify_time
+    if time_of_day is not None:
+        payload["time_of_day"] = time_of_day
     return json.dumps(await _request("POST", "/habits", body=payload))
 
 
 @mcp.tool()
-async def update_habit(habit_id: str, name: str | None = None, notify_time: str | None = None) -> str:
+async def update_habit(
+    habit_id: str,
+    name: str | None = None,
+    notify_time: str | None = None,
+    time_of_day: str | None = None,
+) -> str:
     """Update a habit.
 
     Args:
         habit_id: Habit UUID.
         name: New name.
         notify_time: Reminder time (HH:MM UTC) or empty string to disable.
+        time_of_day: morning, afternoon, evening, or anytime.
     """
     payload: dict = {}
     if name is not None:
         payload["name"] = name
     if notify_time is not None:
         payload["notify_time"] = notify_time
+    if time_of_day is not None:
+        payload["time_of_day"] = time_of_day
     return json.dumps(await _request("PUT", f"/habits/{habit_id}", body=payload))
 
 
@@ -1282,14 +1323,22 @@ async def update_settings(
     ntfy_url: str | None = None,
     autosave_seconds: int | None = None,
     timezone: str | None = None,
+    display_name: str | None = None,
+    pal_name: str | None = None,
+    profile_inference_hours: int | None = None,
+    home_finances_widget: bool | None = None,
 ) -> str:
     """Update user settings. Only provided fields are changed.
 
     Args:
         dark_mode: Enable/disable dark mode.
-        ntfy_url: ntfy push notification endpoint URL.
+        ntfy_url: ntfy push notification endpoint URL (HTTPS only, no private addresses).
         autosave_seconds: Auto-save interval (60, 120, or 300).
         timezone: IANA timezone string (e.g. America/New_York).
+        display_name: Name to show in UI greetings.
+        pal_name: Custom name for the AI assistant (default "Pip").
+        profile_inference_hours: Hours between watcher profile-inference runs.
+        home_finances_widget: Show finances widget on the home dashboard.
     """
     payload: dict = {}
     if dark_mode is not None:
@@ -1300,13 +1349,26 @@ async def update_settings(
         payload["autosave_seconds"] = autosave_seconds
     if timezone is not None:
         payload["timezone"] = timezone
+    if display_name is not None:
+        payload["display_name"] = display_name
+    if pal_name is not None:
+        payload["pal_name"] = pal_name
+    if profile_inference_hours is not None:
+        payload["profile_inference_hours"] = profile_inference_hours
+    if home_finances_widget is not None:
+        payload["home_finances_widget"] = home_finances_widget
     return json.dumps(await _request("PUT", "/settings", body=payload))
 
 
 @mcp.tool()
-async def test_notification() -> str:
-    """Send a test push notification to the configured ntfy URL."""
-    return json.dumps(await _request("POST", "/settings/test-notification"))
+async def test_notification(ntfy_url: str | None = None) -> str:
+    """Send a test push notification.
+
+    Args:
+        ntfy_url: Optional URL to test. If omitted, uses the saved setting.
+    """
+    body = {"ntfy_url": ntfy_url} if ntfy_url else None
+    return json.dumps(await _request("POST", "/settings/test-notification", body=body))
 
 
 # ---------------------------------------------------------------------------
@@ -1319,6 +1381,8 @@ async def chat_with_assistant(
     message: str,
     model: str | None = None,
     local_date: str | None = None,
+    no_history: bool = False,
+    conversation_id: str | None = None,
 ) -> str:
     """Send a message to the AI assistant (Pip). The assistant can read/write tasks, notes, habits, goals, journal, nutrition, and exercise data.
 
@@ -1326,13 +1390,67 @@ async def chat_with_assistant(
         message: User message.
         model: Bedrock model ID. Options: us.amazon.nova-lite-v1:0 (default), us.amazon.nova-pro-v1:0.
         local_date: Current date (YYYY-MM-DD) for context.
+        no_history: Skip loading prior conversation history (one-shot mode). Does not persist the turn.
+        conversation_id: Optional thread UUID. If omitted and no_history is false, a new thread is auto-created.
+            The response includes `conversation_id`; pass it back to continue the same thread.
     """
     payload: dict = {"message": message}
     if model is not None:
         payload["model"] = model
     if local_date is not None:
         payload["local_date"] = local_date
+    if no_history:
+        payload["no_history"] = True
+    if conversation_id is not None:
+        payload["conversation_id"] = conversation_id
     return json.dumps(await _request("POST", "/assistant/chat", body=payload))
+
+
+@mcp.tool()
+async def list_conversations() -> str:
+    """List saved AI assistant conversation threads (metadata only, ordered by most recent update)."""
+    return json.dumps(await _request("GET", "/assistant/conversations"))
+
+
+@mcp.tool()
+async def create_conversation(title: str = "New chat") -> str:
+    """Create an empty assistant conversation thread.
+
+    Args:
+        title: Thread title (max 200 chars).
+    """
+    return json.dumps(await _request("POST", "/assistant/conversations", body={"title": title}))
+
+
+@mcp.tool()
+async def get_conversation(conversation_id: str) -> str:
+    """Get metadata + full message history for one assistant conversation thread.
+
+    Args:
+        conversation_id: Thread UUID.
+    """
+    return json.dumps(await _request("GET", f"/assistant/conversations/{conversation_id}"))
+
+
+@mcp.tool()
+async def rename_conversation(conversation_id: str, title: str) -> str:
+    """Rename an assistant conversation thread.
+
+    Args:
+        conversation_id: Thread UUID.
+        title: New title (max 200 chars).
+    """
+    return json.dumps(await _request("PATCH", f"/assistant/conversations/{conversation_id}", body={"title": title}))
+
+
+@mcp.tool()
+async def delete_conversation(conversation_id: str) -> str:
+    """Delete an assistant conversation thread and all of its messages.
+
+    Args:
+        conversation_id: Thread UUID.
+    """
+    return json.dumps(await _request("DELETE", f"/assistant/conversations/{conversation_id}"))
 
 
 @mcp.tool()
