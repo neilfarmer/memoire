@@ -3560,6 +3560,20 @@
     }
     .btn-add-set:hover { border-color: var(--primary); color: var(--primary); }
 
+    .health-log-month-header {
+      padding: 10px 14px 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .health-log-month-header.future { color: var(--warning, #c47f00); }
     .health-log-item {
       padding: 12px 14px;
       cursor: pointer;
@@ -9227,7 +9241,16 @@
       showLoader("health-loader");
       try {
         health.logs = await api.call("GET", "/health") || [];
-        health.logs.sort((a, b) => b.log_date.localeCompare(a.log_date));
+        // Sort: past-and-today entries first (newest first), then any future-
+        // dated rows afterward. Some older data has year=2099 placeholders
+        // that would otherwise always sit at the top.
+        const today = todayStr();
+        health.logs.sort((a, b) => {
+          const aFuture = (a.log_date || "") > today;
+          const bFuture = (b.log_date || "") > today;
+          if (aFuture !== bFuture) return aFuture ? 1 : -1;
+          return (b.log_date || "").localeCompare(a.log_date || "");
+        });
       } catch (e) {
         console.error("Failed to load health logs:", e);
       } finally {
@@ -9306,16 +9329,29 @@
         list.innerHTML = `<div style="padding:12px 14px;font-size:13px;color:var(--muted);">No workouts logged yet.</div>`;
         return;
       }
-      list.innerHTML = health.logs.map(l => {
-        const dateLabel = new Date(l.log_date + "T12:00:00").toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" });
+      const monthKey = d => d.slice(0, 7); // YYYY-MM
+      const today = todayStr();
+      let lastKey = "";
+      let html = "";
+      for (const l of health.logs) {
+        const key = monthKey(l.log_date || "");
+        if (key !== lastKey) {
+          const dt = new Date((key || "2000-01") + "-01T12:00:00");
+          const label = dt.toLocaleDateString(undefined, { month:"long", year:"numeric" });
+          const future = (l.log_date || "") > today;
+          html += `<div class="health-log-month-header${future ? ' future' : ''}">${escHtml(label)}${future ? ' (future dates)' : ''}</div>`;
+          lastKey = key;
+        }
+        const dateLabel = new Date(l.log_date + "T12:00:00").toLocaleDateString(undefined, { month:"short", day:"numeric" });
         const exLabel   = l.exercise_count === 1 ? "1 exercise" : `${l.exercise_count} exercises`;
         const notesSnip = l.notes ? " · " + escHtml(l.notes.slice(0, 40)) : "";
-        return `
+        html += `
           <div class="health-log-item ${l.log_date === health.currentDate ? "active" : ""}" onclick="health.openLog('${l.log_date}')">
             <div class="health-log-date">${dateLabel}</div>
             <div class="health-log-summary">${exLabel}${notesSnip}</div>
           </div>`;
-      }).join("");
+      }
+      list.innerHTML = html;
     },
 
     async openLog(dateStr) {
@@ -9490,7 +9526,13 @@
       showLoader("nutrition-loader");
       try {
         nutrition.logs = await api.call("GET", "/nutrition") || [];
-        nutrition.logs.sort((a, b) => b.log_date.localeCompare(a.log_date));
+        const nToday = todayStr();
+        nutrition.logs.sort((a, b) => {
+          const aFuture = (a.log_date || "") > nToday;
+          const bFuture = (b.log_date || "") > nToday;
+          if (aFuture !== bFuture) return aFuture ? 1 : -1;
+          return (b.log_date || "").localeCompare(a.log_date || "");
+        });
       } catch (e) {
         console.error("Failed to load nutrition logs:", e);
       } finally {
@@ -9569,15 +9611,28 @@
         list.innerHTML = `<div style="padding:12px 14px;font-size:13px;color:var(--muted);">No meals logged yet.</div>`;
         return;
       }
-      list.innerHTML = nutrition.logs.map(l => {
-        const dateLabel = new Date(l.log_date + "T12:00:00").toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" });
+      const monthKey = d => (d || "").slice(0, 7);
+      const nToday = todayStr();
+      let lastKey = "";
+      let html = "";
+      for (const l of nutrition.logs) {
+        const key = monthKey(l.log_date || "");
+        if (key !== lastKey) {
+          const dt = new Date((key || "2000-01") + "-01T12:00:00");
+          const label = dt.toLocaleDateString(undefined, { month:"long", year:"numeric" });
+          const future = (l.log_date || "") > nToday;
+          html += `<div class="health-log-month-header${future ? ' future' : ''}">${escHtml(label)}${future ? ' (future dates)' : ''}</div>`;
+          lastKey = key;
+        }
+        const dateLabel = new Date(l.log_date + "T12:00:00").toLocaleDateString(undefined, { month:"short", day:"numeric" });
         const calLabel  = l.total_cal ? `${l.total_cal} cal` : `${l.meal_count} meal${l.meal_count !== 1 ? "s" : ""}`;
-        return `
+        html += `
           <div class="health-log-item ${l.log_date === nutrition.currentDate ? "active" : ""}" onclick="nutrition.openLog('${l.log_date}')">
             <div class="health-log-date">${dateLabel}</div>
             <div class="health-log-summary">${calLabel}</div>
           </div>`;
-      }).join("");
+      }
+      list.innerHTML = html;
     },
 
     async openLog(dateStr) {
