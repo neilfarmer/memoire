@@ -189,6 +189,8 @@ A conversational assistant powered by Amazon Bedrock (Nova Lite by default, swit
 
 The assistant panel slides in from the right side of the screen. It persists memory about you across sessions — facts you share are stored and loaded into every conversation.
 
+Chats are saved as distinct threads. The **AI Pal Chats** section under Library in the left sidebar lists every thread; click one to reload its messages, use the "+" button in the section header to start a new thread, or rename/delete per thread. Message TTL is configurable via the **Chat retention** setting (default 30 days; set to *Keep forever* to disable expiry).
+
 Full documentation: [docs/features-ai-pal.md](features-ai-pal.md)
 
 ---
@@ -214,6 +216,7 @@ Downloads a ZIP of all your data as Markdown files, organised by feature:
 | ntfy URL | Push notification endpoint for tasks and habits |
 | Auto-save interval | How frequently the note and journal editors save (30s / 1m / 2m / 5m) |
 | AI Pal name | The name shown in the assistant panel header (default: Pip) |
+| Chat retention | How long AI Pal messages persist before TTL expiry (forever / 7 / 30 / 90 / 180 / 365 days) |
 
 ---
 
