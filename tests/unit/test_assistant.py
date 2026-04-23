@@ -127,43 +127,113 @@ class TestMemoryFacts:
 
 class TestMemoryHistory:
     def test_save_and_load(self, tbls):
-        memory.save_message(USER, "user", "Hello")
-        memory.save_message(USER, "assistant", "Hi there!")
-        history = memory.load_history(USER)
+        meta = memory.create_conversation(USER, "Chat")
+        cid  = meta["conversation_id"]
+        memory.save_message(USER, cid, "user", "Hello")
+        memory.save_message(USER, cid, "assistant", "Hi there!")
+        history = memory.load_history(USER, cid)
         assert len(history) == 2
         assert history[0]["role"] == "user"
         assert history[0]["content"][0]["text"] == "Hello"
         assert history[1]["role"] == "assistant"
 
     def test_empty(self, tbls):
-        assert memory.load_history(USER) == []
+        meta = memory.create_conversation(USER, "Chat")
+        assert memory.load_history(USER, meta["conversation_id"]) == []
+
+    def test_missing_conversation_id_returns_empty(self, tbls):
+        assert memory.load_history(USER, "") == []
+        assert memory.load_history(USER, None) == []
 
     def test_must_start_with_user(self, tbls):
-        # Orphaned assistant message at front should be stripped
-        memory.save_message(USER, "assistant", "Orphan")
-        assert memory.load_history(USER) == []
+        meta = memory.create_conversation(USER, "Chat")
+        cid  = meta["conversation_id"]
+        memory.save_message(USER, cid, "assistant", "Orphan")
+        assert memory.load_history(USER, cid) == []
 
     def test_max_messages_capped(self, tbls):
+        meta = memory.create_conversation(USER, "Chat")
+        cid  = meta["conversation_id"]
         for i in range(25):
-            memory.save_message(USER, "user" if i % 2 == 0 else "assistant", f"msg {i}")
-        history = memory.load_history(USER)
+            memory.save_message(USER, cid, "user" if i % 2 == 0 else "assistant", f"msg {i}")
+        history = memory.load_history(USER, cid)
         assert len(history) <= memory.MAX_HISTORY
 
     def test_consecutive_same_role_merged(self, tbls):
-        memory.save_message(USER, "user", "First")
-        memory.save_message(USER, "user", "Second")
-        memory.save_message(USER, "assistant", "Reply")
-        history = memory.load_history(USER)
-        # Two user messages should merge into one
+        meta = memory.create_conversation(USER, "Chat")
+        cid  = meta["conversation_id"]
+        memory.save_message(USER, cid, "user", "First")
+        memory.save_message(USER, cid, "user", "Second")
+        memory.save_message(USER, cid, "assistant", "Reply")
+        history = memory.load_history(USER, cid)
         assert history[0]["role"] == "user"
         assert "First" in history[0]["content"][0]["text"]
         assert "Second" in history[0]["content"][0]["text"]
 
     def test_clear_history(self, tbls):
-        memory.save_message(USER, "user", "Hello")
-        memory.save_message(USER, "assistant", "Hi")
+        meta = memory.create_conversation(USER, "Chat")
+        cid  = meta["conversation_id"]
+        memory.save_message(USER, cid, "user", "Hello")
+        memory.save_message(USER, cid, "assistant", "Hi")
         memory.clear_history(USER)
-        assert memory.load_history(USER) == []
+        assert memory.load_history(USER, cid) == []
+
+    def test_threads_isolate_history(self, tbls):
+        a = memory.create_conversation(USER, "A")["conversation_id"]
+        b = memory.create_conversation(USER, "B")["conversation_id"]
+        memory.save_message(USER, a, "user", "in-a")
+        memory.save_message(USER, b, "user", "in-b")
+        assert memory.load_history(USER, a)[0]["content"][0]["text"] == "in-a"
+        assert memory.load_history(USER, b)[0]["content"][0]["text"] == "in-b"
+
+    def test_ttl_zero_means_no_ttl_attribute(self, tbls):
+        meta = memory.create_conversation(USER, "Chat")
+        cid  = meta["conversation_id"]
+        memory.save_message(USER, cid, "user", "persist me", ttl_days=0)
+        import boto3
+        tbl = boto3.resource("dynamodb", region_name="us-east-1").Table("test-conversations")
+        items = tbl.scan()["Items"]
+        msg_items = [i for i in items if not i["msg_id"].startswith("__meta__#")]
+        assert msg_items, "message should be stored"
+        assert "ttl" not in msg_items[0]
+
+
+class TestMemoryConversations:
+    def test_create_returns_metadata(self, tbls):
+        meta = memory.create_conversation(USER, "My chat")
+        assert meta["title"] == "My chat"
+        assert meta["message_count"] == 0
+        assert meta["conversation_id"]
+
+    def test_list_conversations_sorted_by_updated_desc(self, tbls):
+        import time as _t
+        a = memory.create_conversation(USER, "First")["conversation_id"]
+        _t.sleep(0.01)
+        b = memory.create_conversation(USER, "Second")["conversation_id"]
+        metas = memory.list_conversations(USER)
+        assert [m["conversation_id"] for m in metas][:2] == [b, a]
+
+    def test_rename_updates_title(self, tbls):
+        cid = memory.create_conversation(USER, "Old")["conversation_id"]
+        memory.rename_conversation(USER, cid, "New")
+        assert memory.get_conversation(USER, cid)["title"] == "New"
+
+    def test_touch_bumps_message_count(self, tbls):
+        cid = memory.create_conversation(USER, "C")["conversation_id"]
+        memory.touch_conversation(USER, cid, bump_count=2)
+        memory.touch_conversation(USER, cid, bump_count=3)
+        assert memory.get_conversation(USER, cid)["message_count"] == 5
+
+    def test_delete_conversation_removes_thread_only(self, tbls):
+        a = memory.create_conversation(USER, "A")["conversation_id"]
+        b = memory.create_conversation(USER, "B")["conversation_id"]
+        memory.save_message(USER, a, "user", "x")
+        memory.save_message(USER, b, "user", "y")
+        count = memory.delete_conversation(USER, a)
+        assert count >= 2  # meta + message
+        assert memory.get_conversation(USER, a) is None
+        assert memory.get_conversation(USER, b) is not None
+        assert memory.load_history(USER, b)
 
 
 # ── memory: model usage ───────────────────────────────────────────────────────
@@ -522,6 +592,36 @@ class TestToolsNutrition:
         result = tools.handle_tool(USER, "get_nutrition_log", {"_today": "2026-01-02"})
         assert "800 cal" in result
 
+    def test_log_meal_batch_items(self, tbls):
+        result = tools.handle_tool(USER, "log_meal", {
+            "items": [
+                {"name": "Cashews", "calories": 150},
+                {"name": "Brats",   "calories": 500},
+                {"name": "Fries",   "calories": 400},
+            ],
+            "_today": "2026-03-10",
+        })
+        assert "3 items" in result
+        assert "1050 cal" in result
+        # verify persisted
+        got = tools.handle_tool(USER, "get_nutrition_log", {"_today": "2026-03-10"})
+        for name in ("Cashews", "Brats", "Fries"):
+            assert name in got
+
+    def test_log_meal_batch_appends_to_existing(self, tbls):
+        tools.handle_tool(USER, "log_meal", {"name": "Toast", "calories": 120, "_today": "2026-03-11"})
+        tools.handle_tool(USER, "log_meal", {
+            "items": [{"name": "Eggs", "calories": 200}, {"name": "Bacon", "calories": 150}],
+            "_today": "2026-03-11",
+        })
+        result = tools.handle_tool(USER, "get_nutrition_log", {"_today": "2026-03-11"})
+        for name in ("Toast", "Eggs", "Bacon"):
+            assert name in result
+
+    def test_log_meal_no_name_no_items_returns_error(self, tbls):
+        result = tools.handle_tool(USER, "log_meal", {"_today": "2026-03-12"})
+        assert "requires" in result.lower() or "name" in result.lower()
+
 
 # ── tools: exercise ───────────────────────────────────────────────────────────
 
@@ -678,15 +778,26 @@ class TestChatStream:
         assert done_evt["tools_used"] == []
 
     def test_reply_saved_to_history(self, tbls):
-        """chat_stream persists the exchange to conversation history."""
+        """chat_stream persists the exchange to the supplied conversation thread."""
         mock_resp = {"stream": iter(_make_stream_events(["Done"]))}
+        cid = memory.create_conversation(USER, "Chat")["conversation_id"]
 
         with patch.object(chat._bedrock, "converse_stream", return_value=mock_resp):
-            chat.chat_stream(USER, "save this", emit=lambda b: None)
+            chat.chat_stream(USER, "save this", emit=lambda b: None, conversation_id=cid)
 
-        history = memory.load_history(USER)
+        history = memory.load_history(USER, cid)
         assert any(m["role"] == "user"      and "save this" in m["content"][0]["text"] for m in history)
         assert any(m["role"] == "assistant" and "Done"       in m["content"][0]["text"] for m in history)
+
+    def test_history_not_saved_without_conversation_id(self, tbls):
+        """chat_stream skips persistence when no conversation_id is supplied."""
+        mock_resp = {"stream": iter(_make_stream_events(["Ephemeral"]))}
+        cid = memory.create_conversation(USER, "Chat")["conversation_id"]
+
+        with patch.object(chat._bedrock, "converse_stream", return_value=mock_resp):
+            chat.chat_stream(USER, "do not save", emit=lambda b: None)  # no conversation_id
+
+        assert memory.load_history(USER, cid) == []
 
     def test_tool_use_then_text(self, tbls):
         """chat_stream handles a tool-use loop followed by a final text response."""

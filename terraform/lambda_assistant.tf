@@ -26,6 +26,7 @@ resource "aws_lambda_function" "assistant" {
     variables = {
       CONVERSATIONS_TABLE     = aws_dynamodb_table.assistant_conversations.name
       MEMORY_TABLE            = aws_dynamodb_table.assistant_memory.name
+      EVENTS_TABLE            = aws_dynamodb_table.assistant_events.name
       TASKS_TABLE             = aws_dynamodb_table.tasks.name
       NOTES_TABLE             = aws_dynamodb_table.notes.name
       NOTE_FOLDERS_TABLE      = aws_dynamodb_table.note_folders.name
@@ -34,6 +35,7 @@ resource "aws_lambda_function" "assistant" {
       JOURNAL_TABLE           = aws_dynamodb_table.journal.name
       NUTRITION_TABLE         = aws_dynamodb_table.nutrition.name
       HEALTH_TABLE            = aws_dynamodb_table.health.name
+      SETTINGS_TABLE          = aws_dynamodb_table.settings.name
       ASSISTANT_MODEL_ID      = var.assistant_model_id
       ASSISTANT_SYSTEM_PROMPT = var.assistant_system_prompt
       USDA_API_KEY            = var.usda_api_key
@@ -65,6 +67,7 @@ resource "aws_iam_role_policy" "assistant_dynamodb" {
       Resource = [
         aws_dynamodb_table.assistant_conversations.arn,
         aws_dynamodb_table.assistant_memory.arn,
+        aws_dynamodb_table.assistant_events.arn,
         aws_dynamodb_table.tasks.arn,
         aws_dynamodb_table.notes.arn,
         aws_dynamodb_table.note_folders.arn,
@@ -73,6 +76,14 @@ resource "aws_iam_role_policy" "assistant_dynamodb" {
         aws_dynamodb_table.journal.arn,
         aws_dynamodb_table.nutrition.arn,
         aws_dynamodb_table.health.arn,
+      ]
+      }, {
+      Effect = "Allow"
+      Action = [
+        "dynamodb:GetItem",
+      ]
+      Resource = [
+        aws_dynamodb_table.settings.arn,
       ]
     }]
   })
@@ -127,6 +138,11 @@ locals {
     "POST /assistant/chat",
     "GET /assistant/history",
     "DELETE /assistant/history",
+    "GET /assistant/conversations",
+    "POST /assistant/conversations",
+    "GET /assistant/conversations/{id}",
+    "PATCH /assistant/conversations/{id}",
+    "DELETE /assistant/conversations/{id}",
     "GET /assistant/usage",
     "GET /assistant/memory",
     "PUT /assistant/memory",

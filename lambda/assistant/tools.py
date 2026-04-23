@@ -307,23 +307,38 @@ TOOL_SPECS = [
         "toolSpec": {
             "name": "log_meal",
             "description": (
-                "Log a food item to the nutrition log for a given date (defaults to today). "
+                "Log one or more food items to the nutrition log for a given date (defaults to today). "
                 "Use this — NOT create_journal_entry — for ANY food, meal, eating, calorie, "
-                "macro, or diet tracking request. When the user mentions 'food journal', "
-                "'nutrition', 'calories', or what they ate, always use this tool."
+                "macro, or diet tracking request. PREFER the 'items' array when logging multiple "
+                "foods at once (e.g. a meal with several components) — one call logs the whole "
+                "meal. Single-item fields (name, calories, ...) are kept for backward compatibility."
             ),
             "inputSchema": {
                 "json": {
                     "type": "object",
                     "properties": {
-                        "name":      {"type": "string", "description": "Food item name, e.g. 'Chorizo with cheese dip'"},
+                        "items": {
+                            "type": "array",
+                            "description": "Batch of food items to log in one call. Use this for multi-item meals.",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name":      {"type": "string", "description": "Food item name"},
+                                    "calories":  {"type": "number", "description": "Calories (kcal)"},
+                                    "protein_g": {"type": "number", "description": "Protein in grams"},
+                                    "carbs_g":   {"type": "number", "description": "Carbohydrates in grams"},
+                                    "fat_g":     {"type": "number", "description": "Fat in grams"},
+                                },
+                                "required": ["name"],
+                            },
+                        },
+                        "name":      {"type": "string", "description": "Food item name (single-item mode)"},
                         "calories":  {"type": "number", "description": "Calories (kcal)"},
                         "protein_g": {"type": "number", "description": "Protein in grams"},
                         "carbs_g":   {"type": "number", "description": "Carbohydrates in grams"},
                         "fat_g":     {"type": "number", "description": "Fat in grams"},
                         "date":      {"type": "string", "description": "Date YYYY-MM-DD, defaults to today"},
                     },
-                    "required": ["name"],
                 }
             },
         }
@@ -794,11 +809,31 @@ def _log_meal(user_id: str, inputs: dict) -> str:
     existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
     meals    = list(existing.get("meals", [])) if existing else []
 
-    meal = {"id": str(uuid.uuid4()), "name": inputs["name"].strip()}
-    for field in ("calories", "protein_g", "carbs_g", "fat_g"):
-        if inputs.get(field) is not None:
-            meal[field] = Decimal(str(inputs[field]))
-    meals.append(meal)
+    raw_items = inputs.get("items")
+    if raw_items and isinstance(raw_items, list):
+        new_items = raw_items
+    elif inputs.get("name"):
+        new_items = [{k: inputs.get(k) for k in ("name", "calories", "protein_g", "carbs_g", "fat_g")}]
+    else:
+        return "log_meal requires either 'items' (array) or 'name' (single item)."
+
+    added_names = []
+    added_cals  = 0
+    for src in new_items:
+        name = (src.get("name") or "").strip()
+        if not name:
+            continue
+        meal = {"id": str(uuid.uuid4()), "name": name}
+        for field in ("calories", "protein_g", "carbs_g", "fat_g"):
+            if src.get(field) is not None:
+                meal[field] = Decimal(str(src[field]))
+        meals.append(meal)
+        added_names.append(name)
+        if meal.get("calories"):
+            added_cals += int(meal["calories"])
+
+    if not added_names:
+        return "No valid items supplied to log_meal."
 
     table.put_item(Item={
         "user_id":    user_id,
@@ -808,8 +843,12 @@ def _log_meal(user_id: str, inputs: dict) -> str:
         "created_at": existing["created_at"] if existing else _now(),
         "updated_at": _now(),
     })
-    cal_str = f" ({int(meal['calories'])} cal)" if meal.get("calories") else ""
-    return f"Logged '{meal['name']}'{cal_str} to nutrition log for {log_date}. {len(meals)} item(s) today."
+
+    if len(added_names) == 1:
+        cal_str = f" ({added_cals} cal)" if added_cals else ""
+        return f"Logged '{added_names[0]}'{cal_str} to nutrition log for {log_date}. {len(meals)} item(s) today."
+    cal_str = f" ({added_cals} cal total)" if added_cals else ""
+    return f"Logged {len(added_names)} items{cal_str} to nutrition log for {log_date}: {', '.join(added_names)}. {len(meals)} item(s) today."
 
 
 def _get_nutrition_log(user_id: str, inputs: dict) -> str:

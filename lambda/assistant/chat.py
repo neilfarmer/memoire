@@ -4,19 +4,59 @@ import json
 import logging
 import os
 import re
+import time
 from datetime import date
 
 import boto3
 
 import memory as mem
+import events as evt
+import supervisor as sup
 from tools import TOOL_SPECS, handle_tool
 from response import ok, server_error
 
 logger = logging.getLogger(__name__)
 
-MODEL_ID   = os.environ.get("ASSISTANT_MODEL_ID", "us.amazon.nova-lite-v1:0")
+MODEL_ID   = os.environ.get("ASSISTANT_MODEL_ID", "us.amazon.nova-pro-v1:0")
 MAX_TOKENS = 1024
-MAX_LOOPS  = 6
+MAX_LOOPS  = 10
+MAX_SUPERVISOR_RETRIES = 1
+SUPERVISOR_RETRY_LOOPS = 5
+
+_ddb_settings = boto3.resource("dynamodb")
+SETTINGS_TABLE = os.environ.get("SETTINGS_TABLE", "")
+
+
+def _supervisor_enabled(user_id: str) -> bool:
+    """Check per-user setting. Defaults to True on missing / error."""
+    if not SETTINGS_TABLE or not user_id:
+        return True
+    try:
+        item = _ddb_settings.Table(SETTINGS_TABLE).get_item(Key={"user_id": user_id}).get("Item", {})
+        val = item.get("supervisor_enabled")
+        if val is None:
+            return True
+        return bool(val)
+    except Exception:
+        logger.warning("Failed to read supervisor_enabled setting", exc_info=True)
+        return True
+
+
+def _invoke_tool(user_id: str, tool_name: str, tool_input: dict, local_date: str | None,
+                 model_id: str, tool_log: list[dict]) -> str:
+    """Run a tool, record timing + success, append to tool_log, return result text."""
+    t0 = time.monotonic()
+    success = True
+    try:
+        result = handle_tool(user_id, tool_name, tool_input, local_date=local_date)
+    except Exception as e:
+        success = False
+        result = f"Tool error: {e}"
+        logger.exception("Tool %s raised", tool_name)
+    duration_ms = int((time.monotonic() - t0) * 1000)
+    tool_log.append({"name": tool_name, "inputs": tool_input, "result": result, "success": success})
+    evt.record_tool_call(user_id, tool_name, tool_input, result, success, duration_ms, model_id)
+    return result
 
 _ALLOWED_MODELS = {
     "us.amazon.nova-lite-v1:0",
@@ -90,9 +130,9 @@ Journal (personal reflections only — NOT for food or exercise):
 
 Nutrition (food, meals, calories, macros):
   lookup_nutrition(food_name)                                       → get accurate USDA nutrition data; call this BEFORE log_meal whenever the user has not explicitly provided calorie/macro values
-  log_meal(name, calories?, protein_g?, carbs_g?, fat_g?, date?)  → log a food item (call once per item)
+  log_meal(items=[{{name, calories?, protein_g?, carbs_g?, fat_g?}}], date?)  → log one or MORE food items in a single call. ALWAYS use the items array for multi-item meals — do not loop single-item log_meal calls.
   get_nutrition_log(date?)                                          → view what was eaten and totals
-  When logging a meal without explicit nutrition values: call lookup_nutrition first, scale the returned per-100g or per-serving values to the user's actual quantity, then call log_meal with those values. When uncertain about exact serving weight, round calories UP — it is better to slightly overestimate than underestimate for nutrition tracking.
+  When logging a meal without explicit nutrition values: call lookup_nutrition for each food, scale the returned per-100g or per-serving values to the user's actual quantity, then call log_meal ONCE with all foods batched in the items array. When uncertain about exact serving weight, round calories UP — it is better to slightly overestimate than underestimate for nutrition tracking.
 
 Exercise (workouts, physical activity):
   log_exercise(name, duration_min?, sets?, date?)   → log an exercise (sets: [{{reps, weight}}])
@@ -212,6 +252,8 @@ def chat_stream(
     model: str | None = None,
     local_date: str | None = None,
     no_history: bool = False,
+    conversation_id: str | None = None,
+    ttl_days: int = mem.DEFAULT_TTL_DAYS,
 ) -> None:
     """Run the chat loop, streaming text tokens via emit(bytes) as they arrive.
 
@@ -225,7 +267,7 @@ def chat_stream(
     """
     model_id = model if model in _ALLOWED_MODELS else MODEL_ID
     try:
-        history       = [] if no_history else mem.load_history(user_id)
+        history       = [] if (no_history or not conversation_id) else mem.load_history(user_id, conversation_id)
         facts, master = mem.load_memory(user_id)
         system        = _system_prompt(facts, master, local_date=local_date)
         messages      = history + [{"role": "user", "content": [{"text": user_message}]}]
@@ -233,8 +275,10 @@ def chat_stream(
         reply      = ""
         link_tags  = []
         tools_used = []
+        tool_log: list[dict] = []
         total_in   = 0
         total_out  = 0
+        chat_t0    = time.monotonic()
 
         for _ in range(MAX_LOOPS):
             stream_resp = _bedrock.converse_stream(
@@ -320,7 +364,7 @@ def chat_stream(
                     if "toolUse" in block:
                         tu = block["toolUse"]
                         emit(json.dumps({"type": "status", "text": tu["name"]}).encode() + b"\n")
-                        result = handle_tool(user_id, tu["name"], tu["input"], local_date=local_date)
+                        result = _invoke_tool(user_id, tu["name"], tu["input"], local_date, model_id, tool_log)
                         logger.info("Tool %s → %s", tu["name"], result)
                         tools_used.append(tu["name"])
                         for tag in re.findall(r"\[pal-link:[^\]]+\]", result):
@@ -340,6 +384,55 @@ def chat_stream(
                 break
 
         reply = _clean_reply(reply)
+
+        # ── Supervisor pass ──────────────────────────────────────────────────
+        if reply and sup.needs_supervision(reply, tools_used) and _supervisor_enabled(user_id):
+            today_str = (local_date or date.today().isoformat())
+            for attempt in range(MAX_SUPERVISOR_RETRIES + 1):
+                verdict = sup.supervise(user_message, reply, tool_log, today_str, model_id=None)
+                evt.record_supervisor(user_id, verdict["verdict"], verdict.get("reason", ""),
+                                      attempt, tools_used, model_id)
+                if verdict["verdict"] == "ok" or attempt == MAX_SUPERVISOR_RETRIES:
+                    break
+                emit(json.dumps({"type": "status", "text": f"supervisor:{verdict['verdict']}"}).encode() + b"\n")
+                correction = sup.build_correction_prompt(verdict)
+                messages.append({"role": "user", "content": [{"text": correction}]})
+                retry_reply = ""
+                for _ in range(SUPERVISOR_RETRY_LOOPS):
+                    r = _bedrock.converse(
+                        modelId=model_id,
+                        system=system,
+                        messages=messages,
+                        toolConfig={"tools": TOOL_SPECS},
+                        inferenceConfig={"maxTokens": MAX_TOKENS},
+                    )
+                    usage = r.get("usage", {})
+                    total_in  += usage.get("inputTokens",  0)
+                    total_out += usage.get("outputTokens", 0)
+                    out_msg = r["output"]["message"]
+                    messages.append(out_msg)
+                    if r.get("stopReason") == "tool_use":
+                        tr = []
+                        for block in out_msg.get("content", []):
+                            if "toolUse" in block:
+                                tu = block["toolUse"]
+                                emit(json.dumps({"type": "status", "text": tu["name"]}).encode() + b"\n")
+                                result = _invoke_tool(user_id, tu["name"], tu["input"], local_date, model_id, tool_log)
+                                tools_used.append(tu["name"])
+                                for tag in re.findall(r"\[pal-link:[^\]]+\]", result):
+                                    link_tags.append(tag)
+                                tr.append({"toolResult": {"toolUseId": tu["toolUseId"], "content": [{"text": result}]}})
+                        messages.append({"role": "user", "content": tr})
+                    else:
+                        for block in out_msg.get("content", []):
+                            if "text" in block:
+                                retry_reply = block["text"]
+                                break
+                        break
+                retry_reply = _clean_reply(retry_reply)
+                if retry_reply:
+                    reply = retry_reply
+                    emit(json.dumps({"type": "token", "text": "\n\n" + retry_reply}).encode() + b"\n")
 
         if not reply:
             logger.warning("No reply after %d streaming loops, forcing final call", MAX_LOOPS)
@@ -370,27 +463,43 @@ def chat_stream(
             emit(json.dumps({"type": "token", "text": links_text}).encode() + b"\n")
             reply = reply.rstrip() + links_text
 
-        if not no_history:
-            mem.save_message(user_id, "user",      user_message)
-            mem.save_message(user_id, "assistant", reply)
+        if not no_history and conversation_id:
+            mem.save_message(user_id, conversation_id, "user",      user_message, ttl_days=ttl_days)
+            mem.save_message(user_id, conversation_id, "assistant", reply,        ttl_days=ttl_days)
+            mem.touch_conversation(user_id, conversation_id, bump_count=2)
             _update_master_context(user_id, master, facts, user_message, reply, model_id)
             _extract_facts(user_id, facts, user_message, reply, model_id)
         mem.update_model_usage(user_id, model_id, total_in, total_out)
 
-        emit(json.dumps({"type": "done", "tools_used": tools_used, "reply": reply}).encode() + b"\n")
+        evt.record_chat_complete(user_id, tools_used, total_in, total_out,
+                                 int((time.monotonic() - chat_t0) * 1000), model_id)
+
+        emit(json.dumps({"type": "done", "tools_used": tools_used, "reply": reply, "conversation_id": conversation_id}).encode() + b"\n")
 
     except Exception:
         logger.exception("Error in chat_stream")
+        try:
+            evt.record_chat_complete(user_id, [], 0, 0, 0, model_id, error="stream_exception")
+        except Exception:
+            pass
         try:
             emit(json.dumps({"type": "error", "message": "Assistant error — please try again"}).encode() + b"\n")
         except Exception:
             pass
 
 
-def chat(user_id: str, user_message: str, model: str | None = None, local_date: str | None = None, no_history: bool = False) -> dict:
+def chat(
+    user_id: str,
+    user_message: str,
+    model: str | None = None,
+    local_date: str | None = None,
+    no_history: bool = False,
+    conversation_id: str | None = None,
+    ttl_days: int = mem.DEFAULT_TTL_DAYS,
+) -> dict:
     model_id = model if model in _ALLOWED_MODELS else MODEL_ID
     try:
-        history         = [] if no_history else mem.load_history(user_id)
+        history         = [] if (no_history or not conversation_id) else mem.load_history(user_id, conversation_id)
         facts, master   = mem.load_memory(user_id)
         system          = _system_prompt(facts, master, local_date=local_date)
         messages        = history + [{"role": "user", "content": [{"text": user_message}]}]
@@ -398,8 +507,10 @@ def chat(user_id: str, user_message: str, model: str | None = None, local_date: 
         reply        = ""
         link_tags    = []  # [pal-link:...] tags collected from tool results
         tools_used   = []  # tool names called, in order
+        tool_log: list[dict] = []
         total_in     = 0
         total_out    = 0
+        chat_t0      = time.monotonic()
 
         for _ in range(MAX_LOOPS):
             resp   = _bedrock.converse(
@@ -425,7 +536,7 @@ def chat(user_id: str, user_message: str, model: str | None = None, local_date: 
                 for block in output_msg["content"]:
                     if "toolUse" in block:
                         tu     = block["toolUse"]
-                        result = handle_tool(user_id, tu["name"], tu["input"], local_date=local_date)
+                        result = _invoke_tool(user_id, tu["name"], tu["input"], local_date, model_id, tool_log)
                         logger.info("Tool %s → %s", tu["name"], result)
                         tools_used.append(tu["name"])
                         # Extract any pal-link tags from the tool result
@@ -469,18 +580,73 @@ def chat(user_id: str, user_message: str, model: str | None = None, local_date: 
                 logger.warning("Forced final call also failed", exc_info=True)
         if not reply:
             reply = "I'm here, but something went wrong with my response. Could you try again?"
+
+        # ── Supervisor pass (sync path) ─────────────────────────────────────
+        if reply and sup.needs_supervision(reply, tools_used) and _supervisor_enabled(user_id):
+            today_str = (local_date or date.today().isoformat())
+            for attempt in range(MAX_SUPERVISOR_RETRIES + 1):
+                verdict = sup.supervise(user_message, reply, tool_log, today_str)
+                evt.record_supervisor(user_id, verdict["verdict"], verdict.get("reason", ""),
+                                      attempt, tools_used, model_id)
+                if verdict["verdict"] == "ok" or attempt == MAX_SUPERVISOR_RETRIES:
+                    break
+                correction = sup.build_correction_prompt(verdict)
+                messages.append({"role": "user", "content": [{"text": correction}]})
+                retry_reply = ""
+                for _ in range(SUPERVISOR_RETRY_LOOPS):
+                    r = _bedrock.converse(
+                        modelId=model_id,
+                        system=system,
+                        messages=messages,
+                        toolConfig={"tools": TOOL_SPECS},
+                        inferenceConfig={"maxTokens": MAX_TOKENS},
+                    )
+                    usage = r.get("usage", {})
+                    total_in  += usage.get("inputTokens",  0)
+                    total_out += usage.get("outputTokens", 0)
+                    out_msg = r["output"]["message"]
+                    messages.append(out_msg)
+                    if r.get("stopReason") == "tool_use":
+                        tr = []
+                        for block in out_msg.get("content", []):
+                            if "toolUse" in block:
+                                tu = block["toolUse"]
+                                result = _invoke_tool(user_id, tu["name"], tu["input"], local_date, model_id, tool_log)
+                                tools_used.append(tu["name"])
+                                for tag in re.findall(r"\[pal-link:[^\]]+\]", result):
+                                    link_tags.append(tag)
+                                tr.append({"toolResult": {"toolUseId": tu["toolUseId"], "content": [{"text": result}]}})
+                        messages.append({"role": "user", "content": tr})
+                    else:
+                        for block in out_msg.get("content", []):
+                            if "text" in block:
+                                retry_reply = block["text"]
+                                break
+                        break
+                retry_reply = _clean_reply(retry_reply)
+                if retry_reply:
+                    reply = retry_reply
+
         # Append any navigation links collected from tool results
         if link_tags:
             reply = reply.rstrip() + "\n" + " ".join(link_tags)
-        if not no_history:
-            mem.save_message(user_id, "user",      user_message)
-            mem.save_message(user_id, "assistant", reply)
+        if not no_history and conversation_id:
+            mem.save_message(user_id, conversation_id, "user",      user_message, ttl_days=ttl_days)
+            mem.save_message(user_id, conversation_id, "assistant", reply,        ttl_days=ttl_days)
+            mem.touch_conversation(user_id, conversation_id, bump_count=2)
             _update_master_context(user_id, master, facts, user_message, reply, model_id)
             _extract_facts(user_id, facts, user_message, reply, model_id)
         mem.update_model_usage(user_id, model_id, total_in, total_out)
 
-        return ok({"reply": reply, "tools_used": tools_used})
+        evt.record_chat_complete(user_id, tools_used, total_in, total_out,
+                                 int((time.monotonic() - chat_t0) * 1000), model_id)
+
+        return ok({"reply": reply, "tools_used": tools_used, "conversation_id": conversation_id})
 
     except Exception:
         logger.exception("Error in chat")
+        try:
+            evt.record_chat_complete(user_id, [], 0, 0, 0, model_id, error="chat_exception")
+        except Exception:
+            pass
         return server_error("Assistant error — please try again")
