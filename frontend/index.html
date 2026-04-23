@@ -2306,13 +2306,48 @@
     .pal-chats-page-list .pal-chat-actions button:hover { color: var(--text); background: var(--hover); }
 
     /* ── Admin page ── */
+    #page-admin { max-width: 1400px; }
     .admin-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 16px;
       margin-top: 8px;
     }
-
+    .admin-card.admin-card-wide { grid-column: 1 / -1; }
+    .event-row {
+      display: grid;
+      grid-template-columns: 110px 160px minmax(0, 1fr) 60px 150px;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px dashed var(--border);
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+      align-items: center;
+    }
+    .event-row:last-child { border-bottom: none; }
+    .event-badge {
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: var(--hover);
+      color: var(--muted);
+      text-align: center;
+      white-space: nowrap;
+    }
+    .event-badge.ok       { color: var(--muted); }
+    .event-badge.err      { background: color-mix(in oklab, var(--danger) 18%, transparent); color: var(--danger); }
+    .event-badge.warn     { background: color-mix(in oklab, var(--warning, #c47f00) 22%, transparent); color: var(--warning, #c47f00); }
+    .event-primary { color: var(--primary); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .event-detail  { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+    .event-meta    { color: var(--muted); font-size: 11px; text-align: right; white-space: nowrap; }
+    @media (max-width: 900px) {
+      .event-row { grid-template-columns: 90px minmax(0, 1fr); row-gap: 2px; }
+      .event-row > .event-detail,
+      .event-row > .event-meta { grid-column: 1 / -1; }
+    }
     .admin-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -10855,52 +10890,54 @@
       // Assistant events (tool calls, supervisor verdicts, chat completions)
       if (events?.events?.length) {
         const evs = events.events;
-        const fmtTime = ts => { try { return new Date(ts).toLocaleString(); } catch { return ts; } };
-        const verdictColor = v => v === "ok" ? "var(--muted)" : v === "incomplete" ? "var(--warning,#c47f00)" : "var(--danger)";
+        const fmtTime = ts => {
+          try {
+            const d = new Date(ts);
+            return d.toLocaleString(undefined, { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit", second:"2-digit" });
+          } catch { return ts; }
+        };
+        const verdictClass = v => v === "ok" ? "ok" : v === "incomplete" ? "warn" : "err";
         const rows = evs.map(e => {
-          const ts = fmtTime(e.ts);
+          const ts = escHtml(fmtTime(e.ts));
           if (e.event_type === "tool_call") {
             const ok = e.success !== false;
-            return `<div class="admin-stat-row" style="font-family:ui-monospace,monospace;font-size:12px;border-bottom:1px dashed var(--border);padding:6px 0;">
-              <span style="color:${ok ? 'var(--muted)' : 'var(--danger)'};">${ok ? 'tool' : 'tool!'}</span>
-              <span style="display:flex;gap:8px;align-items:center;min-width:0;">
-                <span style="color:var(--primary);font-weight:600;">${escHtml(e.tool_name || '?')}</span>
-                <span class="u-text-xs u-muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:360px;">${escHtml((e.result || '').slice(0,140))}</span>
-                <span class="u-text-xs u-muted">${e.duration_ms ?? '—'}ms</span>
-                <span class="u-text-xs u-muted">${ts}</span>
-              </span>
+            return `<div class="event-row">
+              <span class="event-badge ${ok ? 'ok' : 'err'}">${ok ? 'tool' : 'tool err'}</span>
+              <span class="event-primary" title="${escHtml(e.tool_name || '')}">${escHtml(e.tool_name || '?')}</span>
+              <span class="event-detail" title="${escHtml(e.result || '')}">${escHtml((e.result || '').slice(0, 220))}</span>
+              <span class="event-meta">${e.duration_ms ?? '—'}ms</span>
+              <span class="event-meta">${ts}</span>
             </div>`;
           }
           if (e.event_type === "supervisor_verdict") {
-            return `<div class="admin-stat-row" style="font-family:ui-monospace,monospace;font-size:12px;border-bottom:1px dashed var(--border);padding:6px 0;">
-              <span style="color:${verdictColor(e.verdict)};">supervisor:${escHtml(e.verdict || '?')}</span>
-              <span style="display:flex;gap:8px;align-items:center;min-width:0;">
-                <span class="u-text-xs u-muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:360px;">${escHtml((e.reason || '').slice(0,140))}</span>
-                <span class="u-text-xs u-muted">retry=${e.retry_count ?? 0}</span>
-                <span class="u-text-xs u-muted">${ts}</span>
-              </span>
+            const cls = verdictClass(e.verdict);
+            return `<div class="event-row">
+              <span class="event-badge ${cls}">supervisor</span>
+              <span class="event-primary">${escHtml(e.verdict || '?')}</span>
+              <span class="event-detail" title="${escHtml(e.reason || '')}">${escHtml((e.reason || '').slice(0, 220))}</span>
+              <span class="event-meta">retry ${e.retry_count ?? 0}</span>
+              <span class="event-meta">${ts}</span>
             </div>`;
           }
           if (e.event_type === "chat_complete") {
-            return `<div class="admin-stat-row" style="font-family:ui-monospace,monospace;font-size:12px;border-bottom:1px dashed var(--border);padding:6px 0;">
-              <span style="color:${e.error ? 'var(--danger)' : 'var(--muted)'};">chat</span>
-              <span style="display:flex;gap:8px;align-items:center;">
-                <span class="u-text-xs u-muted">tokens ${e.tokens_in ?? 0}↑ ${e.tokens_out ?? 0}↓</span>
-                <span class="u-text-xs u-muted">${e.duration_ms ?? '—'}ms</span>
-                ${e.error ? `<span class="u-text-xs" style="color:var(--danger)">${escHtml(e.error)}</span>` : ""}
-                <span class="u-text-xs u-muted">${ts}</span>
-              </span>
+            const cls = e.error ? 'err' : 'ok';
+            return `<div class="event-row">
+              <span class="event-badge ${cls}">chat</span>
+              <span class="event-primary">${e.error ? escHtml(e.error) : 'completed'}</span>
+              <span class="event-detail">tokens ${e.tokens_in ?? 0}↑ ${e.tokens_out ?? 0}↓</span>
+              <span class="event-meta">${e.duration_ms ?? '—'}ms</span>
+              <span class="event-meta">${ts}</span>
             </div>`;
           }
           return "";
         }).join("");
         html += `
-          <div class="admin-card" style="grid-column: span 2;">
+          <div class="admin-card admin-card-wide">
             <div class="admin-card-title">Assistant Events (recent)</div>
-            <div style="max-height:420px;overflow:auto;">${rows}</div>
+            <div style="max-height:520px;overflow:auto;">${rows}</div>
           </div>`;
       } else if (events) {
-        html += `<div class="admin-card" style="grid-column: span 2;"><div class="admin-card-title">Assistant Events</div><p style="color:var(--muted);font-size:13px;">No events yet.</p></div>`;
+        html += `<div class="admin-card admin-card-wide"><div class="admin-card-title">Assistant Events</div><p style="color:var(--muted);font-size:13px;">No events yet.</p></div>`;
       }
 
       // CloudWatch error/warning logs
@@ -10915,12 +10952,12 @@
           </div>`;
         }).join("");
         html += `
-          <div class="admin-card" style="grid-column: span 2;">
+          <div class="admin-card admin-card-wide">
             <div class="admin-card-title">System Logs — errors/warnings (last ${logs.minutes || 60}m)</div>
             <div style="max-height:420px;overflow:auto;">${rows}</div>
           </div>`;
       } else if (logs) {
-        html += `<div class="admin-card" style="grid-column: span 2;"><div class="admin-card-title">System Logs</div><p style="color:var(--muted);font-size:13px;">No errors or warnings in window.</p></div>`;
+        html += `<div class="admin-card admin-card-wide"><div class="admin-card-title">System Logs</div><p style="color:var(--muted);font-size:13px;">No errors or warnings in window.</p></div>`;
       }
 
       $("admin-grid").innerHTML = html || `<div class="admin-card"><p style="color:var(--muted);font-size:14px;">No data available.</p></div>`;
