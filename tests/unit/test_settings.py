@@ -95,6 +95,31 @@ class TestUpdateSettings:
         r = crud.update_settings(USER, {})
         assert r["statusCode"] == 200
 
+    def test_chat_retention_default(self, tbl):
+        body = json.loads(crud.get_settings(USER)["body"])
+        assert body["chat_retention_days"] == 30
+
+    def test_chat_retention_update(self, tbl):
+        crud.update_settings(USER, {"chat_retention_days": 90})
+        body = json.loads(crud.get_settings(USER)["body"])
+        assert body["chat_retention_days"] == 90
+
+    def test_chat_retention_zero_allowed(self, tbl):
+        r = crud.update_settings(USER, {"chat_retention_days": 0})
+        assert r["statusCode"] == 200
+
+    def test_chat_retention_negative_rejected(self, tbl):
+        r = crud.update_settings(USER, {"chat_retention_days": -1})
+        assert r["statusCode"] == 400
+
+    def test_chat_retention_too_large_rejected(self, tbl):
+        r = crud.update_settings(USER, {"chat_retention_days": 99999})
+        assert r["statusCode"] == 400
+
+    def test_chat_retention_non_integer_rejected(self, tbl):
+        r = crud.update_settings(USER, {"chat_retention_days": "forever"})
+        assert r["statusCode"] == 400
+
     def test_user_id_not_in_response(self, tbl):
         crud.update_settings(USER, {"dark_mode": False})
         body = json.loads(crud.get_settings(USER)["body"])
