@@ -623,6 +623,59 @@ class TestToolsNutrition:
         assert "requires" in result.lower() or "name" in result.lower()
 
 
+# ── tools: update_task / update_note / update_habit ───────────────────────────
+
+class TestToolsUpdates:
+    def test_update_task_changes_title_and_due(self, tbls):
+        created = tools.handle_tool(USER, "create_task", {"title": "sleep", "priority": "high"})
+        # Extract task_id from [pal-link:task:<id>:...]
+        import re
+        m = re.search(r"pal-link:task:([^:\]]+):", created)
+        assert m, created
+        tid = m.group(1)
+
+        result = tools.handle_tool(USER, "update_task", {
+            "task_id": tid, "title": "go to sleep", "due_date": "2026-05-01"
+        })
+        assert "Updated" in result
+        # Verify via list_tasks
+        listing = tools.handle_tool(USER, "list_tasks", {"status": "all"})
+        assert "go to sleep" in listing
+        assert "sleep" not in listing.replace("go to sleep", "")
+        assert "2026-05-01" in listing
+
+    def test_update_task_missing_id_returns_not_found(self, tbls):
+        result = tools.handle_tool(USER, "update_task", {"task_id": "ghost", "title": "x"})
+        assert "not found" in result.lower()
+
+    def test_update_task_requires_at_least_one_field(self, tbls):
+        created = tools.handle_tool(USER, "create_task", {"title": "pick mushrooms"})
+        import re
+        tid = re.search(r"pal-link:task:([^:\]]+):", created).group(1)
+        result = tools.handle_tool(USER, "update_task", {"task_id": tid})
+        assert "No fields" in result
+
+    def test_update_note_changes_title(self, tbls):
+        tools.handle_tool(USER, "create_note", {"title": "old title", "body": "x"})
+        ddb = boto3.resource("dynamodb", region_name="us-east-1")
+        items = ddb.Table("test-notes-asst").scan()["Items"]
+        nid = items[0]["note_id"]
+        result = tools.handle_tool(USER, "update_note", {"note_id": nid, "title": "new title"})
+        assert "Updated" in result
+        refreshed = ddb.Table("test-notes-asst").get_item(Key={"user_id": USER, "note_id": nid})["Item"]
+        assert refreshed["title"] == "new title"
+
+    def test_update_habit_renames(self, tbls):
+        tools.handle_tool(USER, "create_habit", {"name": "meditate"})
+        ddb = boto3.resource("dynamodb", region_name="us-east-1")
+        items = ddb.Table("test-habits-asst").scan()["Items"]
+        hid = items[0]["habit_id"]
+        result = tools.handle_tool(USER, "update_habit", {"habit_id": hid, "name": "morning meditation"})
+        assert "Updated" in result
+        refreshed = ddb.Table("test-habits-asst").get_item(Key={"user_id": USER, "habit_id": hid})["Item"]
+        assert refreshed["name"] == "morning meditation"
+
+
 # ── tools: exercise ───────────────────────────────────────────────────────────
 
 class TestToolsExercise:

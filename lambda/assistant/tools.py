@@ -53,6 +53,33 @@ TOOL_SPECS = [
     },
     {
         "toolSpec": {
+            "name": "update_task",
+            "description": (
+                "Update an EXISTING task — use this to change the title, due date, priority, "
+                "status, description, or folder of a task that already exists. If the user says "
+                "'change', 'rename', 'reschedule', 'move to', 'update', 'set due to', etc. about "
+                "a task from this session OR a task they can see in their list, ALWAYS use "
+                "update_task, NEVER create_task. If you don't know the task_id, call list_tasks "
+                "first to find it."
+            ),
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "task_id":     {"type": "string", "description": "The task id (from list_tasks [id:...])."},
+                        "title":       {"type": "string", "description": "New title (optional)"},
+                        "description": {"type": "string", "description": "New description (optional)"},
+                        "due_date":    {"type": "string", "description": "New due date YYYY-MM-DD (optional)"},
+                        "priority":    {"type": "string", "enum": ["low", "medium", "high"]},
+                        "status":      {"type": "string", "enum": ["todo", "in_progress", "done"]},
+                    },
+                    "required": ["task_id"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
             "name": "list_tasks",
             "description": "List the user's current tasks.",
             "inputSchema": {
@@ -82,6 +109,26 @@ TOOL_SPECS = [
                         "folder_name": {"type": "string", "description": "Name of the folder to put the note in. The folder will be created if it doesn't exist."},
                     },
                     "required": ["title"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "update_note",
+            "description": (
+                "Update an EXISTING note's title or body. If the user says 'rename that note', "
+                "'edit the note', 'change the body', etc., use update_note, NEVER create_note."
+            ),
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "note_id": {"type": "string", "description": "The note id (from list_notes)."},
+                        "title":   {"type": "string", "description": "New title (optional)"},
+                        "body":    {"type": "string", "description": "New body (optional)"},
+                    },
+                    "required": ["note_id"],
                 }
             },
         }
@@ -250,6 +297,26 @@ TOOL_SPECS = [
                     "type": "object",
                     "properties": {
                         "habit_id": {"type": "string", "description": "The habit_id to toggle"},
+                    },
+                    "required": ["habit_id"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "update_habit",
+            "description": (
+                "Update an EXISTING habit — rename it or change its time_of_day. If the user "
+                "says 'rename that habit', 'change the time', etc., use update_habit, NEVER create_habit."
+            ),
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "habit_id":    {"type": "string", "description": "The habit id (from list_habits)."},
+                        "name":        {"type": "string", "description": "New name (optional)"},
+                        "time_of_day": {"type": "string", "enum": ["anytime", "morning", "afternoon", "evening"]},
                     },
                     "required": ["habit_id"],
                 }
@@ -446,15 +513,18 @@ def handle_tool(user_id: str, name: str, inputs: dict, local_date: str | None = 
     _today = local_date or date.today().isoformat()
     handlers = {
         "create_task":          _create_task,
+        "update_task":          _update_task,
         "list_tasks":           _list_tasks,
         "complete_task":        _complete_task,
         "delete_task":          _delete_task,
         "create_note":          _create_note,
+        "update_note":          _update_note,
         "list_notes":           _list_notes,
         "delete_note":          _delete_note,
         "create_note_folder":   _create_note_folder,
         "list_note_folders":    _list_note_folders,
         "create_habit":         _create_habit,
+        "update_habit":         _update_habit,
         "list_habits":          _list_habits,
         "toggle_habit":         _toggle_habit,
         "delete_habit":         _delete_habit,
@@ -678,6 +748,46 @@ def _delete_task(user_id: str, inputs: dict) -> str:
     return f"Deleted task '{existing.get('title', task_id)}'."
 
 
+def _update_task(user_id: str, inputs: dict) -> str:
+    table   = db.get_table(TASKS_TABLE)
+    task_id = inputs["task_id"]
+    existing = db.get_item(table, user_id, "task_id", task_id)
+    if not existing:
+        return f"Task {task_id} not found."
+
+    fields = {}
+    for k in ("title", "description", "due_date", "priority", "status"):
+        if k in inputs and inputs[k] is not None and inputs[k] != "":
+            fields[k] = inputs[k]
+    if not fields:
+        return "No fields supplied to update."
+
+    if "title" in fields:
+        fields["title"] = fields["title"].strip()
+        if not fields["title"]:
+            return "title cannot be empty."
+
+    fields["updated_at"] = _now()
+    set_parts = []
+    names  = {}
+    values = {}
+    for i, (k, v) in enumerate(fields.items()):
+        names[f"#k{i}"]  = k
+        values[f":v{i}"] = v
+        set_parts.append(f"#k{i} = :v{i}")
+    table.update_item(
+        Key={"user_id": user_id, "task_id": task_id},
+        UpdateExpression="SET " + ", ".join(set_parts),
+        ExpressionAttributeNames=names,
+        ExpressionAttributeValues=values,
+    )
+    changed = ", ".join(f"{k}={v}" for k, v in fields.items() if k != "updated_at")
+    return (
+        f"Updated task '{existing.get('title', task_id)}': {changed} "
+        f"[pal-link:task:{task_id}:Open task →]"
+    )
+
+
 def _list_notes(user_id: str, inputs: dict) -> str:
     notes_table   = db.get_table(NOTES_TABLE)
     folders_table = db.get_table(NOTE_FOLDERS_TABLE)
@@ -710,6 +820,37 @@ def _delete_note(user_id: str, inputs: dict) -> str:
     return f"Deleted note '{existing.get('title', note_id)}'."
 
 
+def _update_note(user_id: str, inputs: dict) -> str:
+    table   = db.get_table(NOTES_TABLE)
+    note_id = inputs["note_id"]
+    existing = db.get_item(table, user_id, "note_id", note_id)
+    if not existing:
+        return f"Note {note_id} not found."
+
+    fields = {}
+    if inputs.get("title"):
+        fields["title"] = inputs["title"].strip()
+    if "body" in inputs and inputs["body"] is not None:
+        fields["body"] = inputs["body"]
+    if not fields:
+        return "No fields supplied to update."
+    fields["updated_at"] = _now()
+
+    set_parts, names, values = [], {}, {}
+    for i, (k, v) in enumerate(fields.items()):
+        names[f"#k{i}"]  = k
+        values[f":v{i}"] = v
+        set_parts.append(f"#k{i} = :v{i}")
+    table.update_item(
+        Key={"user_id": user_id, "note_id": note_id},
+        UpdateExpression="SET " + ", ".join(set_parts),
+        ExpressionAttributeNames=names,
+        ExpressionAttributeValues=values,
+    )
+    changed = ", ".join(f"{k}" for k in fields if k != "updated_at")
+    return f"Updated note '{fields.get('title', existing.get('title', note_id))}': {changed}"
+
+
 def _toggle_habit(user_id: str, inputs: dict) -> str:
     table    = db.get_table(HABITS_TABLE)
     habit_id = inputs["habit_id"]
@@ -740,6 +881,37 @@ def _delete_habit(user_id: str, inputs: dict) -> str:
         return f"Habit {habit_id} not found."
     db.delete_item(table, user_id, "habit_id", habit_id)
     return f"Deleted habit '{existing.get('name', habit_id)}'."
+
+
+def _update_habit(user_id: str, inputs: dict) -> str:
+    table    = db.get_table(HABITS_TABLE)
+    habit_id = inputs["habit_id"]
+    existing = db.get_item(table, user_id, "habit_id", habit_id)
+    if not existing:
+        return f"Habit {habit_id} not found."
+
+    fields = {}
+    if inputs.get("name"):
+        fields["name"] = inputs["name"].strip()
+    if inputs.get("time_of_day"):
+        fields["time_of_day"] = inputs["time_of_day"]
+    if not fields:
+        return "No fields supplied to update."
+    fields["updated_at"] = _now()
+
+    set_parts, names, values = [], {}, {}
+    for i, (k, v) in enumerate(fields.items()):
+        names[f"#k{i}"]  = k
+        values[f":v{i}"] = v
+        set_parts.append(f"#k{i} = :v{i}")
+    table.update_item(
+        Key={"user_id": user_id, "habit_id": habit_id},
+        UpdateExpression="SET " + ", ".join(set_parts),
+        ExpressionAttributeNames=names,
+        ExpressionAttributeValues=values,
+    )
+    changed = ", ".join(f"{k}={v}" for k, v in fields.items() if k != "updated_at")
+    return f"Updated habit '{fields.get('name', existing.get('name', habit_id))}': {changed}"
 
 
 def _update_goal_progress(user_id: str, inputs: dict) -> str:
