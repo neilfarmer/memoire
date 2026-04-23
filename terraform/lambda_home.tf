@@ -35,6 +35,7 @@ resource "aws_lambda_function" "home" {
       HEALTH_TABLE            = aws_dynamodb_table.health.name
       NUTRITION_TABLE         = aws_dynamodb_table.nutrition.name
       SETTINGS_TABLE          = aws_dynamodb_table.settings.name
+      EVENTS_TABLE            = aws_dynamodb_table.assistant_events.name
       ADMIN_USER_IDS          = var.admin_user_ids
       ASSISTANT_FUNCTION_NAME = aws_lambda_function.assistant.function_name
       ASSISTANT_MODEL_ID      = var.assistant_model_id
@@ -95,6 +96,26 @@ resource "aws_iam_role_policy" "home_admin_stats" {
         Effect   = "Allow"
         Action   = ["cloudwatch:GetMetricStatistics"]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:Query",
+        ]
+        Resource = [
+          aws_dynamodb_table.assistant_events.arn,
+          "${aws_dynamodb_table.assistant_events.arn}/index/*",
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:StartQuery",
+          "logs:StopQuery",
+          "logs:GetQueryResults",
+          "logs:DescribeLogGroups",
+        ]
+        Resource = "*"
       }
     ]
   })
@@ -128,6 +149,22 @@ resource "aws_apigatewayv2_route" "home_costs" {
 resource "aws_apigatewayv2_route" "admin_stats" {
   api_id             = aws_apigatewayv2_api.main.id
   route_key          = "GET /admin/stats"
+  target             = "integrations/${aws_apigatewayv2_integration.home.id}"
+  authorizer_id      = aws_apigatewayv2_authorizer.lambda.id
+  authorization_type = "CUSTOM"
+}
+
+resource "aws_apigatewayv2_route" "admin_events" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "GET /admin/events"
+  target             = "integrations/${aws_apigatewayv2_integration.home.id}"
+  authorizer_id      = aws_apigatewayv2_authorizer.lambda.id
+  authorization_type = "CUSTOM"
+}
+
+resource "aws_apigatewayv2_route" "admin_logs" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "GET /admin/logs"
   target             = "integrations/${aws_apigatewayv2_integration.home.id}"
   authorizer_id      = aws_apigatewayv2_authorizer.lambda.id
   authorization_type = "CUSTOM"

@@ -21,9 +21,12 @@ DEFAULTS = {
     "pal_name":                "",
     "profile_inference_hours": 24,
     "home_finances_widget":    False,
+    "chat_retention_days":     30,
+    "supervisor_enabled":      True,
 }
 
 ALLOWED_KEYS = set(DEFAULTS.keys())
+CHAT_RETENTION_MAX_DAYS = 3650
 
 
 def _table():
@@ -78,6 +81,15 @@ def update_settings(user_id: str, body: dict) -> dict:
         err = _validate_ntfy_url(fields["ntfy_url"])
         if err:
             return error(err)
+
+    if "chat_retention_days" in fields:
+        try:
+            days = int(fields["chat_retention_days"])
+        except (TypeError, ValueError):
+            return error("chat_retention_days must be an integer")
+        if days < 0 or days > CHAT_RETENTION_MAX_DAYS:
+            return error(f"chat_retention_days must be between 0 and {CHAT_RETENTION_MAX_DAYS}")
+        fields["chat_retention_days"] = days
 
     update_expr, names, values = build_update_expression(fields)
 

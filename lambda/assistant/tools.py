@@ -24,6 +24,13 @@ GOALS_TABLE        = os.environ["GOALS_TABLE"]
 JOURNAL_TABLE      = os.environ["JOURNAL_TABLE"]
 NUTRITION_TABLE    = os.environ["NUTRITION_TABLE"]
 HEALTH_TABLE       = os.environ["HEALTH_TABLE"]
+DEBTS_TABLE        = os.environ.get("DEBTS_TABLE", "")
+INCOME_TABLE       = os.environ.get("INCOME_TABLE", "")
+EXPENSES_TABLE     = os.environ.get("EXPENSES_TABLE", "")
+BOOKMARKS_TABLE    = os.environ.get("BOOKMARKS_TABLE", "")
+FAVORITES_TABLE    = os.environ.get("FAVORITES_TABLE", "")
+FEEDS_TABLE        = os.environ.get("FEEDS_TABLE", "")
+FEEDS_READ_TABLE   = os.environ.get("FEEDS_READ_TABLE", "")
 
 
 def _now() -> str:
@@ -47,6 +54,33 @@ TOOL_SPECS = [
                         "priority":    {"type": "string", "enum": ["low", "medium", "high"]},
                     },
                     "required": ["title"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "update_task",
+            "description": (
+                "Update an EXISTING task — use this to change the title, due date, priority, "
+                "status, description, or folder of a task that already exists. If the user says "
+                "'change', 'rename', 'reschedule', 'move to', 'update', 'set due to', etc. about "
+                "a task from this session OR a task they can see in their list, ALWAYS use "
+                "update_task, NEVER create_task. If you don't know the task_id, call list_tasks "
+                "first to find it."
+            ),
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "task_id":     {"type": "string", "description": "The task id (from list_tasks [id:...])."},
+                        "title":       {"type": "string", "description": "New title (optional)"},
+                        "description": {"type": "string", "description": "New description (optional)"},
+                        "due_date":    {"type": "string", "description": "New due date YYYY-MM-DD (optional)"},
+                        "priority":    {"type": "string", "enum": ["low", "medium", "high"]},
+                        "status":      {"type": "string", "enum": ["todo", "in_progress", "done"]},
+                    },
+                    "required": ["task_id"],
                 }
             },
         }
@@ -82,6 +116,26 @@ TOOL_SPECS = [
                         "folder_name": {"type": "string", "description": "Name of the folder to put the note in. The folder will be created if it doesn't exist."},
                     },
                     "required": ["title"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "update_note",
+            "description": (
+                "Update an EXISTING note's title or body. If the user says 'rename that note', "
+                "'edit the note', 'change the body', etc., use update_note, NEVER create_note."
+            ),
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "note_id": {"type": "string", "description": "The note id (from list_notes)."},
+                        "title":   {"type": "string", "description": "New title (optional)"},
+                        "body":    {"type": "string", "description": "New body (optional)"},
+                    },
+                    "required": ["note_id"],
                 }
             },
         }
@@ -258,6 +312,26 @@ TOOL_SPECS = [
     },
     {
         "toolSpec": {
+            "name": "update_habit",
+            "description": (
+                "Update an EXISTING habit — rename it or change its time_of_day. If the user "
+                "says 'rename that habit', 'change the time', etc., use update_habit, NEVER create_habit."
+            ),
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "habit_id":    {"type": "string", "description": "The habit id (from list_habits)."},
+                        "name":        {"type": "string", "description": "New name (optional)"},
+                        "time_of_day": {"type": "string", "enum": ["anytime", "morning", "afternoon", "evening"]},
+                    },
+                    "required": ["habit_id"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
             "name": "delete_habit",
             "description": "Permanently delete a habit. Use list_habits first to find the habit_id.",
             "inputSchema": {
@@ -307,23 +381,38 @@ TOOL_SPECS = [
         "toolSpec": {
             "name": "log_meal",
             "description": (
-                "Log a food item to the nutrition log for a given date (defaults to today). "
+                "Log one or more food items to the nutrition log for a given date (defaults to today). "
                 "Use this — NOT create_journal_entry — for ANY food, meal, eating, calorie, "
-                "macro, or diet tracking request. When the user mentions 'food journal', "
-                "'nutrition', 'calories', or what they ate, always use this tool."
+                "macro, or diet tracking request. PREFER the 'items' array when logging multiple "
+                "foods at once (e.g. a meal with several components) — one call logs the whole "
+                "meal. Single-item fields (name, calories, ...) are kept for backward compatibility."
             ),
             "inputSchema": {
                 "json": {
                     "type": "object",
                     "properties": {
-                        "name":      {"type": "string", "description": "Food item name, e.g. 'Chorizo with cheese dip'"},
+                        "items": {
+                            "type": "array",
+                            "description": "Batch of food items to log in one call. Use this for multi-item meals.",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name":      {"type": "string", "description": "Food item name"},
+                                    "calories":  {"type": "number", "description": "Calories (kcal)"},
+                                    "protein_g": {"type": "number", "description": "Protein in grams"},
+                                    "carbs_g":   {"type": "number", "description": "Carbohydrates in grams"},
+                                    "fat_g":     {"type": "number", "description": "Fat in grams"},
+                                },
+                                "required": ["name"],
+                            },
+                        },
+                        "name":      {"type": "string", "description": "Food item name (single-item mode)"},
                         "calories":  {"type": "number", "description": "Calories (kcal)"},
                         "protein_g": {"type": "number", "description": "Protein in grams"},
                         "carbs_g":   {"type": "number", "description": "Carbohydrates in grams"},
                         "fat_g":     {"type": "number", "description": "Fat in grams"},
                         "date":      {"type": "string", "description": "Date YYYY-MM-DD, defaults to today"},
                     },
-                    "required": ["name"],
                 }
             },
         }
@@ -422,6 +511,299 @@ TOOL_SPECS = [
             },
         }
     },
+
+    # ── Journal extras ─────────────────────────────────────────────────────
+    {"toolSpec": {
+        "name": "list_journal_entries",
+        "description": "List recent journal entry dates (most recent first).",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "limit": {"type": "number", "description": "Max entries to return (default 10, max 30)"},
+        }}},
+    }},
+    {"toolSpec": {
+        "name": "get_journal_entry",
+        "description": "Get a journal entry by date.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "date": {"type": "string", "description": "YYYY-MM-DD (defaults to today)"},
+        }}},
+    }},
+    {"toolSpec": {
+        "name": "delete_journal_entry",
+        "description": "Permanently delete a journal entry for a date.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "date": {"type": "string", "description": "YYYY-MM-DD (required)"},
+        }, "required": ["date"]}},
+    }},
+
+    # ── Goals update ───────────────────────────────────────────────────────
+    {"toolSpec": {
+        "name": "update_goal",
+        "description": "Update an EXISTING goal's title, description, or target_date. Use update_goal_progress for just progress %.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "goal_id":     {"type": "string", "description": "Goal id from list_goals"},
+            "title":       {"type": "string"},
+            "description": {"type": "string"},
+            "target_date": {"type": "string", "description": "YYYY-MM-DD"},
+        }, "required": ["goal_id"]}},
+    }},
+
+    # ── Nutrition delete ───────────────────────────────────────────────────
+    {"toolSpec": {
+        "name": "delete_meal",
+        "description": "Remove a single meal item from a day's nutrition log.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "date":    {"type": "string", "description": "YYYY-MM-DD (defaults to today)"},
+            "meal_id": {"type": "string", "description": "The meal id to remove"},
+            "name":    {"type": "string", "description": "Alternatively match by name (first match wins)"},
+        }}},
+    }},
+    {"toolSpec": {
+        "name": "clear_nutrition_log",
+        "description": "Clear all meals from a day's nutrition log.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "date": {"type": "string", "description": "YYYY-MM-DD (defaults to today)"},
+        }}},
+    }},
+
+    # ── Exercise delete / list days ────────────────────────────────────────
+    {"toolSpec": {
+        "name": "delete_exercise",
+        "description": "Remove a single exercise from a day's exercise log.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "date":        {"type": "string", "description": "YYYY-MM-DD (defaults to today)"},
+            "exercise_id": {"type": "string"},
+            "name":        {"type": "string", "description": "Alternatively match by name"},
+        }}},
+    }},
+    {"toolSpec": {
+        "name": "list_exercise_days",
+        "description": "List recent dates that have exercise log entries.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "limit": {"type": "number", "description": "Max dates (default 7)"},
+        }}},
+    }},
+
+    # ── Health ─────────────────────────────────────────────────────────────
+    {"toolSpec": {
+        "name": "log_health",
+        "description": "Record daily health metrics (weight, sleep hours, mood) for a date.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "date":         {"type": "string", "description": "YYYY-MM-DD (defaults to today)"},
+            "weight":       {"type": "number", "description": "Weight (user's unit of choice)"},
+            "sleep_hours":  {"type": "number"},
+            "mood":         {"type": "string", "enum": ["great", "good", "okay", "bad", "terrible"]},
+            "notes":        {"type": "string"},
+        }}},
+    }},
+    {"toolSpec": {
+        "name": "get_health_log",
+        "description": "Get health metrics for a date.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "date": {"type": "string", "description": "YYYY-MM-DD"},
+        }}},
+    }},
+    {"toolSpec": {
+        "name": "list_health_logs",
+        "description": "List recent health log dates.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "limit": {"type": "number"},
+        }}},
+    }},
+    {"toolSpec": {
+        "name": "delete_health_log",
+        "description": "Delete the health log for a date.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "date": {"type": "string"},
+        }, "required": ["date"]}},
+    }},
+
+    # ── Finances ───────────────────────────────────────────────────────────
+    {"toolSpec": {
+        "name": "list_debts",
+        "description": "List the user's debts (credit cards, loans, etc.).",
+        "inputSchema": {"json": {"type": "object", "properties": {}}},
+    }},
+    {"toolSpec": {
+        "name": "create_debt",
+        "description": "Record a new debt.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "name":       {"type": "string"},
+            "balance":    {"type": "number"},
+            "apr":        {"type": "number", "description": "Annual percentage rate (e.g. 18.99)"},
+            "min_payment": {"type": "number"},
+        }, "required": ["name", "balance"]}},
+    }},
+    {"toolSpec": {
+        "name": "update_debt",
+        "description": "Update an existing debt by id.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "debt_id":    {"type": "string"},
+            "name":       {"type": "string"},
+            "balance":    {"type": "number"},
+            "apr":        {"type": "number"},
+            "min_payment": {"type": "number"},
+        }, "required": ["debt_id"]}},
+    }},
+    {"toolSpec": {
+        "name": "delete_debt",
+        "description": "Delete a debt by id.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "debt_id": {"type": "string"},
+        }, "required": ["debt_id"]}},
+    }},
+    {"toolSpec": {
+        "name": "list_income",
+        "description": "List the user's income sources.",
+        "inputSchema": {"json": {"type": "object", "properties": {}}},
+    }},
+    {"toolSpec": {
+        "name": "create_income",
+        "description": "Record a new income source.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "name":      {"type": "string"},
+            "amount":    {"type": "number"},
+            "frequency": {"type": "string", "enum": ["weekly", "biweekly", "monthly", "yearly"]},
+        }, "required": ["name", "amount"]}},
+    }},
+    {"toolSpec": {
+        "name": "update_income",
+        "description": "Update an income source by id.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "income_id": {"type": "string"},
+            "name":      {"type": "string"},
+            "amount":    {"type": "number"},
+            "frequency": {"type": "string", "enum": ["weekly", "biweekly", "monthly", "yearly"]},
+        }, "required": ["income_id"]}},
+    }},
+    {"toolSpec": {
+        "name": "delete_income",
+        "description": "Delete an income source by id.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "income_id": {"type": "string"},
+        }, "required": ["income_id"]}},
+    }},
+    {"toolSpec": {
+        "name": "list_expenses",
+        "description": "List fixed recurring expenses.",
+        "inputSchema": {"json": {"type": "object", "properties": {}}},
+    }},
+    {"toolSpec": {
+        "name": "create_expense",
+        "description": "Record a new fixed expense.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "name":      {"type": "string"},
+            "amount":    {"type": "number"},
+            "frequency": {"type": "string", "enum": ["weekly", "biweekly", "monthly", "yearly"]},
+            "due_day":   {"type": "number", "description": "Day of month (1-31) for monthly bills"},
+        }, "required": ["name", "amount"]}},
+    }},
+    {"toolSpec": {
+        "name": "update_expense",
+        "description": "Update a fixed expense by id.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "expense_id": {"type": "string"},
+            "name":       {"type": "string"},
+            "amount":     {"type": "number"},
+            "frequency":  {"type": "string", "enum": ["weekly", "biweekly", "monthly", "yearly"]},
+            "due_day":    {"type": "number"},
+        }, "required": ["expense_id"]}},
+    }},
+    {"toolSpec": {
+        "name": "delete_expense",
+        "description": "Delete a fixed expense by id.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "expense_id": {"type": "string"},
+        }, "required": ["expense_id"]}},
+    }},
+    {"toolSpec": {
+        "name": "get_finances_summary",
+        "description": "Summary of income, expenses, debts, and net cash flow.",
+        "inputSchema": {"json": {"type": "object", "properties": {}}},
+    }},
+
+    # ── Bookmarks ──────────────────────────────────────────────────────────
+    {"toolSpec": {
+        "name": "create_bookmark",
+        "description": "Save a URL as a bookmark.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "url":         {"type": "string"},
+            "title":       {"type": "string"},
+            "description": {"type": "string"},
+            "tags":        {"type": "array", "items": {"type": "string"}},
+        }, "required": ["url"]}},
+    }},
+    {"toolSpec": {
+        "name": "list_bookmarks",
+        "description": "List the user's bookmarks.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "tag": {"type": "string", "description": "Filter by tag"},
+        }}},
+    }},
+    {"toolSpec": {
+        "name": "update_bookmark",
+        "description": "Update a bookmark by id.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "bookmark_id": {"type": "string"},
+            "title":       {"type": "string"},
+            "description": {"type": "string"},
+            "tags":        {"type": "array", "items": {"type": "string"}},
+        }, "required": ["bookmark_id"]}},
+    }},
+    {"toolSpec": {
+        "name": "delete_bookmark",
+        "description": "Delete a bookmark by id.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "bookmark_id": {"type": "string"},
+        }, "required": ["bookmark_id"]}},
+    }},
+
+    # ── Favorites ──────────────────────────────────────────────────────────
+    {"toolSpec": {
+        "name": "add_favorite",
+        "description": "Mark an item (task/note/goal/etc.) as a favorite.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "kind":    {"type": "string", "description": "Type of thing: task, note, goal, bookmark, etc."},
+            "item_id": {"type": "string"},
+            "label":   {"type": "string", "description": "Display label"},
+            "tags":    {"type": "array", "items": {"type": "string"}},
+        }, "required": ["kind", "item_id"]}},
+    }},
+    {"toolSpec": {
+        "name": "list_favorites",
+        "description": "List the user's favorites.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "kind": {"type": "string", "description": "Filter by kind"},
+        }}},
+    }},
+    {"toolSpec": {
+        "name": "remove_favorite",
+        "description": "Remove a favorite by id.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "favorite_id": {"type": "string"},
+        }, "required": ["favorite_id"]}},
+    }},
+
+    # ── Feeds ──────────────────────────────────────────────────────────────
+    {"toolSpec": {
+        "name": "list_feeds",
+        "description": "List the user's RSS feed subscriptions.",
+        "inputSchema": {"json": {"type": "object", "properties": {}}},
+    }},
+    {"toolSpec": {
+        "name": "add_feed",
+        "description": "Subscribe to an RSS feed URL.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "url":  {"type": "string"},
+            "name": {"type": "string"},
+        }, "required": ["url"]}},
+    }},
+    {"toolSpec": {
+        "name": "delete_feed",
+        "description": "Unsubscribe from a feed.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "feed_id": {"type": "string"},
+        }, "required": ["feed_id"]}},
+    }},
 ]
 
 
@@ -431,15 +813,18 @@ def handle_tool(user_id: str, name: str, inputs: dict, local_date: str | None = 
     _today = local_date or date.today().isoformat()
     handlers = {
         "create_task":          _create_task,
+        "update_task":          _update_task,
         "list_tasks":           _list_tasks,
         "complete_task":        _complete_task,
         "delete_task":          _delete_task,
         "create_note":          _create_note,
+        "update_note":          _update_note,
         "list_notes":           _list_notes,
         "delete_note":          _delete_note,
         "create_note_folder":   _create_note_folder,
         "list_note_folders":    _list_note_folders,
         "create_habit":         _create_habit,
+        "update_habit":         _update_habit,
         "list_habits":          _list_habits,
         "toggle_habit":         _toggle_habit,
         "delete_habit":         _delete_habit,
@@ -454,13 +839,60 @@ def handle_tool(user_id: str, name: str, inputs: dict, local_date: str | None = 
         "get_exercise_log":     _get_exercise_log,
         "lookup_nutrition":     _lookup_nutrition,
         "remember_fact":        _remember_fact,
+        # Journal extras
+        "list_journal_entries": _list_journal_entries,
+        "get_journal_entry":    _get_journal_entry,
+        "delete_journal_entry": _delete_journal_entry,
+        # Goals
+        "update_goal":          _update_goal,
+        # Nutrition delete
+        "delete_meal":          _delete_meal,
+        "clear_nutrition_log":  _clear_nutrition_log,
+        # Exercise extras
+        "delete_exercise":      _delete_exercise,
+        "list_exercise_days":   _list_exercise_days,
+        # Health
+        "log_health":           _log_health,
+        "get_health_log":       _get_health_log,
+        "list_health_logs":     _list_health_logs,
+        "delete_health_log":    _delete_health_log,
+        # Finances
+        "list_debts":           _list_debts,
+        "create_debt":          _create_debt,
+        "update_debt":          _update_debt,
+        "delete_debt":          _delete_debt,
+        "list_income":          _list_income,
+        "create_income":        _create_income,
+        "update_income":        _update_income,
+        "delete_income":        _delete_income,
+        "list_expenses":        _list_expenses,
+        "create_expense":       _create_expense,
+        "update_expense":       _update_expense,
+        "delete_expense":       _delete_expense,
+        "get_finances_summary": _get_finances_summary,
+        # Bookmarks
+        "create_bookmark":      _create_bookmark,
+        "list_bookmarks":       _list_bookmarks,
+        "update_bookmark":      _update_bookmark,
+        "delete_bookmark":      _delete_bookmark,
+        # Favorites
+        "add_favorite":         _add_favorite,
+        "list_favorites":       _list_favorites,
+        "remove_favorite":      _remove_favorite,
+        # Feeds
+        "list_feeds":           _list_feeds,
+        "add_feed":             _add_feed,
+        "delete_feed":          _delete_feed,
     }
     handler = handlers.get(name)
     if not handler:
         return f"Unknown tool: {name}"
     # Inject local today for tools that default to "today"
     _date_aware = {"log_meal", "get_nutrition_log", "log_exercise", "get_exercise_log",
-                   "create_journal_entry", "toggle_habit"}
+                   "create_journal_entry", "toggle_habit",
+                   "delete_meal", "clear_nutrition_log", "delete_exercise",
+                   "log_health", "get_health_log",
+                   "list_journal_entries", "get_journal_entry"}
     if name in _date_aware:
         inputs = {**inputs, "_today": _today}
     return handler(user_id, inputs)
@@ -663,6 +1095,46 @@ def _delete_task(user_id: str, inputs: dict) -> str:
     return f"Deleted task '{existing.get('title', task_id)}'."
 
 
+def _update_task(user_id: str, inputs: dict) -> str:
+    table   = db.get_table(TASKS_TABLE)
+    task_id = inputs["task_id"]
+    existing = db.get_item(table, user_id, "task_id", task_id)
+    if not existing:
+        return f"Task {task_id} not found."
+
+    fields = {}
+    for k in ("title", "description", "due_date", "priority", "status"):
+        if k in inputs and inputs[k] is not None and inputs[k] != "":
+            fields[k] = inputs[k]
+    if not fields:
+        return "No fields supplied to update."
+
+    if "title" in fields:
+        fields["title"] = fields["title"].strip()
+        if not fields["title"]:
+            return "title cannot be empty."
+
+    fields["updated_at"] = _now()
+    set_parts = []
+    names  = {}
+    values = {}
+    for i, (k, v) in enumerate(fields.items()):
+        names[f"#k{i}"]  = k
+        values[f":v{i}"] = v
+        set_parts.append(f"#k{i} = :v{i}")
+    table.update_item(
+        Key={"user_id": user_id, "task_id": task_id},
+        UpdateExpression="SET " + ", ".join(set_parts),
+        ExpressionAttributeNames=names,
+        ExpressionAttributeValues=values,
+    )
+    changed = ", ".join(f"{k}={v}" for k, v in fields.items() if k != "updated_at")
+    return (
+        f"Updated task '{existing.get('title', task_id)}': {changed} "
+        f"[pal-link:task:{task_id}:Open task →]"
+    )
+
+
 def _list_notes(user_id: str, inputs: dict) -> str:
     notes_table   = db.get_table(NOTES_TABLE)
     folders_table = db.get_table(NOTE_FOLDERS_TABLE)
@@ -695,6 +1167,37 @@ def _delete_note(user_id: str, inputs: dict) -> str:
     return f"Deleted note '{existing.get('title', note_id)}'."
 
 
+def _update_note(user_id: str, inputs: dict) -> str:
+    table   = db.get_table(NOTES_TABLE)
+    note_id = inputs["note_id"]
+    existing = db.get_item(table, user_id, "note_id", note_id)
+    if not existing:
+        return f"Note {note_id} not found."
+
+    fields = {}
+    if inputs.get("title"):
+        fields["title"] = inputs["title"].strip()
+    if "body" in inputs and inputs["body"] is not None:
+        fields["body"] = inputs["body"]
+    if not fields:
+        return "No fields supplied to update."
+    fields["updated_at"] = _now()
+
+    set_parts, names, values = [], {}, {}
+    for i, (k, v) in enumerate(fields.items()):
+        names[f"#k{i}"]  = k
+        values[f":v{i}"] = v
+        set_parts.append(f"#k{i} = :v{i}")
+    table.update_item(
+        Key={"user_id": user_id, "note_id": note_id},
+        UpdateExpression="SET " + ", ".join(set_parts),
+        ExpressionAttributeNames=names,
+        ExpressionAttributeValues=values,
+    )
+    changed = ", ".join(f"{k}" for k in fields if k != "updated_at")
+    return f"Updated note '{fields.get('title', existing.get('title', note_id))}': {changed}"
+
+
 def _toggle_habit(user_id: str, inputs: dict) -> str:
     table    = db.get_table(HABITS_TABLE)
     habit_id = inputs["habit_id"]
@@ -725,6 +1228,37 @@ def _delete_habit(user_id: str, inputs: dict) -> str:
         return f"Habit {habit_id} not found."
     db.delete_item(table, user_id, "habit_id", habit_id)
     return f"Deleted habit '{existing.get('name', habit_id)}'."
+
+
+def _update_habit(user_id: str, inputs: dict) -> str:
+    table    = db.get_table(HABITS_TABLE)
+    habit_id = inputs["habit_id"]
+    existing = db.get_item(table, user_id, "habit_id", habit_id)
+    if not existing:
+        return f"Habit {habit_id} not found."
+
+    fields = {}
+    if inputs.get("name"):
+        fields["name"] = inputs["name"].strip()
+    if inputs.get("time_of_day"):
+        fields["time_of_day"] = inputs["time_of_day"]
+    if not fields:
+        return "No fields supplied to update."
+    fields["updated_at"] = _now()
+
+    set_parts, names, values = [], {}, {}
+    for i, (k, v) in enumerate(fields.items()):
+        names[f"#k{i}"]  = k
+        values[f":v{i}"] = v
+        set_parts.append(f"#k{i} = :v{i}")
+    table.update_item(
+        Key={"user_id": user_id, "habit_id": habit_id},
+        UpdateExpression="SET " + ", ".join(set_parts),
+        ExpressionAttributeNames=names,
+        ExpressionAttributeValues=values,
+    )
+    changed = ", ".join(f"{k}={v}" for k, v in fields.items() if k != "updated_at")
+    return f"Updated habit '{fields.get('name', existing.get('name', habit_id))}': {changed}"
 
 
 def _update_goal_progress(user_id: str, inputs: dict) -> str:
@@ -794,11 +1328,31 @@ def _log_meal(user_id: str, inputs: dict) -> str:
     existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
     meals    = list(existing.get("meals", [])) if existing else []
 
-    meal = {"id": str(uuid.uuid4()), "name": inputs["name"].strip()}
-    for field in ("calories", "protein_g", "carbs_g", "fat_g"):
-        if inputs.get(field) is not None:
-            meal[field] = Decimal(str(inputs[field]))
-    meals.append(meal)
+    raw_items = inputs.get("items")
+    if raw_items and isinstance(raw_items, list):
+        new_items = raw_items
+    elif inputs.get("name"):
+        new_items = [{k: inputs.get(k) for k in ("name", "calories", "protein_g", "carbs_g", "fat_g")}]
+    else:
+        return "log_meal requires either 'items' (array) or 'name' (single item)."
+
+    added_names = []
+    added_cals  = 0
+    for src in new_items:
+        name = (src.get("name") or "").strip()
+        if not name:
+            continue
+        meal = {"id": str(uuid.uuid4()), "name": name}
+        for field in ("calories", "protein_g", "carbs_g", "fat_g"):
+            if src.get(field) is not None:
+                meal[field] = Decimal(str(src[field]))
+        meals.append(meal)
+        added_names.append(name)
+        if meal.get("calories"):
+            added_cals += int(meal["calories"])
+
+    if not added_names:
+        return "No valid items supplied to log_meal."
 
     table.put_item(Item={
         "user_id":    user_id,
@@ -808,8 +1362,12 @@ def _log_meal(user_id: str, inputs: dict) -> str:
         "created_at": existing["created_at"] if existing else _now(),
         "updated_at": _now(),
     })
-    cal_str = f" ({int(meal['calories'])} cal)" if meal.get("calories") else ""
-    return f"Logged '{meal['name']}'{cal_str} to nutrition log for {log_date}. {len(meals)} item(s) today."
+
+    if len(added_names) == 1:
+        cal_str = f" ({added_cals} cal)" if added_cals else ""
+        return f"Logged '{added_names[0]}'{cal_str} to nutrition log for {log_date}. {len(meals)} item(s) today."
+    cal_str = f" ({added_cals} cal total)" if added_cals else ""
+    return f"Logged {len(added_names)} items{cal_str} to nutrition log for {log_date}: {', '.join(added_names)}. {len(meals)} item(s) today."
 
 
 def _get_nutrition_log(user_id: str, inputs: dict) -> str:
@@ -957,18 +1515,612 @@ def _lookup_nutrition(user_id: str, inputs: dict) -> str:
 
 
 def _remember_fact(user_id: str, inputs: dict) -> str:
-    key      = inputs["key"]
-    new_val  = inputs["value"]
+    import facts as _fct
+    key      = _fct.canonical_key(inputs["key"])
+    new_val  = inputs["value"].strip()
+    if not key or key.startswith("__") or not new_val:
+        return "Skipped: empty fact."
+    if _fct.looks_like_task(new_val):
+        return "Skipped: looks like a task, not a durable fact."
     existing_facts, _ = mem.load_memory(user_id)
     existing = existing_facts.get(key, "")
-    if existing:
-        existing_items = [v.strip() for v in existing.split(",") if v.strip()]
-        new_items      = [v.strip() for v in new_val.split(",")  if v.strip()]
-        existing_lower = {v.lower() for v in existing_items}
-        for item in new_items:
-            if item.lower() not in existing_lower:
-                existing_items.append(item)
-                existing_lower.add(item.lower())
-        new_val = ", ".join(existing_items)
-    mem.save_memory(user_id, key, new_val)
-    return f"Remembered: {key} = {new_val}"
+    merged   = _fct.merge_values(existing, new_val)
+    if not merged:
+        return "Skipped: no useful content after cleanup."
+    if merged == existing:
+        return f"Already knew: {key} = {existing}"
+    mem.save_memory(user_id, key, merged)
+    return f"Remembered: {key} = {merged}"
+
+
+# ── Journal extras ────────────────────────────────────────────────────────────
+
+def _list_journal_entries(user_id: str, inputs: dict) -> str:
+    table = db.get_table(JOURNAL_TABLE)
+    items = db.query_by_user(table, user_id)
+    items.sort(key=lambda x: x.get("entry_date", ""), reverse=True)
+    limit = min(int(inputs.get("limit", 10) or 10), 30)
+    items = items[:limit]
+    if not items:
+        return "No journal entries yet."
+    lines = ["Journal entries:"]
+    for e in items:
+        d    = e.get("entry_date", "")
+        mood = e.get("mood", "")
+        body = (e.get("body", "") or "").strip().replace("\n", " ")
+        preview = body[:80] + ("..." if len(body) > 80 else "")
+        mood_str = f" [{mood}]" if mood else ""
+        lines.append(f"- {d}{mood_str}: {preview} [pal-link:journal:{d}:Open →]")
+    return "\n".join(lines)
+
+
+def _get_journal_entry(user_id: str, inputs: dict) -> str:
+    table = db.get_table(JOURNAL_TABLE)
+    d     = inputs.get("date") or inputs.get("_today") or date.today().isoformat()
+    item  = table.get_item(Key={"user_id": user_id, "entry_date": d}).get("Item")
+    if not item:
+        return f"No journal entry for {d}."
+    mood = item.get("mood", "")
+    body = item.get("body", "")
+    return f"Journal {d}{' (' + mood + ')' if mood else ''}:\n{body}"
+
+
+def _delete_journal_entry(user_id: str, inputs: dict) -> str:
+    table = db.get_table(JOURNAL_TABLE)
+    d     = inputs["date"]
+    item  = table.get_item(Key={"user_id": user_id, "entry_date": d}).get("Item")
+    if not item:
+        return f"No journal entry for {d}."
+    table.delete_item(Key={"user_id": user_id, "entry_date": d})
+    return f"Deleted journal entry for {d}."
+
+
+# ── Goals update ──────────────────────────────────────────────────────────────
+
+def _update_goal(user_id: str, inputs: dict) -> str:
+    table   = db.get_table(GOALS_TABLE)
+    goal_id = inputs["goal_id"]
+    existing = db.get_item(table, user_id, "goal_id", goal_id)
+    if not existing:
+        return f"Goal {goal_id} not found."
+
+    fields = {}
+    for k in ("title", "description", "target_date"):
+        if inputs.get(k):
+            fields[k] = inputs[k].strip() if isinstance(inputs[k], str) else inputs[k]
+    if not fields:
+        return "No fields supplied to update."
+    fields["updated_at"] = _now()
+
+    set_parts, names, values = [], {}, {}
+    for i, (k, v) in enumerate(fields.items()):
+        names[f"#k{i}"]  = k
+        values[f":v{i}"] = v
+        set_parts.append(f"#k{i} = :v{i}")
+    table.update_item(
+        Key={"user_id": user_id, "goal_id": goal_id},
+        UpdateExpression="SET " + ", ".join(set_parts),
+        ExpressionAttributeNames=names,
+        ExpressionAttributeValues=values,
+    )
+    changed = ", ".join(f"{k}" for k in fields if k != "updated_at")
+    return f"Updated goal '{fields.get('title', existing.get('title', goal_id))}': {changed}"
+
+
+# ── Nutrition delete ──────────────────────────────────────────────────────────
+
+def _delete_meal(user_id: str, inputs: dict) -> str:
+    table = db.get_table(NUTRITION_TABLE)
+    log_date = inputs.get("date") or inputs.get("_today") or date.today().isoformat()
+    item = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
+    if not item or not item.get("meals"):
+        return f"No meals on {log_date}."
+    meals = list(item["meals"])
+    target_id   = inputs.get("meal_id")
+    target_name = (inputs.get("name") or "").strip().lower()
+    removed = None
+    for i, m in enumerate(meals):
+        if target_id and m.get("id") == target_id:
+            removed = meals.pop(i)
+            break
+        if target_name and (m.get("name") or "").strip().lower() == target_name:
+            removed = meals.pop(i)
+            break
+    if removed is None:
+        return "No matching meal found."
+    item["meals"]      = meals
+    item["updated_at"] = _now()
+    table.put_item(Item=item)
+    return f"Removed '{removed.get('name')}' from nutrition log for {log_date}. {len(meals)} item(s) remaining."
+
+
+def _clear_nutrition_log(user_id: str, inputs: dict) -> str:
+    table = db.get_table(NUTRITION_TABLE)
+    log_date = inputs.get("date") or inputs.get("_today") or date.today().isoformat()
+    item = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
+    if not item:
+        return f"No nutrition log for {log_date}."
+    table.delete_item(Key={"user_id": user_id, "log_date": log_date})
+    return f"Cleared nutrition log for {log_date}."
+
+
+# ── Exercise extras ───────────────────────────────────────────────────────────
+
+def _delete_exercise(user_id: str, inputs: dict) -> str:
+    table = db.get_table(HEALTH_TABLE)
+    log_date = inputs.get("date") or inputs.get("_today") or date.today().isoformat()
+    item = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
+    if not item or not item.get("exercises"):
+        return f"No exercises on {log_date}."
+    exs = list(item["exercises"])
+    target_id   = inputs.get("exercise_id")
+    target_name = (inputs.get("name") or "").strip().lower()
+    removed = None
+    for i, ex in enumerate(exs):
+        if target_id and ex.get("id") == target_id:
+            removed = exs.pop(i)
+            break
+        if target_name and (ex.get("name") or "").strip().lower() == target_name:
+            removed = exs.pop(i)
+            break
+    if removed is None:
+        return "No matching exercise found."
+    item["exercises"]  = exs
+    item["updated_at"] = _now()
+    table.put_item(Item=item)
+    return f"Removed '{removed.get('name')}' from exercise log for {log_date}."
+
+
+def _list_exercise_days(user_id: str, inputs: dict) -> str:
+    table = db.get_table(HEALTH_TABLE)
+    items = db.query_by_user(table, user_id)
+    items = [i for i in items if i.get("exercises")]
+    items.sort(key=lambda x: x.get("log_date", ""), reverse=True)
+    limit = int(inputs.get("limit", 7) or 7)
+    items = items[:limit]
+    if not items:
+        return "No exercise logs yet."
+    lines = ["Exercise days:"]
+    for i in items:
+        count = len(i.get("exercises", []))
+        lines.append(f"- {i['log_date']}: {count} exercise(s)")
+    return "\n".join(lines)
+
+
+# ── Health ────────────────────────────────────────────────────────────────────
+
+def _log_health(user_id: str, inputs: dict) -> str:
+    table = db.get_table(HEALTH_TABLE)
+    log_date = inputs.get("date") or inputs.get("_today") or date.today().isoformat()
+    existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item") or {}
+    item = {
+        "user_id":    user_id,
+        "log_date":   log_date,
+        "meals":      existing.get("meals", []),
+        "exercises":  existing.get("exercises", []),
+        "notes":      existing.get("notes", ""),
+        "created_at": existing.get("created_at") or _now(),
+        "updated_at": _now(),
+    }
+    for k in ("weight", "sleep_hours"):
+        if inputs.get(k) is not None:
+            item[k] = Decimal(str(inputs[k]))
+    for k in ("mood", "notes"):
+        if inputs.get(k) is not None and inputs.get(k) != "":
+            item[k] = inputs[k]
+    # Preserve existing keys the caller didn't override
+    for k in ("weight", "sleep_hours", "mood"):
+        if k not in item and existing.get(k) is not None:
+            item[k] = existing[k]
+    table.put_item(Item=item)
+    parts = [f"{k}={item[k]}" for k in ("weight", "sleep_hours", "mood") if k in item]
+    return f"Logged health for {log_date}: {', '.join(parts) if parts else 'no new fields'}."
+
+
+def _get_health_log(user_id: str, inputs: dict) -> str:
+    table = db.get_table(HEALTH_TABLE)
+    log_date = inputs.get("date") or inputs.get("_today") or date.today().isoformat()
+    item = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
+    if not item:
+        return f"No health log for {log_date}."
+    bits = []
+    for k in ("weight", "sleep_hours", "mood"):
+        if item.get(k) is not None and item.get(k) != "":
+            bits.append(f"{k}: {item[k]}")
+    if item.get("notes"):
+        bits.append(f"notes: {item['notes']}")
+    return f"Health {log_date}: " + ("; ".join(bits) if bits else "(no entries)")
+
+
+def _list_health_logs(user_id: str, inputs: dict) -> str:
+    table = db.get_table(HEALTH_TABLE)
+    items = db.query_by_user(table, user_id)
+    def _has_health(i):
+        return any(i.get(k) is not None for k in ("weight", "sleep_hours", "mood"))
+    items = [i for i in items if _has_health(i)]
+    items.sort(key=lambda x: x.get("log_date", ""), reverse=True)
+    limit = int(inputs.get("limit", 10) or 10)
+    items = items[:limit]
+    if not items:
+        return "No health logs yet."
+    lines = ["Health logs:"]
+    for i in items:
+        parts = []
+        for k in ("weight", "sleep_hours", "mood"):
+            if i.get(k) is not None:
+                parts.append(f"{k}={i[k]}")
+        lines.append(f"- {i['log_date']}: {', '.join(parts)}")
+    return "\n".join(lines)
+
+
+def _delete_health_log(user_id: str, inputs: dict) -> str:
+    table = db.get_table(HEALTH_TABLE)
+    d = inputs["date"]
+    item = table.get_item(Key={"user_id": user_id, "log_date": d}).get("Item")
+    if not item:
+        return f"No health log for {d}."
+    # Only null out health-specific fields; keep meals/exercises if present
+    if item.get("meals") or item.get("exercises"):
+        for k in ("weight", "sleep_hours", "mood"):
+            item.pop(k, None)
+        item["updated_at"] = _now()
+        table.put_item(Item=item)
+        return f"Cleared health metrics for {d} (kept meals/exercises)."
+    table.delete_item(Key={"user_id": user_id, "log_date": d})
+    return f"Deleted health log for {d}."
+
+
+# ── Finances helpers ──────────────────────────────────────────────────────────
+
+def _finances_common_update(table_name: str, key_name: str, user_id: str, item_id: str, fields: dict) -> str:
+    table = db.get_table(table_name)
+    existing = db.get_item(table, user_id, key_name, item_id)
+    if not existing:
+        return f"{key_name}={item_id} not found."
+    fields = {k: v for k, v in fields.items() if v is not None and v != ""}
+    if not fields:
+        return "No fields supplied to update."
+    # Coerce numeric
+    for k in ("amount", "balance", "apr", "min_payment", "due_day"):
+        if k in fields and not isinstance(fields[k], Decimal):
+            fields[k] = Decimal(str(fields[k]))
+    fields["updated_at"] = _now()
+    set_parts, names, values = [], {}, {}
+    for i, (k, v) in enumerate(fields.items()):
+        names[f"#k{i}"]  = k
+        values[f":v{i}"] = v
+        set_parts.append(f"#k{i} = :v{i}")
+    table.update_item(
+        Key={"user_id": user_id, key_name: item_id},
+        UpdateExpression="SET " + ", ".join(set_parts),
+        ExpressionAttributeNames=names,
+        ExpressionAttributeValues=values,
+    )
+    return f"Updated {key_name}={item_id}."
+
+
+# Debts ---------------------------------------------------------------------
+def _list_debts(user_id: str, inputs: dict) -> str:
+    table = db.get_table(DEBTS_TABLE)
+    items = db.query_by_user(table, user_id)
+    if not items:
+        return "No debts."
+    lines = ["Debts:"]
+    for d in items:
+        lines.append(
+            f"- {d.get('name')}: balance {d.get('balance')} "
+            f"APR {d.get('apr', '?')} min {d.get('min_payment', '?')} "
+            f"[id:{d.get('debt_id')}]"
+        )
+    return "\n".join(lines)
+
+
+def _create_debt(user_id: str, inputs: dict) -> str:
+    table = db.get_table(DEBTS_TABLE)
+    did   = str(uuid.uuid4())
+    item = {
+        "user_id":    user_id,
+        "debt_id":    did,
+        "name":       inputs["name"].strip(),
+        "balance":    Decimal(str(inputs["balance"])),
+        "created_at": _now(),
+        "updated_at": _now(),
+    }
+    for k in ("apr", "min_payment"):
+        if inputs.get(k) is not None:
+            item[k] = Decimal(str(inputs[k]))
+    table.put_item(Item=item)
+    return f"Created debt '{item['name']}' balance {item['balance']} [id:{did}]"
+
+
+def _update_debt(user_id: str, inputs: dict) -> str:
+    return _finances_common_update(
+        DEBTS_TABLE, "debt_id", user_id, inputs["debt_id"],
+        {k: inputs.get(k) for k in ("name", "balance", "apr", "min_payment")},
+    )
+
+
+def _delete_debt(user_id: str, inputs: dict) -> str:
+    table = db.get_table(DEBTS_TABLE)
+    did = inputs["debt_id"]
+    existing = db.get_item(table, user_id, "debt_id", did)
+    if not existing:
+        return f"Debt {did} not found."
+    db.delete_item(table, user_id, "debt_id", did)
+    return f"Deleted debt '{existing.get('name', did)}'."
+
+
+# Income --------------------------------------------------------------------
+def _list_income(user_id: str, inputs: dict) -> str:
+    table = db.get_table(INCOME_TABLE)
+    items = db.query_by_user(table, user_id)
+    if not items:
+        return "No income sources."
+    lines = ["Income:"]
+    for i in items:
+        lines.append(f"- {i.get('name')}: {i.get('amount')} {i.get('frequency', 'monthly')} [id:{i.get('income_id')}]")
+    return "\n".join(lines)
+
+
+def _create_income(user_id: str, inputs: dict) -> str:
+    table = db.get_table(INCOME_TABLE)
+    iid = str(uuid.uuid4())
+    item = {
+        "user_id":    user_id,
+        "income_id":  iid,
+        "name":       inputs["name"].strip(),
+        "amount":     Decimal(str(inputs["amount"])),
+        "frequency":  inputs.get("frequency", "monthly"),
+        "created_at": _now(),
+        "updated_at": _now(),
+    }
+    table.put_item(Item=item)
+    return f"Created income '{item['name']}' {item['amount']} {item['frequency']} [id:{iid}]"
+
+
+def _update_income(user_id: str, inputs: dict) -> str:
+    return _finances_common_update(
+        INCOME_TABLE, "income_id", user_id, inputs["income_id"],
+        {k: inputs.get(k) for k in ("name", "amount", "frequency")},
+    )
+
+
+def _delete_income(user_id: str, inputs: dict) -> str:
+    table = db.get_table(INCOME_TABLE)
+    iid = inputs["income_id"]
+    existing = db.get_item(table, user_id, "income_id", iid)
+    if not existing:
+        return f"Income {iid} not found."
+    db.delete_item(table, user_id, "income_id", iid)
+    return f"Deleted income '{existing.get('name', iid)}'."
+
+
+# Expenses ------------------------------------------------------------------
+def _list_expenses(user_id: str, inputs: dict) -> str:
+    table = db.get_table(EXPENSES_TABLE)
+    items = db.query_by_user(table, user_id)
+    if not items:
+        return "No fixed expenses."
+    lines = ["Fixed expenses:"]
+    for e in items:
+        dd = f" due day {e['due_day']}" if e.get("due_day") else ""
+        lines.append(
+            f"- {e.get('name')}: {e.get('amount')} {e.get('frequency', 'monthly')}{dd} "
+            f"[id:{e.get('expense_id')}]"
+        )
+    return "\n".join(lines)
+
+
+def _create_expense(user_id: str, inputs: dict) -> str:
+    table = db.get_table(EXPENSES_TABLE)
+    eid = str(uuid.uuid4())
+    item = {
+        "user_id":    user_id,
+        "expense_id": eid,
+        "name":       inputs["name"].strip(),
+        "amount":     Decimal(str(inputs["amount"])),
+        "frequency":  inputs.get("frequency", "monthly"),
+        "created_at": _now(),
+        "updated_at": _now(),
+    }
+    if inputs.get("due_day") is not None:
+        item["due_day"] = Decimal(str(inputs["due_day"]))
+    table.put_item(Item=item)
+    return f"Created expense '{item['name']}' {item['amount']} {item['frequency']} [id:{eid}]"
+
+
+def _update_expense(user_id: str, inputs: dict) -> str:
+    return _finances_common_update(
+        EXPENSES_TABLE, "expense_id", user_id, inputs["expense_id"],
+        {k: inputs.get(k) for k in ("name", "amount", "frequency", "due_day")},
+    )
+
+
+def _delete_expense(user_id: str, inputs: dict) -> str:
+    table = db.get_table(EXPENSES_TABLE)
+    eid = inputs["expense_id"]
+    existing = db.get_item(table, user_id, "expense_id", eid)
+    if not existing:
+        return f"Expense {eid} not found."
+    db.delete_item(table, user_id, "expense_id", eid)
+    return f"Deleted expense '{existing.get('name', eid)}'."
+
+
+def _get_finances_summary(user_id: str, inputs: dict) -> str:
+    def _monthly(amount, freq):
+        if amount is None: return Decimal(0)
+        amt = amount if isinstance(amount, Decimal) else Decimal(str(amount))
+        f = (freq or "monthly").lower()
+        if f == "weekly":   return amt * Decimal("52") / Decimal("12")
+        if f == "biweekly": return amt * Decimal("26") / Decimal("12")
+        if f == "yearly":   return amt / Decimal("12")
+        return amt
+    inc_sum = Decimal(0)
+    for i in db.query_by_user(db.get_table(INCOME_TABLE), user_id):
+        inc_sum += _monthly(i.get("amount"), i.get("frequency"))
+    exp_sum = Decimal(0)
+    for e in db.query_by_user(db.get_table(EXPENSES_TABLE), user_id):
+        exp_sum += _monthly(e.get("amount"), e.get("frequency"))
+    debt_total = Decimal(0)
+    for d in db.query_by_user(db.get_table(DEBTS_TABLE), user_id):
+        bal = d.get("balance") or 0
+        debt_total += bal if isinstance(bal, Decimal) else Decimal(str(bal))
+    net = inc_sum - exp_sum
+    return (
+        f"Monthly income: {inc_sum:.2f}\n"
+        f"Monthly outflow: {exp_sum:.2f}\n"
+        f"Net monthly cash flow: {net:.2f}\n"
+        f"Total debt balance: {debt_total:.2f}"
+    )
+
+
+# ── Bookmarks ─────────────────────────────────────────────────────────────────
+
+def _create_bookmark(user_id: str, inputs: dict) -> str:
+    table = db.get_table(BOOKMARKS_TABLE)
+    bid = str(uuid.uuid4())
+    item = {
+        "user_id":     user_id,
+        "bookmark_id": bid,
+        "url":         inputs["url"].strip(),
+        "title":       inputs.get("title", "").strip(),
+        "description": inputs.get("description", ""),
+        "tags":        [t.strip() for t in (inputs.get("tags") or []) if t and t.strip()],
+        "created_at":  _now(),
+        "updated_at":  _now(),
+    }
+    table.put_item(Item={k: v for k, v in item.items() if v not in (None, "", [])})
+    return f"Bookmarked '{item['title'] or item['url']}' [id:{bid}]"
+
+
+def _list_bookmarks(user_id: str, inputs: dict) -> str:
+    table = db.get_table(BOOKMARKS_TABLE)
+    items = db.query_by_user(table, user_id)
+    tag = (inputs.get("tag") or "").strip().lower()
+    if tag:
+        items = [b for b in items if any((t or "").lower() == tag for t in b.get("tags", []))]
+    if not items:
+        return "No bookmarks."
+    lines = ["Bookmarks:"]
+    for b in items[:50]:
+        tags_str = f" [{', '.join(b.get('tags', []))}]" if b.get("tags") else ""
+        lines.append(f"- {b.get('title') or b.get('url')}{tags_str} → {b.get('url')} [id:{b.get('bookmark_id')}]")
+    return "\n".join(lines)
+
+
+def _update_bookmark(user_id: str, inputs: dict) -> str:
+    table = db.get_table(BOOKMARKS_TABLE)
+    bid = inputs["bookmark_id"]
+    existing = db.get_item(table, user_id, "bookmark_id", bid)
+    if not existing:
+        return f"Bookmark {bid} not found."
+    fields = {}
+    for k in ("title", "description"):
+        if inputs.get(k) is not None:
+            fields[k] = inputs[k]
+    if inputs.get("tags") is not None:
+        fields["tags"] = [t.strip() for t in inputs["tags"] if t and t.strip()]
+    if not fields:
+        return "No fields supplied to update."
+    fields["updated_at"] = _now()
+    set_parts, names, values = [], {}, {}
+    for i, (k, v) in enumerate(fields.items()):
+        names[f"#k{i}"]  = k
+        values[f":v{i}"] = v
+        set_parts.append(f"#k{i} = :v{i}")
+    table.update_item(
+        Key={"user_id": user_id, "bookmark_id": bid},
+        UpdateExpression="SET " + ", ".join(set_parts),
+        ExpressionAttributeNames=names,
+        ExpressionAttributeValues=values,
+    )
+    return f"Updated bookmark {bid}."
+
+
+def _delete_bookmark(user_id: str, inputs: dict) -> str:
+    table = db.get_table(BOOKMARKS_TABLE)
+    bid = inputs["bookmark_id"]
+    existing = db.get_item(table, user_id, "bookmark_id", bid)
+    if not existing:
+        return f"Bookmark {bid} not found."
+    db.delete_item(table, user_id, "bookmark_id", bid)
+    return f"Deleted bookmark '{existing.get('title', existing.get('url', bid))}'."
+
+
+# ── Favorites ────────────────────────────────────────────────────────────────
+
+def _add_favorite(user_id: str, inputs: dict) -> str:
+    table = db.get_table(FAVORITES_TABLE)
+    fid = str(uuid.uuid4())
+    item = {
+        "user_id":     user_id,
+        "favorite_id": fid,
+        "kind":        inputs["kind"].strip().lower(),
+        "item_id":     inputs["item_id"].strip(),
+        "label":       inputs.get("label", "").strip(),
+        "tags":        [t.strip() for t in (inputs.get("tags") or []) if t and t.strip()],
+        "created_at":  _now(),
+    }
+    table.put_item(Item={k: v for k, v in item.items() if v not in (None, "", [])})
+    return f"Favorited {item['kind']} '{item.get('label') or item['item_id']}' [id:{fid}]"
+
+
+def _list_favorites(user_id: str, inputs: dict) -> str:
+    table = db.get_table(FAVORITES_TABLE)
+    items = db.query_by_user(table, user_id)
+    kind = (inputs.get("kind") or "").strip().lower()
+    if kind:
+        items = [f for f in items if (f.get("kind") or "").lower() == kind]
+    if not items:
+        return "No favorites."
+    lines = ["Favorites:"]
+    for f in items[:50]:
+        lines.append(f"- [{f.get('kind', '?')}] {f.get('label') or f.get('item_id')} [id:{f.get('favorite_id')}]")
+    return "\n".join(lines)
+
+
+def _remove_favorite(user_id: str, inputs: dict) -> str:
+    table = db.get_table(FAVORITES_TABLE)
+    fid = inputs["favorite_id"]
+    existing = db.get_item(table, user_id, "favorite_id", fid)
+    if not existing:
+        return f"Favorite {fid} not found."
+    db.delete_item(table, user_id, "favorite_id", fid)
+    return f"Removed favorite '{existing.get('label', fid)}'."
+
+
+# ── Feeds ─────────────────────────────────────────────────────────────────────
+
+def _list_feeds(user_id: str, inputs: dict) -> str:
+    table = db.get_table(FEEDS_TABLE)
+    items = db.query_by_user(table, user_id)
+    if not items:
+        return "No feed subscriptions."
+    lines = ["Feeds:"]
+    for f in items:
+        lines.append(f"- {f.get('name') or f.get('url')} → {f.get('url')} [id:{f.get('feed_id')}]")
+    return "\n".join(lines)
+
+
+def _add_feed(user_id: str, inputs: dict) -> str:
+    table = db.get_table(FEEDS_TABLE)
+    fid = str(uuid.uuid4())
+    item = {
+        "user_id":    user_id,
+        "feed_id":    fid,
+        "url":        inputs["url"].strip(),
+        "name":       (inputs.get("name") or "").strip(),
+        "created_at": _now(),
+    }
+    table.put_item(Item={k: v for k, v in item.items() if v not in (None, "")})
+    return f"Added feed '{item.get('name') or item['url']}' [id:{fid}]"
+
+
+def _delete_feed(user_id: str, inputs: dict) -> str:
+    table = db.get_table(FEEDS_TABLE)
+    fid = inputs["feed_id"]
+    existing = db.get_item(table, user_id, "feed_id", fid)
+    if not existing:
+        return f"Feed {fid} not found."
+    db.delete_item(table, user_id, "feed_id", fid)
+    return f"Deleted feed '{existing.get('name', existing.get('url', fid))}'."

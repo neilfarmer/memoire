@@ -11,7 +11,7 @@ from chat import _clean_reply
 
 logger = logging.getLogger(__name__)
 
-MODEL_ID = os.environ.get("ASSISTANT_MODEL_ID", "us.amazon.nova-lite-v1:0")
+MODEL_ID = os.environ.get("ASSISTANT_MODEL_ID", "us.amazon.nova-pro-v1:0")
 
 TASKS_TABLE   = os.environ["TASKS_TABLE"]
 NOTES_TABLE   = os.environ["NOTES_TABLE"]

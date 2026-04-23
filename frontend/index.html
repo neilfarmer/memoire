@@ -567,7 +567,7 @@
     }
 
     .logo { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--text); display: flex; align-items: center; gap: var(--space-2); letter-spacing: -0.2px; }
-    .logo img { width: 28px; height: 28px; display: block; filter: drop-shadow(0 0 8px rgba(217,119,6,.5)); }
+    .logo img { width: 28px; height: 28px; display: block; filter: drop-shadow(0 0 8px rgba(255,255,255,.5)); }
 
     .avatar-btn {
       width: 32px; height: 32px;
@@ -749,6 +749,77 @@
     }
     .sb-sub-link:hover { background: var(--hover); color: var(--text); }
     .sb-sub-link.active { color: var(--primary); background: var(--hover); border-left-color: var(--primary); }
+    .sb-hdr-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      margin-left: auto;
+      margin-right: 2px;
+      padding: 0;
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      opacity: 0;
+      transition: background .1s, color .1s, opacity .1s;
+    }
+    .sb-section-hdr:hover .sb-hdr-action { opacity: 1; }
+    .sb-hdr-action:hover { background: var(--hover); color: var(--text); }
+    .sb-empty-hint {
+      padding: 8px 10px 8px 22px;
+      font-size: 12px;
+      color: var(--muted);
+      font-style: italic;
+    }
+    .pal-chat-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      width: calc(100% - 8px);
+      margin: 1px 4px;
+      padding: 6px 6px 6px 22px;
+      border-left: 2px solid transparent;
+      border-radius: var(--radius);
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background .1s, color .1s;
+    }
+    .pal-chat-row:hover { background: var(--hover); color: var(--text); }
+    .pal-chat-row.active { color: var(--primary); background: var(--hover); border-left-color: var(--primary); }
+    .pal-chat-title {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: left;
+      background: none;
+      border: none;
+      color: inherit;
+      font-size: inherit;
+      font-family: inherit;
+      padding: 0;
+      cursor: pointer;
+    }
+    .pal-chat-actions {
+      display: none;
+      gap: 2px;
+    }
+    .pal-chat-row:hover .pal-chat-actions { display: inline-flex; }
+    .pal-chat-actions button {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 2px;
+      border-radius: 3px;
+      cursor: pointer;
+      line-height: 0;
+    }
+    .pal-chat-actions button:hover { background: var(--border); color: var(--text); }
     #main-content {
       flex: 1;
       min-width: 0;
@@ -2078,7 +2149,11 @@
       font-size: 12px;
       font-weight: 500;
       color: var(--text);
-      white-space: nowrap;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      max-width: 100%;
+      line-height: 1.35;
     }
     .profile-fact-value input {
       width: 100%;
@@ -2176,14 +2251,118 @@
       margin-top: 6px;
     }
 
+    /* ── AI Pal chats page ── */
+    .pal-chats-page-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .pal-chats-page-list .pal-chat-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .pal-chats-page-list .pal-chat-row:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow);
+    }
+    .pal-chats-page-list .pal-chat-title {
+      flex: 1;
+      text-align: left;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pal-chats-page-list .pal-chat-when {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .pal-chats-page-list .pal-chat-actions {
+      display: flex;
+      gap: 4px;
+    }
+    .pal-chats-page-list .pal-chat-actions button {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .pal-chats-page-list .pal-chat-actions button:hover { color: var(--text); background: var(--hover); }
+
     /* ── Admin page ── */
+    #page-admin { max-width: 1400px; }
     .admin-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 16px;
       margin-top: 8px;
     }
-
+    .admin-card.admin-card-wide { grid-column: 1 / -1; }
+    .event-row {
+      display: grid;
+      grid-template-columns: 110px 160px minmax(0, 1fr) 60px 150px;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px dashed var(--border);
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+      align-items: center;
+    }
+    .event-row:last-child { border-bottom: none; }
+    .event-day-header {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      padding: 14px 0 6px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2px;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 1;
+    }
+    .event-day-header:first-child { padding-top: 0; }
+    .event-badge {
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: var(--hover);
+      color: var(--muted);
+      text-align: center;
+      white-space: nowrap;
+    }
+    .event-badge.ok       { color: var(--muted); }
+    .event-badge.err      { background: color-mix(in oklab, var(--danger) 18%, transparent); color: var(--danger); }
+    .event-badge.warn     { background: color-mix(in oklab, var(--warning, #c47f00) 22%, transparent); color: var(--warning, #c47f00); }
+    .event-primary { color: var(--primary); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .event-detail  { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+    .event-meta    { color: var(--muted); font-size: 11px; text-align: right; white-space: nowrap; }
+    @media (max-width: 900px) {
+      .event-row { grid-template-columns: 90px minmax(0, 1fr); row-gap: 2px; }
+      .event-row > .event-detail,
+      .event-row > .event-meta { grid-column: 1 / -1; }
+    }
     .admin-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -3381,6 +3560,20 @@
     }
     .btn-add-set:hover { border-color: var(--primary); color: var(--primary); }
 
+    .health-log-month-header {
+      padding: 10px 14px 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .health-log-month-header.future { color: var(--warning, #c47f00); }
     .health-log-item {
       padding: 12px 14px;
       cursor: pointer;
@@ -4328,26 +4521,6 @@
     }
 
     /* ── AI Pal chat widget ── */
-    #pal-btn {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      z-index: 900;
-      font-size: 22px;
-      transition: background 0.15s, transform 0.15s;
-    }
-    #pal-btn:hover { background: var(--primary-h); transform: scale(1.05); }
     #pal-window {
       position: fixed;
       bottom: 84px;
@@ -4986,6 +5159,15 @@
             <span class="sb-hdr-label">Diagrams</span>
           </div>
         </div>
+        <div class="sb-section" id="sb-pal-chats">
+          <div class="sb-section-hdr" onclick="sidebar.navigate('pal-chats')">
+            <span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+            <span class="sb-hdr-label">AI Pal Chats</span>
+            <button type="button" class="sb-hdr-action" title="New chat" aria-label="New chat" onclick="event.stopPropagation(); palChats.newChat()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          </div>
+        </div>
         <div class="sb-spacer"></div>
         <div class="sb-pal" id="sb-pal">
           <button type="button" class="sb-pal-btn" id="sb-pal-btn" aria-label="Chat with your AI pal" aria-haspopup="dialog" aria-expanded="false">
@@ -5338,6 +5520,20 @@
           <option value="0">Disabled</option>
         </select>
       </div>
+      <div class="settings-row">
+        <div class="u-flex1">
+          <div class="settings-label">Chat retention</div>
+          <div class="settings-desc">How long AI Pal chat messages are kept before automatic deletion. Set to "Keep forever" to preserve every conversation.</div>
+        </div>
+        <select id="chat-retention-select" style="min-width:160px;">
+          <option value="0">Keep forever</option>
+          <option value="7">7 days</option>
+          <option value="30" selected>30 days</option>
+          <option value="90">90 days</option>
+          <option value="180">180 days</option>
+          <option value="365">1 year</option>
+        </select>
+      </div>
     </div>
     <div class="settings-section">
       <div class="settings-section-title">Appearance</div>
@@ -5390,6 +5586,19 @@
         </div>
         <label class="toggle">
           <input type="checkbox" id="home-finances-toggle" />
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">AI Pal</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Supervisor verification</div>
+          <div class="settings-desc">After the assistant replies, a secondary model verifies claimed actions actually ran. Adds a small latency but prevents silent failures. Recommended on.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="supervisor-enabled-toggle" />
           <span class="toggle-track"></span>
         </label>
       </div>
@@ -5674,6 +5883,7 @@
         <div>
           <div class="profile-section-header">
             <span class="profile-section-title">What the AI knows</span>
+            <button class="btn btn-secondary btn-sm" id="profile-cleanup-btn" style="margin-left:auto;" title="Dedupe, merge, and drop task-like noise from your remembered facts">Clean up</button>
             <button class="profile-refresh-icon-btn" id="profile-refresh-btn" title="Refresh">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             </button>
@@ -5685,6 +5895,17 @@
       </div>
 
     </div>
+  </main>
+
+  <!-- AI Pal chats page -->
+  <main id="page-pal-chats" class="hidden">
+    <div class="toolbar">
+      <h2>AI Pal Chats</h2>
+      <button class="btn btn-primary" id="pal-chats-new-btn">New chat</button>
+    </div>
+    <div id="pal-chats-loader" class="page-loader hidden"><div class="spinner"></div></div>
+    <div id="pal-chats-empty" class="u-text-meta hidden" style="padding:24px 0;">No chats yet. Click "New chat" to start one.</div>
+    <div id="pal-chats-page-list" class="pal-chats-page-list"></div>
   </main>
 
   <!-- Admin page -->
@@ -6929,10 +7150,18 @@
           applyPalName(settings.pal_name || "");
           $("ntfy-url").value = settings.ntfy_url || "";
           $("profile-inference-select").value = String(settings.profile_inference_hours ?? 24);
+          const retentionSelect = $("chat-retention-select");
+          if (retentionSelect) {
+            const retentionVal = String(settings.chat_retention_days ?? 30);
+            const opts = Array.from(retentionSelect.options).map(o => o.value);
+            retentionSelect.value = opts.includes(retentionVal) ? retentionVal : "30";
+          }
           const secs = settings.autosave_seconds ?? 300;
           $("autosave-select").value = String(secs);
           autoSave.start(secs);
           $("timezone-select").value = settings.timezone || "";
+          const supToggle = $("supervisor-enabled-toggle");
+          if (supToggle) supToggle.checked = settings.supervisor_enabled !== false;
           refreshAvatarInitials();
         }
       } catch (e) {
@@ -7252,6 +7481,19 @@
     }
   });
 
+  const chatRetentionSelect = $("chat-retention-select");
+  if (chatRetentionSelect) {
+    chatRetentionSelect.addEventListener("change", async () => {
+      const days = parseInt(chatRetentionSelect.value, 10);
+      try {
+        await api.updateSettings({ chat_retention_days: days });
+        if (state.settings) state.settings.chat_retention_days = days;
+      } catch (e) {
+        console.error("Failed to save chat retention setting:", e);
+      }
+    });
+  }
+
   $("autosave-select").addEventListener("change", async () => {
     const secs = parseInt($("autosave-select").value, 10);
     autoSave.start(secs);
@@ -7316,6 +7558,19 @@
       if (pages.current === "home") renderHomeDashboard();
     } catch (e) {
       this.checked = !enabled; // revert on failure
+    } finally {
+      this.disabled = false;
+    }
+  });
+
+  $("supervisor-enabled-toggle").addEventListener("change", async function() {
+    const enabled = this.checked;
+    this.disabled = true;
+    try {
+      const updated = await api.updateSettings({ supervisor_enabled: enabled });
+      state.settings = { ...state.settings, ...updated };
+    } catch (e) {
+      this.checked = !enabled;
     } finally {
       this.disabled = false;
     }
@@ -8986,7 +9241,16 @@
       showLoader("health-loader");
       try {
         health.logs = await api.call("GET", "/health") || [];
-        health.logs.sort((a, b) => b.log_date.localeCompare(a.log_date));
+        // Sort: past-and-today entries first (newest first), then any future-
+        // dated rows afterward. Some older data has year=2099 placeholders
+        // that would otherwise always sit at the top.
+        const today = todayStr();
+        health.logs.sort((a, b) => {
+          const aFuture = (a.log_date || "") > today;
+          const bFuture = (b.log_date || "") > today;
+          if (aFuture !== bFuture) return aFuture ? 1 : -1;
+          return (b.log_date || "").localeCompare(a.log_date || "");
+        });
       } catch (e) {
         console.error("Failed to load health logs:", e);
       } finally {
@@ -9065,16 +9329,29 @@
         list.innerHTML = `<div style="padding:12px 14px;font-size:13px;color:var(--muted);">No workouts logged yet.</div>`;
         return;
       }
-      list.innerHTML = health.logs.map(l => {
-        const dateLabel = new Date(l.log_date + "T12:00:00").toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" });
+      const monthKey = d => d.slice(0, 7); // YYYY-MM
+      const today = todayStr();
+      let lastKey = "";
+      let html = "";
+      for (const l of health.logs) {
+        const key = monthKey(l.log_date || "");
+        if (key !== lastKey) {
+          const dt = new Date((key || "2000-01") + "-01T12:00:00");
+          const label = dt.toLocaleDateString(undefined, { month:"long", year:"numeric" });
+          const future = (l.log_date || "") > today;
+          html += `<div class="health-log-month-header${future ? ' future' : ''}">${escHtml(label)}${future ? ' (future dates)' : ''}</div>`;
+          lastKey = key;
+        }
+        const dateLabel = new Date(l.log_date + "T12:00:00").toLocaleDateString(undefined, { month:"short", day:"numeric" });
         const exLabel   = l.exercise_count === 1 ? "1 exercise" : `${l.exercise_count} exercises`;
         const notesSnip = l.notes ? " · " + escHtml(l.notes.slice(0, 40)) : "";
-        return `
+        html += `
           <div class="health-log-item ${l.log_date === health.currentDate ? "active" : ""}" onclick="health.openLog('${l.log_date}')">
             <div class="health-log-date">${dateLabel}</div>
             <div class="health-log-summary">${exLabel}${notesSnip}</div>
           </div>`;
-      }).join("");
+      }
+      list.innerHTML = html;
     },
 
     async openLog(dateStr) {
@@ -9249,7 +9526,13 @@
       showLoader("nutrition-loader");
       try {
         nutrition.logs = await api.call("GET", "/nutrition") || [];
-        nutrition.logs.sort((a, b) => b.log_date.localeCompare(a.log_date));
+        const nToday = todayStr();
+        nutrition.logs.sort((a, b) => {
+          const aFuture = (a.log_date || "") > nToday;
+          const bFuture = (b.log_date || "") > nToday;
+          if (aFuture !== bFuture) return aFuture ? 1 : -1;
+          return (b.log_date || "").localeCompare(a.log_date || "");
+        });
       } catch (e) {
         console.error("Failed to load nutrition logs:", e);
       } finally {
@@ -9328,15 +9611,28 @@
         list.innerHTML = `<div style="padding:12px 14px;font-size:13px;color:var(--muted);">No meals logged yet.</div>`;
         return;
       }
-      list.innerHTML = nutrition.logs.map(l => {
-        const dateLabel = new Date(l.log_date + "T12:00:00").toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" });
+      const monthKey = d => (d || "").slice(0, 7);
+      const nToday = todayStr();
+      let lastKey = "";
+      let html = "";
+      for (const l of nutrition.logs) {
+        const key = monthKey(l.log_date || "");
+        if (key !== lastKey) {
+          const dt = new Date((key || "2000-01") + "-01T12:00:00");
+          const label = dt.toLocaleDateString(undefined, { month:"long", year:"numeric" });
+          const future = (l.log_date || "") > nToday;
+          html += `<div class="health-log-month-header${future ? ' future' : ''}">${escHtml(label)}${future ? ' (future dates)' : ''}</div>`;
+          lastKey = key;
+        }
+        const dateLabel = new Date(l.log_date + "T12:00:00").toLocaleDateString(undefined, { month:"short", day:"numeric" });
         const calLabel  = l.total_cal ? `${l.total_cal} cal` : `${l.meal_count} meal${l.meal_count !== 1 ? "s" : ""}`;
-        return `
+        html += `
           <div class="health-log-item ${l.log_date === nutrition.currentDate ? "active" : ""}" onclick="nutrition.openLog('${l.log_date}')">
             <div class="health-log-date">${dateLabel}</div>
             <div class="health-log-summary">${calLabel}</div>
           </div>`;
-      }).join("");
+      }
+      list.innerHTML = html;
     },
 
     async openLog(dateStr) {
@@ -10478,13 +10774,15 @@
       showLoader("admin-loader");
       $("admin-grid").innerHTML = "";
       try {
-        const [costs, stats, usage] = await Promise.all([
+        const [costs, stats, usage, events, logs] = await Promise.all([
           api.call("GET", "/home/costs").catch(() => null),
           api.call("GET", "/admin/stats").catch(() => null),
           api.call("GET", "/assistant/usage").catch(() => null),
+          api.call("GET", "/admin/events?limit=50").catch(() => null),
+          api.call("GET", "/admin/logs?minutes=60").catch(() => null),
         ]);
         admin.loaded = true;
-        admin.render(costs, stats, usage);
+        admin.render(costs, stats, usage, events, logs);
       } catch (e) {
         $("admin-grid").innerHTML = `<div class="admin-card"><p style="color:var(--muted);font-size:14px;">Failed to load admin data.</p></div>`;
         console.error("Failed to load admin data:", e);
@@ -10493,7 +10791,7 @@
       }
     },
 
-    render(costs, stats, usage) {
+    render(costs, stats, usage, events, logs) {
       const fmtMoney = n => !n && n !== 0 ? "—" : n < 0.005 ? "$0.00" : n < 1 ? `$${n.toFixed(3)}` : `$${n.toFixed(2)}`;
       const fmtBytes = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b/1024).toFixed(1)} KB` : `${(b/1048576).toFixed(1)} MB`;
 
@@ -10657,6 +10955,104 @@
             </div>
             ${rows}
           </div>`;
+      }
+
+      // Assistant events (tool calls, supervisor verdicts, chat completions)
+      if (events?.events?.length) {
+        // Defensively sort recent-first, in case the server or storage returned
+        // them in another order. ts is an ISO-8601 string; lexicographic sort
+        // is equivalent to chronological.
+        const evs = events.events
+          .slice()
+          .sort((a, b) => (b.ts || "").localeCompare(a.ts || ""));
+        const fmtTime = ts => {
+          try {
+            return new Date(ts).toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+          } catch { return ts; }
+        };
+        const dayKeyOf = ts => { try { return new Date(ts).toDateString(); } catch { return ts; } };
+        const todayKey = new Date().toDateString();
+        const yesterdayKey = new Date(Date.now() - 86400000).toDateString();
+        const fmtDayLabel = key => {
+          if (key === todayKey)     return "Today";
+          if (key === yesterdayKey) return "Yesterday";
+          try { return new Date(key).toLocaleDateString(undefined, { weekday:"long", month:"short", day:"numeric", year:"numeric" }); }
+          catch { return key; }
+        };
+        const verdictClass = v => v === "ok" ? "ok" : v === "incomplete" ? "warn" : "err";
+        const renderRow = e => {
+          const ts = escHtml(fmtTime(e.ts));
+          if (e.event_type === "tool_call") {
+            const ok = e.success !== false;
+            return `<div class="event-row">
+              <span class="event-badge ${ok ? 'ok' : 'err'}">${ok ? 'tool' : 'tool err'}</span>
+              <span class="event-primary" title="${escHtml(e.tool_name || '')}">${escHtml(e.tool_name || '?')}</span>
+              <span class="event-detail" title="${escHtml(e.result || '')}">${escHtml((e.result || '').slice(0, 220))}</span>
+              <span class="event-meta">${e.duration_ms ?? '—'}ms</span>
+              <span class="event-meta">${ts}</span>
+            </div>`;
+          }
+          if (e.event_type === "supervisor_verdict") {
+            const cls = verdictClass(e.verdict);
+            return `<div class="event-row">
+              <span class="event-badge ${cls}">supervisor</span>
+              <span class="event-primary">${escHtml(e.verdict || '?')}</span>
+              <span class="event-detail" title="${escHtml(e.reason || '')}">${escHtml((e.reason || '').slice(0, 220))}</span>
+              <span class="event-meta">retry ${e.retry_count ?? 0}</span>
+              <span class="event-meta">${ts}</span>
+            </div>`;
+          }
+          if (e.event_type === "chat_complete") {
+            const cls = e.error ? 'err' : 'ok';
+            return `<div class="event-row">
+              <span class="event-badge ${cls}">chat</span>
+              <span class="event-primary">${e.error ? escHtml(e.error) : 'completed'}</span>
+              <span class="event-detail">tokens ${e.tokens_in ?? 0}↑ ${e.tokens_out ?? 0}↓</span>
+              <span class="event-meta">${e.duration_ms ?? '—'}ms</span>
+              <span class="event-meta">${ts}</span>
+            </div>`;
+          }
+          return "";
+        };
+
+        let rows = "";
+        let lastDay = "";
+        for (const e of evs) {
+          const key = dayKeyOf(e.ts);
+          if (key !== lastDay) {
+            rows += `<div class="event-day-header">${escHtml(fmtDayLabel(key))}</div>`;
+            lastDay = key;
+          }
+          rows += renderRow(e);
+        }
+
+        html += `
+          <div class="admin-card admin-card-wide">
+            <div class="admin-card-title">Assistant Events (recent)</div>
+            <div style="max-height:520px;overflow:auto;">${rows}</div>
+          </div>`;
+      } else if (events) {
+        html += `<div class="admin-card admin-card-wide"><div class="admin-card-title">Assistant Events</div><p style="color:var(--muted);font-size:13px;">No events yet.</p></div>`;
+      }
+
+      // CloudWatch error/warning logs
+      if (logs?.logs?.length) {
+        const rows = logs.logs.slice(0, 40).map(l => {
+          const ts = l["@timestamp"] || "";
+          const msg = (l["@message"] || "").slice(0, 300).replace(/\s+/g, " ");
+          const stream = (l["@logStream"] || "").split("/").pop() || "";
+          return `<div style="font-family:ui-monospace,monospace;font-size:11px;border-bottom:1px dashed var(--border);padding:6px 0;">
+            <div class="u-text-xs u-muted">${escHtml(ts)} &middot; ${escHtml(stream)}</div>
+            <div style="white-space:pre-wrap;word-break:break-word;">${escHtml(msg)}</div>
+          </div>`;
+        }).join("");
+        html += `
+          <div class="admin-card admin-card-wide">
+            <div class="admin-card-title">System Logs — errors/warnings (last ${logs.minutes || 60}m)</div>
+            <div style="max-height:420px;overflow:auto;">${rows}</div>
+          </div>`;
+      } else if (logs) {
+        html += `<div class="admin-card admin-card-wide"><div class="admin-card-title">System Logs</div><p style="color:var(--muted);font-size:13px;">No errors or warnings in window.</p></div>`;
       }
 
       $("admin-grid").innerHTML = html || `<div class="admin-card"><p style="color:var(--muted);font-size:14px;">No data available.</p></div>`;
@@ -10924,6 +11320,22 @@
       }
     },
 
+    async cleanup() {
+      const btn = $("profile-cleanup-btn");
+      const original = btn.textContent;
+      btn.disabled    = true;
+      btn.textContent = "Cleaning...";
+      try {
+        const result = await api.call("POST", "/assistant/profile/cleanup", {});
+        profilePage.renderFacts(result.facts || {});
+      } catch (e) {
+        console.error("Failed to clean up facts:", e);
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = original;
+      }
+    },
+
     renderAnalysis(text, generatedAt) {
       const emptyEl = $("profile-analysis-empty");
       const textEl  = $("profile-analysis-text");
@@ -11028,6 +11440,7 @@
   document.getElementById("profile-fields-save-btn").addEventListener("click", () => profilePage.saveProfile());
   document.getElementById("profile-analyze-btn").addEventListener("click", () => profilePage.generateAnalysis());
   document.getElementById("profile-refresh-btn").addEventListener("click", () => profilePage.load());
+  document.getElementById("profile-cleanup-btn").addEventListener("click", () => profilePage.cleanup());
 
   // ── Global search ────────────────────────────────────────────────────────────
 
@@ -11543,7 +11956,7 @@
 
   const pages = {
     current: "home",
-    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "bookmarks", "diagrams", "finances", "settings", "admin", "profile"],
+    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "bookmarks", "diagrams", "finances", "settings", "admin", "profile", "pal-chats"],
 
     show(name) {
       // Auto-close any open journal entry overlay so sidebar navigation works
@@ -11606,9 +12019,7 @@
       if (name === "diagrams")  { if (!diagrams.loaded) diagrams.load(); else diagrams.render(); }
       if (name === "finances")  { finances.load(); }
       if (name === "profile")   { profilePage.load(); }
-      // Hide the AI pal FAB on the diagrams page — Excalidraw's help button occupies the same corner
-      const palBtn = document.getElementById("pal-btn");
-      if (palBtn) palBtn.classList.toggle("hidden", name === "diagrams");
+      if (name === "pal-chats") { palChats.loadPage(); }
     },
   };
 
@@ -12014,6 +12425,8 @@
     $("sidebar-backdrop").classList.remove("visible");
   });
   $("admin-refresh-btn").addEventListener("click", () => { admin.loaded = false; admin.load(); });
+  const palChatsNewBtn = document.getElementById("pal-chats-new-btn");
+  if (palChatsNewBtn) palChatsNewBtn.addEventListener("click", () => palChats.newChat());
   $("diagram-new-btn").addEventListener("click", () => diagrams.newDiagram());
   $("diagram-save-btn").addEventListener("click", () => diagrams.save());
   $("diagram-rename-btn").addEventListener("click", () => diagrams.rename());
@@ -12374,9 +12787,6 @@
 </script>
 
 <!-- ── AI Pal widget ── -->
-<button id="pal-btn" title="Chat with your AI pal" aria-label="AI assistant" class="hidden">
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-</button>
 <div id="pal-window" class="hidden">
   <div id="pal-header">
     <span id="pal-header-name">AI Pal</span>
@@ -12415,7 +12825,6 @@
 
 <script>
   (function () {
-    const palBtn     = document.getElementById("pal-btn");
     const palWindow  = document.getElementById("pal-window");
     const palClose   = document.getElementById("pal-close");
     const palForm    = document.getElementById("pal-form");
@@ -12499,10 +12908,11 @@
       "us.amazon.nova-lite-v1:0",
       "us.amazon.nova-pro-v1:0",
     ];
-    const DEFAULT_MODEL = "us.amazon.nova-lite-v1:0";
+    const DEFAULT_MODEL = "us.amazon.nova-pro-v1:0";
 
     let palOpen = false;
-    let palHistoryLoaded = false;
+    let palActiveConvoId = null;
+    let palLoadedConvoId = null;
     let palModel = localStorage.getItem("pal_model") || DEFAULT_MODEL;
     if (!PAL_MODELS.includes(palModel)) palModel = DEFAULT_MODEL;
 
@@ -12520,18 +12930,49 @@
     });
     palSetModel(palModel); // apply initial active state
 
-    async function palLoadHistory() {
-      if (palHistoryLoaded) return;
-      palHistoryLoaded = true;
+    const PAL_GREETING = "Hi! I'm your AI pal. I can create tasks, notes, habits, goals, and journal entries for you. What would you like to do?";
+
+    function palClearMessages() {
+      palMsgs.innerHTML = "";
+    }
+
+    async function palLoadConversation(convoId) {
+      // If no id, try last used (from localStorage) else show greeting, auto-create happens on first send.
+      if (!convoId) {
+        convoId = localStorage.getItem("pal_active_convo") || null;
+      }
+
+      if (convoId && palLoadedConvoId === convoId) return;
+
+      palClearMessages();
+
+      if (!convoId) {
+        palActiveConvoId = null;
+        palLoadedConvoId = null;
+        localStorage.removeItem("pal_active_convo");
+        palAddMsg("assistant", PAL_GREETING);
+        palChats.render();
+        return;
+      }
+
       try {
-        const history = await api.call("GET", "/assistant/history");
-        if (history && history.length > 0) {
-          history.forEach(msg => palAddMsg(msg.role, msg.content));
+        const data = await api.call("GET", `/assistant/conversations/${convoId}`);
+        palActiveConvoId = convoId;
+        palLoadedConvoId = convoId;
+        localStorage.setItem("pal_active_convo", convoId);
+        if (data && Array.isArray(data.messages) && data.messages.length > 0) {
+          data.messages.forEach(msg => palAddMsg(msg.role, msg.content));
         } else {
-          palAddMsg("assistant", "Hi! I'm your AI pal. I can create tasks, notes, habits, goals, and journal entries for you. What would you like to do?");
+          palAddMsg("assistant", PAL_GREETING);
         }
+        palChats.render();
       } catch (e) {
-        palAddMsg("assistant", "Hi! I'm your AI pal. I can create tasks, notes, habits, goals, and journal entries for you. What would you like to do?");
+        // Stale id — fall back to greeting, unset
+        palActiveConvoId = null;
+        palLoadedConvoId = null;
+        localStorage.removeItem("pal_active_convo");
+        palAddMsg("assistant", PAL_GREETING);
+        palChats.render();
       }
     }
 
@@ -12560,7 +13001,6 @@
           palWindow.style.bottom = "";
         }
         palInput.focus();
-        palLoadHistory();
       } else {
         palWindow.style.bottom = "";
         if (palShowingUsage) {
@@ -12667,7 +13107,7 @@
             method:      "POST",
             credentials: "include",
             headers:     { "Content-Type": "application/json", "Authorization": "Bearer " + (localStorage.getItem("access_token") || "") },
-            body:        JSON.stringify({ message: msg, model: palModel, local_date: localDate }),
+            body:        JSON.stringify({ message: msg, model: palModel, local_date: localDate, conversation_id: palActiveConvoId || undefined }),
           });
 
           if (!resp.ok || !resp.body) {
@@ -12701,6 +13141,12 @@
                   bubble.innerHTML = palRenderText(escHtml(evt.reply));
                   palMsgs.scrollTop = palMsgs.scrollHeight;
                 }
+                if (evt.conversation_id) {
+                  palActiveConvoId = evt.conversation_id;
+                  palLoadedConvoId = evt.conversation_id;
+                  localStorage.setItem("pal_active_convo", evt.conversation_id);
+                  palChats.load();
+                }
                 _palRefreshSections(evt.tools_used);
               } else if (evt.type === "error") {
                 bubble.remove();
@@ -12720,12 +13166,20 @@
         // Fallback: non-streaming path via API Gateway
         const typing = palAddMsg("typing", "Thinking\u2026");
         try {
-          const res = await api.call("POST", "/assistant/chat", { message: msg, model: palModel, local_date: localDate });
+          const body = { message: msg, model: palModel, local_date: localDate };
+          if (palActiveConvoId) body.conversation_id = palActiveConvoId;
+          const res = await api.call("POST", "/assistant/chat", body);
           typing.remove();
           if (res && res.reply) {
             palAddMsg("assistant", res.reply);
           } else {
             palAddMsg("assistant", "Sorry, something went wrong. Try again.");
+          }
+          if (res && res.conversation_id) {
+            palActiveConvoId = res.conversation_id;
+            palLoadedConvoId = res.conversation_id;
+            localStorage.setItem("pal_active_convo", res.conversation_id);
+            palChats.load();
           }
           if (res) _palRefreshSections(res.tools_used);
         } catch (e) {
@@ -12814,18 +13268,138 @@
     palUsageBtn.addEventListener("click", palToggleUsage);
 
     async function palClearHistory() {
+      if (!palActiveConvoId) {
+        palClearMessages();
+        palAddMsg("assistant", PAL_GREETING);
+        return;
+      }
+      if (!confirm("Delete this chat? This cannot be undone.")) return;
       try {
-        await api.call("DELETE", "/assistant/history");
-        palMsgs.innerHTML = "";
-        palHistoryLoaded = true;
-        palAddMsg("assistant", "Chat cleared. What would you like to do?");
+        await api.call("DELETE", `/assistant/conversations/${palActiveConvoId}`);
+        palActiveConvoId = null;
+        palLoadedConvoId = null;
+        localStorage.removeItem("pal_active_convo");
+        palClearMessages();
+        palAddMsg("assistant", PAL_GREETING);
+        palChats.load();
       } catch (e) {
-        palAddMsg("assistant", "Failed to clear history. Please try again.");
+        palAddMsg("assistant", "Failed to delete chat. Please try again.");
       }
     }
 
-    palBtn.addEventListener("click", palToggle);
-    if (sbPalBtn) sbPalBtn.addEventListener("click", palToggle);
+    const palChats = {
+      list: [],
+      async load() {
+        try {
+          const records = await api.call("GET", "/assistant/conversations");
+          this.list = Array.isArray(records) ? records : [];
+        } catch (e) {
+          this.list = [];
+        }
+        this.renderPage();
+      },
+      async loadPage() {
+        const loader  = document.getElementById("pal-chats-loader");
+        const empty   = document.getElementById("pal-chats-empty");
+        const listEl  = document.getElementById("pal-chats-page-list");
+        if (loader) loader.classList.remove("hidden");
+        try {
+          const records = await api.call("GET", "/assistant/conversations");
+          this.list = Array.isArray(records) ? records : [];
+        } catch (e) {
+          this.list = [];
+        }
+        if (loader) loader.classList.add("hidden");
+        if (empty)  empty.classList.toggle("hidden", this.list.length > 0);
+        if (!listEl) return;
+        this.renderPage();
+      },
+      _fmtWhen(ts) {
+        if (!ts) return "";
+        try {
+          const d = new Date(ts);
+          const now = new Date();
+          const diffMs = now - d;
+          const oneDay = 86400000;
+          if (diffMs < oneDay) return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+          if (diffMs < 7 * oneDay) return d.toLocaleDateString([], {weekday:"short"});
+          return d.toLocaleDateString([], {month:"short", day:"numeric"});
+        } catch { return ""; }
+      },
+      renderPage() {
+        const listEl = document.getElementById("pal-chats-page-list");
+        const empty  = document.getElementById("pal-chats-empty");
+        if (!listEl) return;
+        if (empty) empty.classList.toggle("hidden", this.list.length > 0);
+        listEl.innerHTML = this.list.slice(0, 500).map(c => {
+          const active = c.conversation_id === palActiveConvoId ? " active" : "";
+          const title  = escHtml(c.title || "Untitled");
+          const when   = escHtml(this._fmtWhen(c.updated_at));
+          return `
+            <div class="pal-chat-row${active}" data-id="${escHtml(c.conversation_id)}">
+              <button class="pal-chat-title" type="button" onclick="palChats.open('${escHtml(c.conversation_id)}')">${title}</button>
+              <span class="pal-chat-when">${when}</span>
+              <span class="pal-chat-actions">
+                <button type="button" title="Rename" aria-label="Rename" onclick="palChats.rename('${escHtml(c.conversation_id)}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
+                <button type="button" title="Delete" aria-label="Delete" onclick="palChats.delete('${escHtml(c.conversation_id)}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
+              </span>
+            </div>
+          `;
+        }).join("");
+      },
+      async newChat() {
+        palActiveConvoId = null;
+        palLoadedConvoId = null;
+        localStorage.removeItem("pal_active_convo");
+        palClearMessages();
+        palAddMsg("assistant", PAL_GREETING);
+        if (!palOpen) palToggle();
+        else palInput.focus();
+      },
+      async open(convoId) {
+        if (!palOpen) palToggle();
+        palLoadedConvoId = null; // force reload
+        await palLoadConversation(convoId);
+      },
+      async rename(convoId) {
+        const current = (this.list.find(c => c.conversation_id === convoId) || {}).title || "";
+        const next = prompt("Rename chat:", current);
+        if (next === null) return;
+        const title = next.trim();
+        if (!title) return;
+        try {
+          await api.call("PATCH", `/assistant/conversations/${convoId}`, { title });
+          await this.load();
+        } catch (e) {
+          alert("Failed to rename chat.");
+        }
+      },
+      async delete(convoId) {
+        if (!confirm("Delete this chat? This cannot be undone.")) return;
+        try {
+          await api.call("DELETE", `/assistant/conversations/${convoId}`);
+          if (palActiveConvoId === convoId) {
+            palActiveConvoId = null;
+            palLoadedConvoId = null;
+            localStorage.removeItem("pal_active_convo");
+            palClearMessages();
+            palAddMsg("assistant", PAL_GREETING);
+          }
+          await this.load();
+        } catch (e) {
+          alert("Failed to delete chat.");
+        }
+      },
+    };
+
+    window.palChats = palChats;
+
+    if (sbPalBtn) sbPalBtn.addEventListener("click", () => {
+      // Clicking the main pal button always starts a fresh chat.
+      // Previous chats are accessible via the AI Pal Chats page.
+      if (palOpen) { palToggle(); return; }
+      palChats.newChat();
+    });
     palClose.addEventListener("click", palToggle);
     palClear.addEventListener("click", palClearHistory);
 
@@ -12846,14 +13420,12 @@
 
     // Show/hide based on auth state
     document.addEventListener("pal:hide", () => {
-      palBtn.classList.add("hidden");
       palWindow.classList.add("hidden");
       palOpen = false;
       const sbPal = document.getElementById("sb-pal");
       if (sbPal) sbPal.classList.add("hidden");
     });
     document.addEventListener("pal:show", () => {
-      // Sidebar avatar is the primary trigger now; keep the floating FAB hidden.
       const sbPal = document.getElementById("sb-pal");
       if (sbPal) sbPal.classList.remove("hidden");
     });

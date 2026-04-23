@@ -131,7 +131,7 @@ All tables use on-demand billing and point-in-time recovery (PITR). Terraform te
 | nutrition | user_id | log_date | -- |
 | settings | user_id | -- (no SK) | -- |
 | tokens | user_id | token_id | **token-hash-index** (KEYS_ONLY, used by authorizer for PAT lookup) |
-| assistant_conversations | user_id | msg_id | -- (TTL: 30d) |
+| assistant_conversations | user_id | msg_id | -- (messages carry `conversation_id`; thread metadata stored as `msg_id = __meta__#<id>`; message TTL configurable via settings.chat_retention_days, default 30d, 0=forever) |
 | assistant_memory | user_id | memory_key | -- |
 | favorites | user_id | favorite_id | -- |
 | feeds | user_id | feed_id | -- |

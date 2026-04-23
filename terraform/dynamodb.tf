@@ -400,6 +400,56 @@ resource "aws_dynamodb_table" "assistant_memory" {
   }
 }
 
+# ── Assistant events table ────────────────────────────────────────────────────
+#
+# PK: user_id   (String)
+# SK: event_id  (String) — ISO timestamp + UUID for ordering + uniqueness
+# GSI (scope-ts-index): shard (String fixed "all"), ts (String) — recency scan for admin dashboard
+# TTL: ttl (Number) — 30 days
+
+resource "aws_dynamodb_table" "assistant_events" {
+  name         = "${local.name_prefix}-assistant-events"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "event_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "event_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "shard"
+    type = "S"
+  }
+
+  attribute {
+    name = "ts"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "scope-ts-index"
+    hash_key        = "shard"
+    range_key       = "ts"
+    projection_type = "ALL"
+  }
+
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
 # ── Task folders table ────────────────────────────────────────────────────────
 #
 # PK: user_id    (String)
