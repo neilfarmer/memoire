@@ -36,6 +36,13 @@ resource "aws_lambda_function" "assistant" {
       NUTRITION_TABLE         = aws_dynamodb_table.nutrition.name
       HEALTH_TABLE            = aws_dynamodb_table.health.name
       SETTINGS_TABLE          = aws_dynamodb_table.settings.name
+      DEBTS_TABLE             = aws_dynamodb_table.debts.name
+      INCOME_TABLE            = aws_dynamodb_table.income.name
+      EXPENSES_TABLE          = aws_dynamodb_table.fixed_expenses.name
+      BOOKMARKS_TABLE         = aws_dynamodb_table.bookmarks.name
+      FAVORITES_TABLE         = aws_dynamodb_table.favorites.name
+      FEEDS_TABLE             = aws_dynamodb_table.feeds.name
+      FEEDS_READ_TABLE        = aws_dynamodb_table.feeds_read.name
       ASSISTANT_MODEL_ID      = var.assistant_model_id
       ASSISTANT_SYSTEM_PROMPT = var.assistant_system_prompt
       USDA_API_KEY            = var.usda_api_key
@@ -76,6 +83,13 @@ resource "aws_iam_role_policy" "assistant_dynamodb" {
         aws_dynamodb_table.journal.arn,
         aws_dynamodb_table.nutrition.arn,
         aws_dynamodb_table.health.arn,
+        aws_dynamodb_table.debts.arn,
+        aws_dynamodb_table.income.arn,
+        aws_dynamodb_table.fixed_expenses.arn,
+        aws_dynamodb_table.bookmarks.arn,
+        aws_dynamodb_table.favorites.arn,
+        aws_dynamodb_table.feeds.arn,
+        aws_dynamodb_table.feeds_read.arn,
       ]
       }, {
       Effect = "Allow"

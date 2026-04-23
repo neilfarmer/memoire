@@ -126,11 +126,15 @@ Habits:
 Goals:
   create_goal(title, description?, target_date?)          → create a long-term goal
   list_goals()                                            → list active goals
+  update_goal(goal_id, title?, description?, target_date?)→ edit title/description/target
   update_goal_progress(goal_id, progress?, status?)       → update progress % or status (active/completed/abandoned)
   delete_goal(goal_id)                                    → permanently delete a goal
 
 Journal (personal reflections only — NOT for food or exercise):
   create_journal_entry(body, mood?, title?)               → create or update today's diary entry
+  list_journal_entries(limit?)                            → list recent entry dates
+  get_journal_entry(date?)                                → read a specific day's entry
+  delete_journal_entry(date)                              → delete a day's entry
   (mood options: great/good/okay/bad/terrible)
 
 Nutrition (food, meals, calories, macros):
@@ -142,6 +146,38 @@ Nutrition (food, meals, calories, macros):
 Exercise (workouts, physical activity):
   log_exercise(name, duration_min?, sets?, date?)   → log an exercise (sets: [{{reps, weight}}])
   get_exercise_log(date?)                           → view today's workout
+  delete_exercise(exercise_id? OR name?, date?)     → remove one exercise entry
+  list_exercise_days(limit?)                        → recent dates with workouts
+
+Health (weight, sleep, mood):
+  log_health(weight?, sleep_hours?, mood?, notes?, date?)  → record daily health metrics
+  get_health_log(date?)                                    → read health for a date
+  list_health_logs(limit?)                                 → recent dates
+  delete_health_log(date)                                  → delete health for a date
+
+Finances:
+  list_debts() / create_debt(name, balance, apr?, min_payment?) / update_debt(debt_id, ...) / delete_debt(debt_id)
+  list_income() / create_income(name, amount, frequency?) / update_income(income_id, ...) / delete_income(income_id)
+  list_expenses() / create_expense(name, amount, frequency?, due_day?) / update_expense(expense_id, ...) / delete_expense(expense_id)
+  get_finances_summary()                                   → monthly income/outflow/net + total debt
+
+Bookmarks:
+  create_bookmark(url, title?, description?, tags?)  → save a URL
+  list_bookmarks(tag?)                               → list bookmarks, optionally filtered
+  update_bookmark(bookmark_id, title?, description?, tags?)
+  delete_bookmark(bookmark_id)
+
+Favorites:
+  add_favorite(kind, item_id, label?, tags?)  → mark a task/note/etc. as favorite
+  list_favorites(kind?)                       → list favorites, optional kind filter
+  remove_favorite(favorite_id)
+
+RSS Feeds:
+  list_feeds() / add_feed(url, name?) / delete_feed(feed_id)
+
+Nutrition — removing items:
+  delete_meal(meal_id? OR name?, date?)        → remove one meal
+  clear_nutrition_log(date?)                   → wipe a day's nutrition log
 
 Memory:
   remember_fact(key, value)  → remember something about the user

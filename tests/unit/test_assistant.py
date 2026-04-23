@@ -22,6 +22,13 @@ os.environ["GOALS_TABLE"]         = "test-goals-asst"
 os.environ["JOURNAL_TABLE"]       = "test-journal-asst"
 os.environ["NUTRITION_TABLE"]     = "test-nutrition-asst"
 os.environ["HEALTH_TABLE"]        = "test-health-asst"
+os.environ["DEBTS_TABLE"]         = "test-debts-asst"
+os.environ["INCOME_TABLE"]        = "test-income-asst"
+os.environ["EXPENSES_TABLE"]      = "test-expenses-asst"
+os.environ["BOOKMARKS_TABLE"]     = "test-bookmarks-asst"
+os.environ["FAVORITES_TABLE"]     = "test-favorites-asst"
+os.environ["FEEDS_TABLE"]         = "test-feeds-asst"
+os.environ["FEEDS_READ_TABLE"]    = "test-feeds-read-asst"
 os.environ["AWS_REGION"]          = "us-east-1"
 os.environ["TOKENS_TABLE"]        = "test-tokens"
 os.environ["JWKS_URI"]            = "https://cognito.example.com/.well-known/jwks.json"
@@ -56,6 +63,13 @@ def tbls():
         make_table(ddb, "test-journal-asst",      "user_id", "entry_date")
         make_table(ddb, "test-nutrition-asst",    "user_id", "log_date")
         make_table(ddb, "test-health-asst",       "user_id", "log_date")
+        make_table(ddb, "test-debts-asst",        "user_id", "debt_id")
+        make_table(ddb, "test-income-asst",       "user_id", "income_id")
+        make_table(ddb, "test-expenses-asst",     "user_id", "expense_id")
+        make_table(ddb, "test-bookmarks-asst",    "user_id", "bookmark_id")
+        make_table(ddb, "test-favorites-asst",    "user_id", "favorite_id")
+        make_table(ddb, "test-feeds-asst",        "user_id", "feed_id")
+        make_table(ddb, "test-feeds-read-asst",   "user_id", "article_url")
         # Tokens table with token-hash GSI (used by token_auth PAT lookup)
         ddb.create_table(
             TableName="test-tokens",
@@ -674,6 +688,106 @@ class TestToolsUpdates:
         assert "Updated" in result
         refreshed = ddb.Table("test-habits-asst").get_item(Key={"user_id": USER, "habit_id": hid})["Item"]
         assert refreshed["name"] == "morning meditation"
+
+
+class TestToolsCoverage:
+    def test_journal_list_get_delete(self, tbls):
+        tools.handle_tool(USER, "create_journal_entry", {"body": "hello world", "mood": "good"}, local_date="2026-05-01")
+        lst = tools.handle_tool(USER, "list_journal_entries", {"limit": 5})
+        assert "2026-05-01" in lst
+        got = tools.handle_tool(USER, "get_journal_entry", {"date": "2026-05-01"})
+        assert "hello world" in got
+        out = tools.handle_tool(USER, "delete_journal_entry", {"date": "2026-05-01"})
+        assert "Deleted" in out
+        assert "No journal entry" in tools.handle_tool(USER, "get_journal_entry", {"date": "2026-05-01"})
+
+    def test_goal_update_title(self, tbls):
+        tools.handle_tool(USER, "create_goal", {"title": "Learn Go"})
+        ddb = boto3.resource("dynamodb", region_name="us-east-1")
+        items = ddb.Table("test-goals-asst").scan()["Items"]
+        gid = items[0]["goal_id"]
+        out = tools.handle_tool(USER, "update_goal", {"goal_id": gid, "title": "Learn Rust"})
+        assert "Updated" in out
+        refreshed = ddb.Table("test-goals-asst").get_item(Key={"user_id": USER, "goal_id": gid})["Item"]
+        assert refreshed["title"] == "Learn Rust"
+
+    def test_delete_meal_by_name(self, tbls):
+        tools.handle_tool(USER, "log_meal", {
+            "items": [{"name": "burger", "calories": 600}, {"name": "salad", "calories": 200}],
+            "date": "2026-05-02",
+        })
+        out = tools.handle_tool(USER, "delete_meal", {"name": "burger", "date": "2026-05-02"})
+        assert "Removed" in out
+        log = tools.handle_tool(USER, "get_nutrition_log", {"date": "2026-05-02"})
+        assert "salad" in log
+        assert "burger" not in log
+
+    def test_clear_nutrition_log(self, tbls):
+        tools.handle_tool(USER, "log_meal", {"name": "snack", "calories": 100, "date": "2026-05-03"})
+        out = tools.handle_tool(USER, "clear_nutrition_log", {"date": "2026-05-03"})
+        assert "Cleared" in out
+        assert "No nutrition log" in tools.handle_tool(USER, "get_nutrition_log", {"date": "2026-05-03"})
+
+    def test_delete_exercise_by_name(self, tbls):
+        tools.handle_tool(USER, "log_exercise", {"name": "pushups", "date": "2026-05-04"})
+        out = tools.handle_tool(USER, "delete_exercise", {"name": "pushups", "date": "2026-05-04"})
+        assert "Removed" in out
+
+    def test_health_log_and_get(self, tbls):
+        out = tools.handle_tool(USER, "log_health", {"weight": 180, "sleep_hours": 7.5, "mood": "good", "date": "2026-05-05"})
+        assert "Logged health" in out
+        got = tools.handle_tool(USER, "get_health_log", {"date": "2026-05-05"})
+        assert "180" in got
+        assert "sleep_hours" in got
+        lst = tools.handle_tool(USER, "list_health_logs", {})
+        assert "2026-05-05" in lst
+
+    def test_health_delete(self, tbls):
+        tools.handle_tool(USER, "log_health", {"weight": 175, "date": "2026-05-06"})
+        out = tools.handle_tool(USER, "delete_health_log", {"date": "2026-05-06"})
+        assert "Deleted" in out
+
+    def test_finances_full_cycle(self, tbls):
+        c = tools.handle_tool(USER, "create_income", {"name": "Salary", "amount": 5000, "frequency": "monthly"})
+        import re
+        iid = re.search(r"\[id:([^\]]+)\]", c).group(1)
+        assert "Salary" in tools.handle_tool(USER, "list_income", {})
+        tools.handle_tool(USER, "update_income", {"income_id": iid, "amount": 5500})
+        assert "5500" in tools.handle_tool(USER, "list_income", {})
+
+        tools.handle_tool(USER, "create_debt", {"name": "Visa", "balance": 2500, "apr": 18.99})
+        tools.handle_tool(USER, "create_expense", {"name": "Rent", "amount": 1500, "frequency": "monthly"})
+        summary = tools.handle_tool(USER, "get_finances_summary", {})
+        assert "Monthly income" in summary
+        assert "Net monthly cash flow" in summary
+
+    def test_bookmarks_cycle(self, tbls):
+        c = tools.handle_tool(USER, "create_bookmark", {"url": "https://example.com", "title": "Example", "tags": ["news"]})
+        import re
+        bid = re.search(r"\[id:([^\]]+)\]", c).group(1)
+        assert "Example" in tools.handle_tool(USER, "list_bookmarks", {})
+        assert "Example" in tools.handle_tool(USER, "list_bookmarks", {"tag": "news"})
+        tools.handle_tool(USER, "update_bookmark", {"bookmark_id": bid, "title": "Renamed"})
+        assert "Renamed" in tools.handle_tool(USER, "list_bookmarks", {})
+        tools.handle_tool(USER, "delete_bookmark", {"bookmark_id": bid})
+        assert "No bookmarks" in tools.handle_tool(USER, "list_bookmarks", {})
+
+    def test_favorites_cycle(self, tbls):
+        c = tools.handle_tool(USER, "add_favorite", {"kind": "task", "item_id": "task-123", "label": "Important"})
+        import re
+        fid = re.search(r"\[id:([^\]]+)\]", c).group(1)
+        assert "Important" in tools.handle_tool(USER, "list_favorites", {})
+        assert "Important" in tools.handle_tool(USER, "list_favorites", {"kind": "task"})
+        tools.handle_tool(USER, "remove_favorite", {"favorite_id": fid})
+        assert "No favorites" in tools.handle_tool(USER, "list_favorites", {})
+
+    def test_feeds_cycle(self, tbls):
+        c = tools.handle_tool(USER, "add_feed", {"url": "https://example.com/rss.xml", "name": "Example Feed"})
+        import re
+        fid = re.search(r"\[id:([^\]]+)\]", c).group(1)
+        assert "Example Feed" in tools.handle_tool(USER, "list_feeds", {})
+        tools.handle_tool(USER, "delete_feed", {"feed_id": fid})
+        assert "No feed" in tools.handle_tool(USER, "list_feeds", {})
 
 
 # ── tools: exercise ───────────────────────────────────────────────────────────
