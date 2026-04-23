@@ -5767,6 +5767,7 @@
         <div>
           <div class="profile-section-header">
             <span class="profile-section-title">What the AI knows</span>
+            <button class="btn btn-secondary btn-sm" id="profile-cleanup-btn" style="margin-left:auto;" title="Dedupe, merge, and drop task-like noise from your remembered facts">Clean up</button>
             <button class="profile-refresh-icon-btn" id="profile-refresh-btn" title="Refresh">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             </button>
@@ -11124,6 +11125,22 @@
       }
     },
 
+    async cleanup() {
+      const btn = $("profile-cleanup-btn");
+      const original = btn.textContent;
+      btn.disabled    = true;
+      btn.textContent = "Cleaning...";
+      try {
+        const result = await api.call("POST", "/assistant/profile/cleanup", {});
+        profilePage.renderFacts(result.facts || {});
+      } catch (e) {
+        console.error("Failed to clean up facts:", e);
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = original;
+      }
+    },
+
     renderAnalysis(text, generatedAt) {
       const emptyEl = $("profile-analysis-empty");
       const textEl  = $("profile-analysis-text");
@@ -11228,6 +11245,7 @@
   document.getElementById("profile-fields-save-btn").addEventListener("click", () => profilePage.saveProfile());
   document.getElementById("profile-analyze-btn").addEventListener("click", () => profilePage.generateAnalysis());
   document.getElementById("profile-refresh-btn").addEventListener("click", () => profilePage.load());
+  document.getElementById("profile-cleanup-btn").addEventListener("click", () => profilePage.cleanup());
 
   // ── Global search ────────────────────────────────────────────────────────────
 

@@ -12,6 +12,7 @@ import boto3
 import memory as mem
 import events as evt
 import supervisor as sup
+import facts as fct
 from tools import TOOL_SPECS, handle_tool
 from response import ok, server_error
 
@@ -199,20 +200,43 @@ def _update_master_context(user_id: str, existing_context: str, facts: dict, use
         logger.warning("Failed to update master context", exc_info=True)
 
 
+_EXTRACT_PROMPT = """\
+You extract durable personal facts about the user from a conversation exchange.
+
+STRICT RULES:
+- Extract only durable, time-stable facts (identity, role, long-term preferences,
+  hobbies, diet, pets, habits practiced regularly). Never extract one-off tasks,
+  errands, or requests made to the assistant ("go to the store", "discover magic
+  items", "pick up eggs", "finish chapter 10" — these are TASKS, not facts).
+- Reuse an existing key whenever the new fact fits it. Prefer these canonical keys:
+  {canonical_keys}
+  Do NOT invent a new key unless no existing or canonical key fits.
+- Never output the same information under two keys (e.g. goal AND fitness_goal).
+- If the user restates something already known in different words, output NONE.
+- Values must not include commas that are part of numbers. If you need to list
+  multiple items, put them on separate lines with the same key.
+
+Existing known facts:
+{existing_text}
+
+Latest exchange:
+User: {user_message}
+Assistant: {reply}
+
+Output ONLY genuinely new or changed facts, one per line as `key: value`.
+If there is nothing new or changed, output exactly: NONE
+"""
+
+
 def _extract_facts(user_id: str, existing_facts: dict, user_message: str, reply: str, model_id: str = MODEL_ID) -> None:
     """Extract new or updated personal facts from the latest exchange and persist them."""
     existing_text = "\n".join(f"- {k}: {v}" for k, v in existing_facts.items()) if existing_facts else "None"
 
-    prompt = (
-        "You are a fact-extraction assistant. Read the conversation exchange below and identify "
-        "any NEW or UPDATED personal facts about the user — things like their interests, hobbies, "
-        "occupation, preferences, routines, pets, diet, etc. Only extract durable personal facts, "
-        "not one-off task requests.\n\n"
-        f"Existing known facts:\n{existing_text}\n\n"
-        f"Latest exchange:\nUser: {user_message[:600]}\nAssistant: {reply[:400]}\n\n"
-        "Output ONLY the facts that are new or changed compared to the existing list. "
-        "Format: one fact per line as `key: value` using short snake_case keys. "
-        "If there is nothing new or changed, output exactly: NONE"
+    prompt = _EXTRACT_PROMPT.format(
+        canonical_keys=", ".join(sorted(fct.CANONICAL_KEYS)),
+        existing_text=existing_text,
+        user_message=user_message[:600],
+        reply=reply[:400],
     )
     try:
         resp = _bedrock.converse(
@@ -227,20 +251,17 @@ def _extract_facts(user_id: str, existing_facts: dict, user_message: str, reply:
             if ":" not in line:
                 continue
             key, _, value = line.partition(":")
-            key   = key.strip().lower().replace(" ", "_").replace("-", "_")
+            key   = fct.canonical_key(key)
             value = value.strip().replace("_", " ")
-            if key and value and not key.startswith("__"):
-                existing = existing_facts.get(key, "")
-                if existing:
-                    existing_items = [v.strip() for v in existing.split(",") if v.strip()]
-                    new_items      = [v.strip() for v in value.split(",")    if v.strip()]
-                    existing_lower = {v.lower() for v in existing_items}
-                    for item in new_items:
-                        if item.lower() not in existing_lower:
-                            existing_items.append(item)
-                            existing_lower.add(item.lower())
-                    value = ", ".join(existing_items)
-                mem.save_memory(user_id, key, value)
+            if not key or key.startswith("__") or not value:
+                continue
+            if fct.looks_like_task(value):
+                continue
+            existing = existing_facts.get(key, "")
+            merged   = fct.merge_values(existing, value)
+            if merged and merged != existing:
+                mem.save_memory(user_id, key, merged)
+                existing_facts[key] = merged
     except Exception:
         logger.warning("Failed to extract facts", exc_info=True)
 

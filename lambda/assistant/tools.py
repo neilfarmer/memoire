@@ -996,18 +996,19 @@ def _lookup_nutrition(user_id: str, inputs: dict) -> str:
 
 
 def _remember_fact(user_id: str, inputs: dict) -> str:
-    key      = inputs["key"]
-    new_val  = inputs["value"]
+    import facts as _fct
+    key      = _fct.canonical_key(inputs["key"])
+    new_val  = inputs["value"].strip()
+    if not key or key.startswith("__") or not new_val:
+        return "Skipped: empty fact."
+    if _fct.looks_like_task(new_val):
+        return "Skipped: looks like a task, not a durable fact."
     existing_facts, _ = mem.load_memory(user_id)
     existing = existing_facts.get(key, "")
-    if existing:
-        existing_items = [v.strip() for v in existing.split(",") if v.strip()]
-        new_items      = [v.strip() for v in new_val.split(",")  if v.strip()]
-        existing_lower = {v.lower() for v in existing_items}
-        for item in new_items:
-            if item.lower() not in existing_lower:
-                existing_items.append(item)
-                existing_lower.add(item.lower())
-        new_val = ", ".join(existing_items)
-    mem.save_memory(user_id, key, new_val)
-    return f"Remembered: {key} = {new_val}"
+    merged   = _fct.merge_values(existing, new_val)
+    if not merged:
+        return "Skipped: no useful content after cleanup."
+    if merged == existing:
+        return f"Already knew: {key} = {existing}"
+    mem.save_memory(user_id, key, merged)
+    return f"Remembered: {key} = {merged}"

@@ -8,6 +8,7 @@ from response import error, ok, not_found
 import chat
 import memory as mem
 import analysis as ana
+import facts as fct
 
 
 SETTINGS_TABLE = os.environ.get("SETTINGS_TABLE")
@@ -185,5 +186,24 @@ def route(route_key: str, user_id: str, body: dict, path_params: dict | None = N
     if route_key == "POST /assistant/profile/analyze":
         result = ana.generate_analysis(user_id)
         return ok(result)
+
+    if route_key == "POST /assistant/profile/cleanup":
+        facts_before, _ = mem.load_memory(user_id)
+        new_facts, removed_keys = fct.cleanup_facts(facts_before)
+        # Delete keys that disappeared (aliased or emptied).
+        for k in removed_keys:
+            mem.delete_memory(user_id, k)
+        # Upsert cleaned keys.
+        changed = 0
+        for k, v in new_facts.items():
+            if facts_before.get(k, "") != v:
+                mem.save_memory(user_id, k, v)
+                changed += 1
+        return ok({
+            "facts":        new_facts,
+            "removed_keys": removed_keys,
+            "changed":      changed,
+            "total":        len(new_facts),
+        })
 
     return error("Not found", status=404)

@@ -151,6 +151,7 @@ locals {
     "GET /assistant/profile",
     "PUT /assistant/profile",
     "POST /assistant/profile/analyze",
+    "POST /assistant/profile/cleanup",
   ]
 }
 
