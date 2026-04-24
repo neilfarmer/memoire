@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import re
 import urllib.parse
 import urllib.request
 import uuid
@@ -13,6 +14,36 @@ import db
 import memory as mem
 
 logger = logging.getLogger(__name__)
+
+
+# ── Write-tool result contracts ───────────────────────────────────────────────
+# Creation tools must emit an id or pal-link tag in their result so the UI can
+# render the correct link and downstream callers can verify the action actually
+# happened. If a tool's result doesn't match its contract, something went wrong
+# silently — treat it as a tool error so the model retries.
+WRITE_TOOL_TAG_PATTERNS: dict[str, re.Pattern] = {
+    "create_task":          re.compile(r"\[pal-link:task:[^\]]+\]"),
+    "create_note":          re.compile(r"\[pal-link:note:[^\]]+\]"),
+    "create_goal":          re.compile(r"\[pal-link:goal:[^\]]+\]"),
+    "create_journal_entry": re.compile(r"\[pal-link:journal:[^\]]+\]"),
+    "create_debt":          re.compile(r"\[id:[^\]]+\]"),
+    "create_income":        re.compile(r"\[id:[^\]]+\]"),
+    "create_expense":       re.compile(r"\[id:[^\]]+\]"),
+    "create_bookmark":      re.compile(r"\[id:[^\]]+\]"),
+    "add_favorite":         re.compile(r"\[id:[^\]]+\]"),
+    "add_feed":             re.compile(r"\[id:[^\]]+\]"),
+}
+
+
+def verify_tool_result(name: str, result: str) -> str | None:
+    """Return None if the result meets the tool's contract, else an error message."""
+    pattern = WRITE_TOOL_TAG_PATTERNS.get(name)
+    if not pattern:
+        return None
+    if pattern.search(result or ""):
+        return None
+    truncated = (result or "")[:200].replace("\n", " ")
+    return f"{name} did not return an id tag (expected to match {pattern.pattern}). Raw result: {truncated!r}"
 
 # ── Table env vars ────────────────────────────────────────────────────────────
 
