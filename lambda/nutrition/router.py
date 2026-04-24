@@ -10,6 +10,12 @@ def route(route_key: str, user_id: str, body: dict, path_params: dict, query_par
     if route_key == "GET /nutrition":
         return crud.list_logs(user_id)
 
+    if route_key == "GET /nutrition/summary":
+        return crud.summary(user_id, query_params)
+
+    if route_key == "GET /nutrition/meals/recent":
+        return crud.recent_meals(user_id, query_params)
+
     if route_key == "GET /nutrition/{date}":
         if not log_date:
             return error("date required")

@@ -671,7 +671,14 @@ async def upsert_health_log(
 
     Args:
         date: Date in YYYY-MM-DD format.
-        exercises: List of exercise objects, each with name (str), sets (list of {reps, weight}), and optional duration (int, minutes).
+        exercises: List of exercise objects. Each exercise supports:
+            - name (str, required)
+            - type ("strength" | "cardio" | "mobility", optional)
+            - sets (list of {reps, weight}) for strength training
+            - duration_min (number) for timed/cardio exercises
+            - distance_km (number) for cardio
+            - intensity (number 0-10, RPE)
+            - muscle_groups (list of str)
         notes: Freeform notes.
     """
     payload: dict = {}
@@ -690,6 +697,42 @@ async def delete_health_log(date: str) -> str:
         date: Date in YYYY-MM-DD format.
     """
     return json.dumps(await _request("DELETE", f"/health/{date}"))
+
+
+@mcp.tool()
+async def get_health_summary(date_from: str | None = None, date_to: str | None = None) -> str:
+    """Get rollup metrics (total volume, duration, distance, streak) across a date range.
+
+    Args:
+        date_from: Start date YYYY-MM-DD (default: 30 days ago).
+        date_to: End date YYYY-MM-DD (default: today).
+    """
+    params: dict = {}
+    if date_from: params["from"] = date_from
+    if date_to:   params["to"]   = date_to
+    return json.dumps(await _request("GET", "/health/summary", params=params))
+
+
+@mcp.tool()
+async def search_recent_exercises(
+    q: str | None = None,
+    days: int = 90,
+    limit: int = 20,
+) -> str:
+    """Search recently logged exercises to re-use a previous workout.
+
+    Returns distinct exercise names from the last N days with their most recent
+    sets/duration/type/muscle_groups, so you can copy the payload into
+    upsert_health_log to repeat the same workout.
+
+    Args:
+        q: Optional substring filter on exercise name (case-insensitive).
+        days: Look back this many days (default 90, max 365).
+        limit: Max distinct exercises to return (default 20, max 100).
+    """
+    params: dict = {"days": str(days), "limit": str(limit)}
+    if q: params["q"] = q
+    return json.dumps(await _request("GET", "/health/exercises/recent", params=params))
 
 
 # ---------------------------------------------------------------------------
@@ -742,6 +785,42 @@ async def delete_nutrition_log(date: str) -> str:
         date: Date in YYYY-MM-DD format.
     """
     return json.dumps(await _request("DELETE", f"/nutrition/{date}"))
+
+
+@mcp.tool()
+async def get_nutrition_summary(date_from: str | None = None, date_to: str | None = None) -> str:
+    """Get rollup macros (totals, per-day averages, streak) across a date range.
+
+    Args:
+        date_from: Start date YYYY-MM-DD (default: 30 days ago).
+        date_to: End date YYYY-MM-DD (default: today).
+    """
+    params: dict = {}
+    if date_from: params["from"] = date_from
+    if date_to:   params["to"]   = date_to
+    return json.dumps(await _request("GET", "/nutrition/summary", params=params))
+
+
+@mcp.tool()
+async def search_recent_meals(
+    q: str | None = None,
+    days: int = 90,
+    limit: int = 20,
+) -> str:
+    """Search recently eaten meals to re-use a previous entry.
+
+    Returns distinct meal names from the last N days with their most recent
+    macros, so you can copy the payload into upsert_nutrition_log to log the
+    same meal again.
+
+    Args:
+        q: Optional substring filter on meal name (case-insensitive).
+        days: Look back this many days (default 90, max 365).
+        limit: Max distinct meals to return (default 20, max 100).
+    """
+    params: dict = {"days": str(days), "limit": str(limit)}
+    if q: params["q"] = q
+    return json.dumps(await _request("GET", "/nutrition/meals/recent", params=params))
 
 
 # ---------------------------------------------------------------------------

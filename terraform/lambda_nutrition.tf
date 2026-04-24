@@ -75,6 +75,8 @@ resource "aws_apigatewayv2_integration" "nutrition" {
 locals {
   nutrition_routes = [
     "GET /nutrition",
+    "GET /nutrition/summary",
+    "GET /nutrition/meals/recent",
     "GET /nutrition/{date}",
     "PUT /nutrition/{date}",
     "DELETE /nutrition/{date}",

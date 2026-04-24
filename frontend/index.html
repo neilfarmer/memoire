@@ -3609,6 +3609,45 @@
       margin-bottom: 20px;
       flex-wrap: wrap;
     }
+
+    /* Repeat-previous picker (shared by health + nutrition) */
+    .repeat-picker {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    .repeat-picker-search {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    .repeat-picker-results {
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .repeat-picker-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .repeat-picker-item:hover { border-color: var(--primary); background: var(--bg); }
+    .repeat-picker-item-meta { font-size: 11px; color: var(--muted); }
+    .repeat-picker-empty { color: var(--muted); font-size: 13px; padding: 8px 10px; }
+    .editor-btn-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
     .nutrition-total-pill {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -5408,8 +5447,16 @@
           <button class="btn btn-primary" id="health-save-btn">Save</button>
         </div>
         <div class="health-editor-body">
+          <div id="health-totals" class="nutrition-totals hidden"></div>
+          <div id="health-repeat-picker" class="repeat-picker hidden">
+            <input class="repeat-picker-search" id="health-repeat-search" type="search" placeholder="Search previous workouts..." />
+            <div class="repeat-picker-results" id="health-repeat-results"></div>
+          </div>
           <div id="health-exercises"></div>
-          <button class="btn btn-secondary" id="health-add-exercise-btn" style="margin-bottom:20px;">+ Add exercise</button>
+          <div class="editor-btn-row">
+            <button class="btn btn-secondary" id="health-add-exercise-btn">+ Add exercise</button>
+            <button class="btn btn-secondary" id="health-repeat-btn">+ Repeat previous</button>
+          </div>
           <div class="field">
             <label class="u-text-xs u-muted">Notes</label>
             <textarea id="health-notes" placeholder="How did it go?..." rows="3"></textarea>
@@ -5449,8 +5496,15 @@
         </div>
         <div class="health-editor-body">
           <div id="nutrition-totals" class="nutrition-totals hidden"></div>
+          <div id="nutrition-repeat-picker" class="repeat-picker hidden">
+            <input class="repeat-picker-search" id="nutrition-repeat-search" type="search" placeholder="Search recently eaten meals..." />
+            <div class="repeat-picker-results" id="nutrition-repeat-results"></div>
+          </div>
           <div id="nutrition-meals"></div>
-          <button class="btn btn-secondary" id="nutrition-add-meal-btn" style="margin-bottom:20px;">+ Add meal</button>
+          <div class="editor-btn-row">
+            <button class="btn btn-secondary" id="nutrition-add-meal-btn">+ Add meal</button>
+            <button class="btn btn-secondary" id="nutrition-repeat-btn">+ Repeat previous</button>
+          </div>
           <div class="field">
             <label class="u-text-xs u-muted">Notes</label>
             <textarea id="nutrition-notes" placeholder="How was your eating today?..." rows="3"></textarea>
@@ -9363,6 +9417,7 @@
       $("health-delete-btn").classList.add("hidden");
       $("health-empty-state").classList.add("hidden");
       $("health-editor").classList.remove("hidden");
+      $("health-repeat-picker").classList.add("hidden");
       health.renderExercises();
       health.renderCalendar();
       health.renderLogList();
@@ -9404,10 +9459,37 @@
       if (ex) { ex.sets.splice(idx, 1); health.renderExercises(); }
     },
 
+    renderTotals() {
+      const totals = $("health-totals");
+      if (!totals) return;
+      let volume = 0, duration = 0, distance = 0, sets = 0;
+      for (const ex of health.exercises) {
+        if (Number.isFinite(Number(ex.duration_min))) duration += Number(ex.duration_min);
+        if (Number.isFinite(Number(ex.distance_km)))  distance += Number(ex.distance_km);
+        for (const s of (ex.sets || [])) {
+          sets++;
+          const r = Number(s.reps), w = Number(s.weight);
+          if (Number.isFinite(r) && Number.isFinite(w)) volume += r * w;
+        }
+      }
+      if (!volume && !duration && !distance && !sets) {
+        totals.classList.add("hidden");
+        return;
+      }
+      totals.classList.remove("hidden");
+      const pills = [];
+      if (volume)   pills.push(`<div class="nutrition-total-pill"><strong>${Math.round(volume)}</strong>volume (lbs)</div>`);
+      if (sets)     pills.push(`<div class="nutrition-total-pill"><strong>${sets}</strong>sets</div>`);
+      if (duration) pills.push(`<div class="nutrition-total-pill"><strong>${Math.round(duration)}</strong>min</div>`);
+      if (distance) pills.push(`<div class="nutrition-total-pill"><strong>${Number(distance.toFixed(2))}</strong>km</div>`);
+      totals.innerHTML = pills.join("");
+    },
+
     renderExercises() {
       const container = $("health-exercises");
       if (!health.exercises.length) {
         container.innerHTML = `<div style="color:var(--muted);font-size:13px;margin-bottom:16px;">No exercises added yet.</div>`;
+        health.renderTotals();
         return;
       }
       container.innerHTML = health.exercises.map(ex => `
@@ -9442,6 +9524,7 @@
             </span>
           </div>
         </div>`).join("");
+      health.renderTotals();
     },
 
     setExName(id, name) {
@@ -9452,11 +9535,83 @@
     setVal(exId, idx, field, val) {
       const ex = health.exercises.find(e => e.id === exId);
       if (ex && ex.sets[idx]) ex.sets[idx][field] = val !== "" ? Number(val) : null;
+      health.renderTotals();
     },
 
     setDuration(id, val) {
       const ex = health.exercises.find(e => e.id === id);
       if (ex) ex.duration_min = val !== "" ? Number(val) : null;
+      health.renderTotals();
+    },
+
+    _recentCache: null,
+
+    async openRepeat() {
+      const picker = $("health-repeat-picker");
+      const results = $("health-repeat-results");
+      const search  = $("health-repeat-search");
+      if (!picker.classList.contains("hidden")) {
+        picker.classList.add("hidden");
+        return;
+      }
+      picker.classList.remove("hidden");
+      results.innerHTML = `<div class="repeat-picker-empty">Loading...</div>`;
+      search.value = "";
+      try {
+        health._recentCache = await api.call("GET", "/health/exercises/recent?days=180&limit=50") || [];
+      } catch (e) {
+        results.innerHTML = `<div class="repeat-picker-empty">Failed to load: ${escHtml(e.message || "")}</div>`;
+        return;
+      }
+      health.renderRepeatResults("");
+      search.focus();
+    },
+
+    renderRepeatResults(query) {
+      const results = $("health-repeat-results");
+      const q = (query || "").trim().toLowerCase();
+      const items = (health._recentCache || []).filter(r => !q || (r.name || "").toLowerCase().includes(q));
+      if (!items.length) {
+        results.innerHTML = `<div class="repeat-picker-empty">No matching exercises yet.</div>`;
+        return;
+      }
+      results.innerHTML = items.map((r, i) => {
+        const parts = [r.last_date, `${r.count}x`];
+        if (r.type) parts.push(r.type);
+        if (r.sets && r.sets.length) {
+          const s0 = r.sets[0];
+          parts.push(`${r.sets.length}set × ${s0?.reps ?? "?"}×${s0?.weight ?? "?"}`);
+        }
+        if (r.duration_min != null) parts.push(`${r.duration_min}min`);
+        if (r.distance_km != null)  parts.push(`${r.distance_km}km`);
+        return `
+          <div class="repeat-picker-item" onclick="health.applyRepeat(${i})">
+            <div>
+              <div>${escHtml(r.name)}</div>
+              <div class="repeat-picker-item-meta">${parts.map(escHtml).join(" · ")}</div>
+            </div>
+            <span style="color:var(--primary);font-weight:600;">+ Add</span>
+          </div>`;
+      }).join("");
+    },
+
+    applyRepeat(idx) {
+      const q = $("health-repeat-search").value;
+      const filtered = (health._recentCache || []).filter(r => !q || (r.name || "").toLowerCase().includes((q||"").trim().toLowerCase()));
+      const src = filtered[idx];
+      if (!src) return;
+      const copy = {
+        id: crypto.randomUUID(),
+        name: src.name,
+        type: src.type || undefined,
+        sets: (src.sets || []).map(s => ({ reps: s.reps ?? null, weight: s.weight ?? null })),
+        duration_min: src.duration_min != null ? Number(src.duration_min) : null,
+        distance_km:  src.distance_km  != null ? Number(src.distance_km)  : null,
+        muscle_groups: src.muscle_groups || [],
+      };
+      health.exercises.push(copy);
+      $("health-repeat-picker").classList.add("hidden");
+      health.renderExercises();
     },
 
     async save() {
@@ -9513,6 +9668,8 @@
   $("health-save-btn").addEventListener("click",   () => health.save());
   $("health-delete-btn").addEventListener("click", () => health.deleteLog());
   $("health-add-exercise-btn").addEventListener("click", () => health.addExercise());
+  $("health-repeat-btn").addEventListener("click", () => health.openRepeat());
+  $("health-repeat-search").addEventListener("input", (e) => health.renderRepeatResults(e.target.value));
 
   // ── Nutrition ─────────────────────────────────────────────────────────────────
 
@@ -9644,6 +9801,7 @@
       $("nutrition-delete-btn").classList.add("hidden");
       $("nutrition-empty-state").classList.add("hidden");
       $("nutrition-editor").classList.remove("hidden");
+      $("nutrition-repeat-picker").classList.add("hidden");
       nutrition.renderMeals();
       nutrition.renderCalendar();
       nutrition.renderLogList();
@@ -9786,6 +9944,75 @@
         $("nutrition-save-status").textContent = e.message;
       }
     },
+
+    _recentCache: null,
+
+    async openRepeat() {
+      const picker = $("nutrition-repeat-picker");
+      const results = $("nutrition-repeat-results");
+      const search  = $("nutrition-repeat-search");
+      if (!picker.classList.contains("hidden")) {
+        picker.classList.add("hidden");
+        return;
+      }
+      picker.classList.remove("hidden");
+      results.innerHTML = `<div class="repeat-picker-empty">Loading...</div>`;
+      search.value = "";
+      try {
+        nutrition._recentCache = await api.call("GET", "/nutrition/meals/recent?days=180&limit=50") || [];
+      } catch (e) {
+        results.innerHTML = `<div class="repeat-picker-empty">Failed to load: ${escHtml(e.message || "")}</div>`;
+        return;
+      }
+      nutrition.renderRepeatResults("");
+      search.focus();
+    },
+
+    renderRepeatResults(query) {
+      const results = $("nutrition-repeat-results");
+      const q = (query || "").trim().toLowerCase();
+      const items = (nutrition._recentCache || []).filter(r => !q || (r.name || "").toLowerCase().includes(q));
+      if (!items.length) {
+        results.innerHTML = `<div class="repeat-picker-empty">No matching meals yet.</div>`;
+        return;
+      }
+      results.innerHTML = items.map((r, i) => {
+        const parts = [r.last_date, `${r.count}x`];
+        if (r.calories != null) {
+          let macros = `${Math.round(Number(r.calories))} cal`;
+          if (r.protein_g != null) macros += ` · ${r.protein_g}P`;
+          if (r.carbs_g   != null) macros += `/${r.carbs_g}C`;
+          if (r.fat_g     != null) macros += `/${r.fat_g}F`;
+          parts.push(macros);
+        }
+        return `
+          <div class="repeat-picker-item" onclick="nutrition.applyRepeat(${i})">
+            <div>
+              <div>${escHtml(r.name)}</div>
+              <div class="repeat-picker-item-meta">${parts.map(escHtml).join(" · ")}</div>
+            </div>
+            <span style="color:var(--primary);font-weight:600;">+ Add</span>
+          </div>`;
+      }).join("");
+    },
+
+    applyRepeat(idx) {
+      const q = $("nutrition-repeat-search").value;
+      const filtered = (nutrition._recentCache || []).filter(r => !q || (r.name || "").toLowerCase().includes((q||"").trim().toLowerCase()));
+      const src = filtered[idx];
+      if (!src) return;
+      const toNum = v => (v == null ? null : Number(v));
+      nutrition.meals.push({
+        id: crypto.randomUUID(),
+        name: src.name,
+        calories:  toNum(src.calories),
+        protein_g: toNum(src.protein_g),
+        carbs_g:   toNum(src.carbs_g),
+        fat_g:     toNum(src.fat_g),
+      });
+      $("nutrition-repeat-picker").classList.add("hidden");
+      nutrition.renderMeals();
+    },
   };
 
   $("nutrition-today-btn").addEventListener("click", () => {
@@ -9794,6 +10021,8 @@
   $("nutrition-save-btn").addEventListener("click",   () => nutrition.save());
   $("nutrition-delete-btn").addEventListener("click", () => nutrition.deleteLog());
   $("nutrition-add-meal-btn").addEventListener("click", () => nutrition.addMeal());
+  $("nutrition-repeat-btn").addEventListener("click", () => nutrition.openRepeat());
+  $("nutrition-repeat-search").addEventListener("input", (e) => nutrition.renderRepeatResults(e.target.value));
 
   // ── Habits ────────────────────────────────────────────────────────────────────
 

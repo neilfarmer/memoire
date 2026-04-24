@@ -9,6 +9,7 @@ import os
 
 import boto3
 import pytest
+from freezegun import freeze_time
 from moto import mock_aws
 
 from conftest import USER, load_lambda, make_table
@@ -190,3 +191,76 @@ class TestDeleteLog:
 
     def test_invalid_date(self, tbl):
         assert crud.delete_log(USER, "bad-date")["statusCode"] == 400
+
+
+class TestValidation:
+    def test_negative_calories_dropped(self, tbl):
+        r = crud.upsert_log(USER, "2024-05-01", {"meals": [
+            {"name": "Bad",  "calories": -50},
+            {"name": "Good", "calories": 200},
+        ]})
+        meals = json.loads(r["body"])["meals"]
+        bad  = next(m for m in meals if m["name"] == "Bad")
+        good = next(m for m in meals if m["name"] == "Good")
+        assert "calories" not in bad
+        assert good["calories"] == 200
+
+    def test_empty_name_meal_dropped(self, tbl):
+        r = crud.upsert_log(USER, "2024-05-01", {"meals": [
+            {"name": ""}, {"name": "  "}, {"name": "Oats"},
+        ]})
+        meals = json.loads(r["body"])["meals"]
+        assert len(meals) == 1
+        assert meals[0]["name"] == "Oats"
+
+
+class TestSummaryEndpoint:
+    @freeze_time("2024-05-20")
+    def test_aggregates_macros(self, tbl):
+        crud.upsert_log(USER, "2024-05-19", {"meals": [
+            {"name": "A", "calories": 500, "protein_g": 40, "carbs_g": 30, "fat_g": 10},
+        ]})
+        crud.upsert_log(USER, "2024-05-20", {"meals": [
+            {"name": "B", "calories": 300, "protein_g": 20, "carbs_g": 40, "fat_g": 5},
+        ]})
+        body = json.loads(crud.summary(USER, {})["body"])
+        assert body["logged_days"] == 2
+        assert body["meal_count"]  == 2
+        assert body["totals"]["calories"]  == 800
+        assert body["totals"]["protein_g"] == 60
+        assert body["avg_per_day"]["calories"] == 400
+
+    @freeze_time("2024-05-20")
+    def test_streak_counts_consecutive(self, tbl):
+        for d in ("2024-05-19", "2024-05-20"):
+            crud.upsert_log(USER, d, {"meals": [{"name": "X", "calories": 100}]})
+        assert json.loads(crud.summary(USER, {})["body"])["streak_days"] == 2
+
+    def test_invalid_to_returns_400(self, tbl):
+        assert crud.summary(USER, {"to": "garbage"})["statusCode"] == 400
+
+
+class TestRecentMeals:
+    @freeze_time("2024-05-20")
+    def test_returns_distinct_with_macros(self, tbl):
+        crud.upsert_log(USER, "2024-05-15", {"meals": [
+            {"name": "Oatmeal", "calories": 300, "protein_g": 10},
+        ]})
+        crud.upsert_log(USER, "2024-05-19", {"meals": [
+            {"name": "oatmeal", "calories": 320, "protein_g": 12},
+        ]})
+        r = crud.recent_meals(USER, {})
+        items = json.loads(r["body"])
+        assert len(items) == 1
+        assert items[0]["last_date"] == "2024-05-19"
+        assert items[0]["count"] == 2
+        assert items[0]["calories"] == 320
+
+    @freeze_time("2024-05-20")
+    def test_filter_by_q(self, tbl):
+        crud.upsert_log(USER, "2024-05-18", {"meals": [
+            {"name": "Oatmeal"}, {"name": "Chicken salad"},
+        ]})
+        r = crud.recent_meals(USER, {"q": "oat"})
+        names = [x["name"] for x in json.loads(r["body"])]
+        assert names == ["Oatmeal"]
