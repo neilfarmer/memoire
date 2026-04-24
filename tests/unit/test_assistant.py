@@ -849,6 +849,117 @@ class TestToolsExercise:
         assert "Deadlift" in result
         assert "45 min" in result
 
+    def test_log_exercise_with_enriched_fields(self, tbls):
+        result = tools.handle_tool(USER, "log_exercise", {
+            "name": "Trail run",
+            "type": "cardio",
+            "duration_min": 45,
+            "distance_km": 7.5,
+            "intensity": 8,
+            "muscle_groups": ["legs"],
+            "_today": "2026-02-01",
+        })
+        assert "Trail run" in result
+        assert "45 min" in result
+
+    def test_log_exercise_rejects_unknown_type(self, tbls):
+        tools.handle_tool(USER, "log_exercise", {
+            "name": "Swim", "type": "aquatic", "_today": "2026-02-02",
+        })
+        # Logged under aquatic type silently dropped; the log still succeeds
+        result = tools.handle_tool(USER, "get_exercise_log", {"_today": "2026-02-02"})
+        assert "Swim" in result
+
+
+class TestToolsSearchRecent:
+    def test_search_recent_exercises_empty(self, tbls):
+        result = tools.handle_tool(USER, "search_recent_exercises", {})
+        assert "No matching" in result
+
+    def test_search_recent_exercises_finds_previous(self, tbls):
+        from freezegun import freeze_time
+        with freeze_time("2026-03-15"):
+            tools.handle_tool(USER, "log_exercise", {
+                "name": "Bench Press",
+                "sets": [{"reps": 5, "weight": 155}],
+                "date": "2026-03-10",
+            })
+            result = tools.handle_tool(USER, "search_recent_exercises", {})
+        assert "Bench Press" in result
+        assert "last 2026-03-10" in result
+
+    def test_search_recent_exercises_filters_by_q(self, tbls):
+        from freezegun import freeze_time
+        with freeze_time("2026-03-15"):
+            tools.handle_tool(USER, "log_exercise", {"name": "Bench Press", "date": "2026-03-10"})
+            tools.handle_tool(USER, "log_exercise", {"name": "Squat",       "date": "2026-03-10"})
+            result = tools.handle_tool(USER, "search_recent_exercises", {"q": "bench"})
+        assert "Bench Press" in result
+        assert "Squat" not in result
+
+    def test_search_recent_meals_empty(self, tbls):
+        result = tools.handle_tool(USER, "search_recent_meals", {})
+        assert "No matching" in result
+
+    def test_search_recent_meals_shows_macros(self, tbls):
+        from freezegun import freeze_time
+        with freeze_time("2026-03-15"):
+            tools.handle_tool(USER, "log_meal", {
+                "name": "Oatmeal", "calories": 300, "protein_g": 12,
+                "date": "2026-03-12",
+            })
+            result = tools.handle_tool(USER, "search_recent_meals", {"q": "oat"})
+        assert "Oatmeal" in result
+        assert "300 cal" in result
+
+
+class TestToolsExerciseSummary:
+    def test_exercise_summary_zero_days(self, tbls):
+        result = tools.handle_tool(USER, "get_exercise_summary", {
+            "from": "2026-01-01", "to": "2026-01-31",
+        })
+        assert "0 workout day" in result
+
+    def test_exercise_summary_aggregates(self, tbls):
+        tools.handle_tool(USER, "log_exercise", {
+            "name": "Squat",
+            "sets": [{"reps": 5, "weight": 100}, {"reps": 5, "weight": 100}],
+            "date": "2026-04-01",
+        })
+        tools.handle_tool(USER, "log_exercise", {
+            "name": "Run", "duration_min": 20, "distance_km": 3,
+            "date": "2026-04-02",
+        })
+        result = tools.handle_tool(USER, "get_exercise_summary", {
+            "from": "2026-04-01", "to": "2026-04-30",
+        })
+        assert "2 workout day" in result
+        assert "1000 lbs" in result
+        assert "20 min" in result
+
+
+class TestToolsNutritionSummary:
+    def test_nutrition_summary_zero_days(self, tbls):
+        result = tools.handle_tool(USER, "get_nutrition_summary", {
+            "from": "2026-01-01", "to": "2026-01-31",
+        })
+        assert "0 logged day" in result
+
+    def test_nutrition_summary_avg_per_day(self, tbls):
+        tools.handle_tool(USER, "log_meal", {
+            "name": "A", "calories": 500, "protein_g": 40, "carbs_g": 30, "fat_g": 10,
+            "date": "2026-04-01",
+        })
+        tools.handle_tool(USER, "log_meal", {
+            "name": "B", "calories": 300, "protein_g": 20, "carbs_g": 40, "fat_g": 5,
+            "date": "2026-04-02",
+        })
+        result = tools.handle_tool(USER, "get_nutrition_summary", {
+            "from": "2026-04-01", "to": "2026-04-30",
+        })
+        assert "2 logged day" in result
+        assert "400 cal" in result
+
 
 # ── tools: nutrition lookup ───────────────────────────────────────────────────
 
