@@ -6,6 +6,7 @@ import uuid
 
 import boto3
 import db
+import links_util
 from response import ok, created, no_content, error, not_found
 from utils import now_iso, parse_tags, build_update_expression
 
@@ -98,6 +99,7 @@ def create_note(user_id: str, body: dict) -> dict:
         "updated_at": now,
     }
     _table().put_item(Item=note)
+    links_util.sync_links(user_id, "note", note["note_id"], [title, note_body])
     return created(note)
 
 
@@ -135,7 +137,12 @@ def update_note(user_id: str, note_id: str, body: dict) -> dict:
         ExpressionAttributeValues=values,
         ReturnValues="ALL_NEW",
     )
-    return ok(result["Attributes"])
+    updated = result["Attributes"]
+    links_util.sync_links(
+        user_id, "note", note_id,
+        [updated.get("title", ""), updated.get("body", "")],
+    )
+    return ok(updated)
 
 
 # ── Delete ────────────────────────────────────────────────────────────────────
@@ -167,4 +174,5 @@ def delete_note(user_id: str, note_id: str) -> dict:
         return not_found("Note")
     _delete_note_s3_assets(user_id, note)
     _table().delete_item(Key={"user_id": user_id, "note_id": note_id})
+    links_util.delete_source_links(user_id, "note", note_id)
     return no_content()

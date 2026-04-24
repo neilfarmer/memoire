@@ -40,6 +40,11 @@ os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "testing")
 os.environ.setdefault("AWS_SECURITY_TOKEN", "testing")
 os.environ.setdefault("AWS_SESSION_TOKEN", "testing")
 
+# Wiki-link graph. Writers (notes, journal, tasks) share one logical table so
+# fixtures can create it once via `make_links_table` and `links_util` picks it
+# up from the env at import time.
+os.environ.setdefault("LINKS_TABLE", "test-links")
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
@@ -85,6 +90,8 @@ def load_lambda(feature: str, filename: str):
         _register(LAYER_DIR / "utils.py", "utils")
     if "sanitize" not in sys.modules:
         _register(LAYER_DIR / "sanitize.py", "sanitize")
+    if "links_util" not in sys.modules:
+        _register(LAYER_DIR / "links_util.py", "links_util")
 
     feature_dir = REPO_ROOT / "lambda" / feature
     stem = Path(filename).stem
@@ -127,5 +134,30 @@ def make_table(ddb, name: str, pk: str, sk: str | None = None):
         TableName=name,
         KeySchema=keys,
         AttributeDefinitions=attrs,
+        BillingMode="PAY_PER_REQUEST",
+    )
+
+
+def make_links_table(ddb, name: str = "test-links"):
+    """Create the `links` table with its reverse GSI for feature fixtures."""
+    return ddb.create_table(
+        TableName=name,
+        KeySchema=[
+            {"AttributeName": "user_id",  "KeyType": "HASH"},
+            {"AttributeName": "link_key", "KeyType": "RANGE"},
+        ],
+        AttributeDefinitions=[
+            {"AttributeName": "user_id",    "AttributeType": "S"},
+            {"AttributeName": "link_key",   "AttributeType": "S"},
+            {"AttributeName": "target_key", "AttributeType": "S"},
+        ],
+        GlobalSecondaryIndexes=[{
+            "IndexName": "reverse-index",
+            "KeySchema": [
+                {"AttributeName": "user_id",    "KeyType": "HASH"},
+                {"AttributeName": "target_key", "KeyType": "RANGE"},
+            ],
+            "Projection": {"ProjectionType": "ALL"},
+        }],
         BillingMode="PAY_PER_REQUEST",
     )

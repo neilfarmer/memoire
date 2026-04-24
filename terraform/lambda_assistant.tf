@@ -43,6 +43,7 @@ resource "aws_lambda_function" "assistant" {
       FAVORITES_TABLE         = aws_dynamodb_table.favorites.name
       FEEDS_TABLE             = aws_dynamodb_table.feeds.name
       FEEDS_READ_TABLE        = aws_dynamodb_table.feeds_read.name
+      LINKS_TABLE             = aws_dynamodb_table.links.name
       ASSISTANT_MODEL_ID      = var.assistant_model_id
       ASSISTANT_SYSTEM_PROMPT = var.assistant_system_prompt
       USDA_API_KEY            = var.usda_api_key
@@ -98,6 +99,15 @@ resource "aws_iam_role_policy" "assistant_dynamodb" {
       ]
       Resource = [
         aws_dynamodb_table.settings.arn,
+      ]
+      }, {
+      Effect = "Allow"
+      Action = [
+        "dynamodb:Query",
+      ]
+      Resource = [
+        aws_dynamodb_table.links.arn,
+        "${aws_dynamodb_table.links.arn}/index/*",
       ]
     }]
   })

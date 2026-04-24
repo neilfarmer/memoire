@@ -1696,6 +1696,46 @@ async def revoke_token(token_id: str) -> str:
     return json.dumps(await _request("DELETE", f"/tokens/{token_id}"))
 
 
+# ---------------------------------------------------------------------------
+# Links (wiki-style `[[type:id]]` graph)
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+async def list_outbound_links(source_type: str, source_id: str) -> str:
+    """List all outbound wiki-links emitted by an entity.
+
+    Notes, journal entries, and tasks that contain `[[type:id]]` tags in
+    their body create link rows. This returns the targets that the given
+    source entity points at.
+
+    Args:
+        source_type: Type of the source entity (note, journal, task, goal, ...).
+        source_id:   Id of the source entity (for journal, use YYYY-MM-DD).
+    """
+    return json.dumps(await _request(
+        "GET", "/links",
+        params={"source_type": source_type, "source_id": source_id},
+    ))
+
+
+@mcp.tool()
+async def list_backlinks(target_type: str, target_id: str) -> str:
+    """List all inbound wiki-links pointing at an entity.
+
+    Use this to find out which notes / journal entries / tasks reference a
+    given item via `[[type:id]]` tags.
+
+    Args:
+        target_type: Type of the target entity (note, journal, task, goal, ...).
+        target_id:   Id of the target entity (for journal, use YYYY-MM-DD).
+    """
+    return json.dumps(await _request(
+        "GET", "/backlinks",
+        params={"target_type": target_type, "target_id": target_id},
+    ))
+
+
 def main():
     mcp.run(transport="stdio")
 

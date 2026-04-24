@@ -2874,6 +2874,34 @@
       border-top: 1px solid var(--border);
     }
 
+    .backlinks-panel {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .backlinks-panel h4 {
+      margin: 0 0 8px 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .backlinks-panel ul {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 10px 0;
+    }
+    .backlinks-panel li {
+      padding: 4px 0;
+      color: var(--text);
+    }
+    .backlinks-panel .backlinks-empty {
+      color: var(--muted);
+      font-style: italic;
+    }
+
     .notes-editor-footer {
       padding: 8px 28px;
       border-top: 1px solid var(--border);
@@ -5389,6 +5417,7 @@
             <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:5px;">Tags (comma-separated)</label>
             <input type="text" id="notes-tags-input" placeholder="e.g. work, ideas" />
           </div>
+          <div id="notes-backlinks" class="backlinks-panel hidden"></div>
         </div>
         <div class="notes-editor-footer">
           <span id="notes-save-status"></span>
@@ -6037,6 +6066,7 @@
       <label for="entry-tags" style="font-size:12px; color:var(--muted);">Tags (comma-separated)</label>
       <input type="text" id="entry-tags" placeholder="e.g. work, reflection, gratitude" />
     </div>
+    <div id="journal-backlinks" class="backlinks-panel hidden"></div>
   </div>
   <div class="entry-footer">
     <span class="entry-status" id="entry-status"></span>
@@ -6395,6 +6425,8 @@
           </select>
         </div>
       </div>
+
+      <div id="task-backlinks" class="backlinks-panel hidden"></div>
 
       <div class="modal-footer">
         <div class="modal-footer-left">
@@ -6879,6 +6911,30 @@
       .replace(/"/g, "&quot;");
   }
 
+  // Wiki-link backlinks panel: fetches inbound edges pointing at an entity
+  // and renders them into a container. Safe to call with a missing id (hides
+  // the panel) and silently tolerates API failure.
+  async function renderBacklinksPanel(containerId, targetType, targetId) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (!targetId) { el.classList.add("hidden"); el.innerHTML = ""; return; }
+    try {
+      const qs = `target_type=${encodeURIComponent(targetType)}&target_id=${encodeURIComponent(targetId)}`;
+      const edges = await api.call("GET", `/backlinks?${qs}`);
+      if (!edges?.length) { el.classList.add("hidden"); el.innerHTML = ""; return; }
+      const items = edges.map(e => {
+        const label = `${e.source_type}:${e.source_id}`;
+        return `<li>${escHtml(label)}</li>`;
+      }).join("");
+      el.innerHTML = `<h4>Backlinks (${edges.length})</h4><ul>${items}</ul>`;
+      el.classList.remove("hidden");
+    } catch (e) {
+      console.error("Failed to load backlinks:", e);
+      el.classList.add("hidden");
+      el.innerHTML = "";
+    }
+  }
+
   async function updateStatus(taskId, selectEl) {
     const task = state.tasks.find(t => t.task_id === taskId);
     if (!task) return;
@@ -6995,6 +7051,8 @@
         ? (state.tasks.find(t => t.task_id === taskId) || {}).folder_id
         : state.currentFolderID;
       folderSel.value = taskFolderId || (taskFolders.data[0]?.folder_id ?? "");
+
+      renderBacklinksPanel("task-backlinks", "task", taskId);
 
       $("modal-overlay").classList.remove("hidden");
       $("task-title").focus();
@@ -8000,6 +8058,7 @@
       $("notes-preview-pane").classList.remove("show");
       $("notes-md-toolbar").classList.remove("hidden");
       $("notes-tags-row").classList.remove("hidden");
+      renderBacklinksPanel("notes-backlinks", "note", null);
       hideNoteTagPills();
       noteAttachments.clear();
 
@@ -8035,6 +8094,7 @@
         $("notes-tags-row").classList.add("hidden");
         showNoteTagPills(note.tags || []);
         noteAttachments.set(note.attachments || []);
+        renderBacklinksPanel("notes-backlinks", "note", note.note_id);
 
         notesApp.renderTree();
       } catch (e) {
@@ -8982,6 +9042,7 @@
         hideLoader("journal-overlay-loader");
         $("entry-body-input").focus();
       }
+      renderBacklinksPanel("journal-backlinks", "journal", dateStr);
     },
 
     openDay(dateStr) {

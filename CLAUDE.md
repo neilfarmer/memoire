@@ -106,6 +106,7 @@ Each CRUD feature follows this 3-layer pattern:
 - `db.py` -- DynamoDB helpers: `get_table()`, `query_by_user()`, `get_item()`, `delete_item()`
 - `response.py` -- HTTP response helpers: `ok()`, `created()`, `error()`, `not_found()`, `forbidden()`, `server_error()` with Decimal->JSON serialization
 - `utils.py` -- `now_iso()`, `validate_date()`, `parse_tags()`, `build_update_expression()`
+- `links_util.py` -- wiki-link parsing and the `links` table sync/query helpers (`parse_wiki_links`, `sync_links`, `delete_source_links`, `query_outbound`, `query_inbound`); no-op when `LINKS_TABLE` is unset
 
 ### Standard CRUD Lambdas
 
@@ -127,6 +128,7 @@ These follow the handler/router/crud pattern:
 | `favorites` | favorites | |
 | `settings` | settings | No sort key (user_id PK only) |
 | `tokens` | tokens | PAT management; rejects PAT-authenticated requests (JWT only) |
+| `links` | links | Read-only endpoints (`GET /links`, `GET /backlinks`) for the wiki-link graph. Writers (notes/journal/tasks) keep the table in sync via `lambda/layer/python/links_util.py` during create/update/delete. |
 
 ### Special-Purpose Lambdas
 
@@ -172,6 +174,7 @@ All tables use on-demand billing and point-in-time recovery (PITR). Terraform te
 | fixed_expenses | user_id | expense_id | -- |
 | diagrams | user_id | diagram_id | -- |
 | bookmarks | user_id | bookmark_id | -- |
+| links | user_id | link_key (`{source_type}#{source_id}#{target_type}#{target_id}`) | **reverse-index** (user_id, target_key) — used by `GET /backlinks` |
 
 Utility functions in `lambda/layer/python/db.py`:
 - `get_table(name)` -> resource

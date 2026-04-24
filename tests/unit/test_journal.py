@@ -7,7 +7,7 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from conftest import USER, load_lambda, make_table
+from conftest import USER, load_lambda, make_table, make_links_table
 
 # ── env vars must be set before module load ───────────────────────────────────
 os.environ["TABLE_NAME"] = "test-journal"
@@ -24,6 +24,7 @@ def tbl():
     with mock_aws():
         ddb = boto3.resource("dynamodb", region_name="us-east-1")
         make_table(ddb, TABLE, "user_id", "entry_date")
+        make_links_table(ddb)
         yield
 
 
