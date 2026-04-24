@@ -83,6 +83,8 @@ def load_lambda(feature: str, filename: str):
         _register(LAYER_DIR / "response.py", "response")
     if "utils" not in sys.modules:
         _register(LAYER_DIR / "utils.py", "utils")
+    if "sanitize" not in sys.modules:
+        _register(LAYER_DIR / "sanitize.py", "sanitize")
 
     feature_dir = REPO_ROOT / "lambda" / feature
     stem = Path(filename).stem
