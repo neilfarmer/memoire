@@ -468,14 +468,25 @@ TOOL_SPECS = [
             "description": (
                 "Log an exercise to the exercise log for a given date (defaults to today). "
                 "Use this — NOT create_journal_entry — for ANY workout, exercise, gym, "
-                "run, swim, lift, or physical activity tracking request."
+                "run, swim, lift, or physical activity tracking request. "
+                "PREFER calling search_recent_exercises first when the user says they are "
+                "repeating a previous workout (e.g. 'same as last time', 'my usual run') — "
+                "it returns prior sets/duration/distance you can re-use."
             ),
             "inputSchema": {
                 "json": {
                     "type": "object",
                     "properties": {
                         "name":         {"type": "string", "description": "Exercise name, e.g. 'Bench Press' or 'Morning run'"},
+                        "type":         {"type": "string", "enum": ["strength", "cardio", "mobility"], "description": "Exercise type. Drives UI rendering."},
                         "duration_min": {"type": "number", "description": "Duration in minutes (for cardio or timed exercises)"},
+                        "distance_km":  {"type": "number", "description": "Distance in km (for cardio)"},
+                        "intensity":    {"type": "number", "description": "RPE 0-10 (rate of perceived exertion)"},
+                        "muscle_groups": {
+                            "type": "array",
+                            "description": "Muscle groups worked, e.g. ['chest', 'triceps']",
+                            "items": {"type": "string"},
+                        },
                         "sets": {
                             "type": "array",
                             "description": "Sets for strength exercises, e.g. [{\"reps\": 10, \"weight\": 135}]",
@@ -611,6 +622,50 @@ TOOL_SPECS = [
         "description": "List recent dates that have exercise log entries.",
         "inputSchema": {"json": {"type": "object", "properties": {
             "limit": {"type": "number", "description": "Max dates (default 7)"},
+        }}},
+    }},
+    {"toolSpec": {
+        "name": "search_recent_exercises",
+        "description": (
+            "Search recently logged exercises to re-use a previous workout. Returns distinct "
+            "exercise names with their most recent sets/duration/distance/type. Call this "
+            "BEFORE log_exercise when the user says 'same as last time', 'my usual run', "
+            "'repeat yesterday's workout', etc — then copy the returned config into log_exercise."
+        ),
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "q":     {"type": "string", "description": "Optional substring filter on name (case-insensitive)"},
+            "days":  {"type": "number", "description": "Look back this many days (default 90)"},
+            "limit": {"type": "number", "description": "Max results (default 20)"},
+        }}},
+    }},
+    {"toolSpec": {
+        "name": "search_recent_meals",
+        "description": (
+            "Search recently eaten meals to re-log a previous entry. Returns distinct meal "
+            "names with their most recent macros. Call this BEFORE log_meal when the user "
+            "says 'same lunch as yesterday', 'my usual breakfast', etc — then copy the "
+            "returned macros into log_meal."
+        ),
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "q":     {"type": "string", "description": "Optional substring filter on name (case-insensitive)"},
+            "days":  {"type": "number", "description": "Look back this many days (default 90)"},
+            "limit": {"type": "number", "description": "Max results (default 20)"},
+        }}},
+    }},
+    {"toolSpec": {
+        "name": "get_exercise_summary",
+        "description": "Get rollup metrics (volume, duration, distance, workout days, streak) across a date range. Use when the user asks about weekly/monthly totals or trends.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "from": {"type": "string", "description": "YYYY-MM-DD (default: 30 days ago)"},
+            "to":   {"type": "string", "description": "YYYY-MM-DD (default: today)"},
+        }}},
+    }},
+    {"toolSpec": {
+        "name": "get_nutrition_summary",
+        "description": "Get rollup macros (totals, per-day averages, streak) across a date range. Use when the user asks about weekly/monthly totals or averages.",
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "from": {"type": "string", "description": "YYYY-MM-DD (default: 30 days ago)"},
+            "to":   {"type": "string", "description": "YYYY-MM-DD (default: today)"},
         }}},
     }},
 
@@ -882,6 +937,10 @@ def handle_tool(user_id: str, name: str, inputs: dict, local_date: str | None = 
         # Exercise extras
         "delete_exercise":      _delete_exercise,
         "list_exercise_days":   _list_exercise_days,
+        "search_recent_exercises": _search_recent_exercises,
+        "search_recent_meals":  _search_recent_meals,
+        "get_exercise_summary": _get_exercise_summary,
+        "get_nutrition_summary": _get_nutrition_summary,
         # Health
         "log_health":           _log_health,
         "get_health_log":       _get_health_log,
@@ -1429,8 +1488,16 @@ def _log_exercise(user_id: str, inputs: dict) -> str:
     exercises = list(existing.get("exercises", [])) if existing else []
 
     exercise = {"id": str(uuid.uuid4()), "name": inputs["name"].strip(), "sets": []}
+    if inputs.get("type") in ("strength", "cardio", "mobility"):
+        exercise["type"] = inputs["type"]
     if inputs.get("duration_min") is not None:
         exercise["duration_min"] = Decimal(str(inputs["duration_min"]))
+    if inputs.get("distance_km") is not None:
+        exercise["distance_km"] = Decimal(str(inputs["distance_km"]))
+    if inputs.get("intensity") is not None:
+        exercise["intensity"] = Decimal(str(inputs["intensity"]))
+    if isinstance(inputs.get("muscle_groups"), list):
+        exercise["muscle_groups"] = [str(m).strip() for m in inputs["muscle_groups"] if str(m).strip()]
     if inputs.get("sets"):
         exercise["sets"] = [
             {k: Decimal(str(v)) if isinstance(v, (int, float)) else v for k, v in s.items()}
@@ -1443,12 +1510,169 @@ def _log_exercise(user_id: str, inputs: dict) -> str:
         "log_date":   log_date,
         "exercises":  exercises,
         "notes":      existing.get("notes", "") if existing else "",
-        "created_at": existing["created_at"] if existing else _now(),
+        "created_at": (existing or {}).get("created_at") or _now(),
         "updated_at": _now(),
     })
     dur_str = f" ({int(exercise['duration_min'])} min)" if exercise.get("duration_min") else ""
     sets_str = f" — {len(exercise['sets'])} set(s)" if exercise.get("sets") else ""
     return f"Logged '{exercise['name']}'{dur_str}{sets_str} to exercise log for {log_date}. {len(exercises)} exercise(s) today."
+
+
+def _search_recent_exercises(user_id: str, inputs: dict) -> str:
+    from datetime import timedelta
+    table   = db.get_table(HEALTH_TABLE)
+    q       = (inputs.get("q") or "").strip().lower()
+    days    = max(1, min(int(inputs.get("days") or 90), 365))
+    limit   = max(1, min(int(inputs.get("limit") or 20), 100))
+    cutoff  = (date.today() - timedelta(days=days)).isoformat()
+    items   = [i for i in db.query_by_user(table, user_id) if i.get("log_date", "") >= cutoff]
+    items.sort(key=lambda x: x["log_date"], reverse=True)
+
+    seen: dict[str, dict] = {}
+    for item in items:
+        for ex in item.get("exercises") or []:
+            name = (ex.get("name") or "").strip()
+            if not name:
+                continue
+            key = name.lower()
+            if q and q not in key:
+                continue
+            if key in seen:
+                seen[key]["count"] += 1
+                continue
+            seen[key] = {
+                "name": name, "last_date": item["log_date"], "count": 1,
+                "type": ex.get("type"), "sets": ex.get("sets") or [],
+                "duration_min": ex.get("duration_min"),
+                "distance_km": ex.get("distance_km"),
+                "muscle_groups": ex.get("muscle_groups") or [],
+            }
+
+    results = list(seen.values())[:limit]
+    if not results:
+        return f"No matching exercises in the last {days} days."
+    lines = [f"Recent exercises ({'matching ' + chr(39) + q + chr(39) + ', ' if q else ''}last {days} days):"]
+    for r in results:
+        parts = [f"last {r['last_date']}", f"{r['count']}x"]
+        if r.get("type"):          parts.append(r["type"])
+        if r.get("sets"):
+            sets_s = ", ".join(f"{s.get('reps','?')}x{s.get('weight','?')}" for s in r["sets"])
+            parts.append(f"sets: {sets_s}")
+        if r.get("duration_min") is not None: parts.append(f"{int(r['duration_min'])} min")
+        if r.get("distance_km")  is not None: parts.append(f"{r['distance_km']} km")
+        lines.append(f"- {r['name']} ({'; '.join(parts)})")
+    return "\n".join(lines)
+
+
+def _search_recent_meals(user_id: str, inputs: dict) -> str:
+    from datetime import timedelta
+    table   = db.get_table(NUTRITION_TABLE)
+    q       = (inputs.get("q") or "").strip().lower()
+    days    = max(1, min(int(inputs.get("days") or 90), 365))
+    limit   = max(1, min(int(inputs.get("limit") or 20), 100))
+    cutoff  = (date.today() - timedelta(days=days)).isoformat()
+    items   = [i for i in db.query_by_user(table, user_id) if i.get("log_date", "") >= cutoff]
+    items.sort(key=lambda x: x["log_date"], reverse=True)
+
+    seen: dict[str, dict] = {}
+    for item in items:
+        for m in item.get("meals") or []:
+            name = (m.get("name") or "").strip()
+            if not name:
+                continue
+            key = name.lower()
+            if q and q not in key:
+                continue
+            if key in seen:
+                seen[key]["count"] += 1
+                continue
+            entry = {"name": name, "last_date": item["log_date"], "count": 1}
+            for f in ("calories", "protein_g", "carbs_g", "fat_g"):
+                if m.get(f) is not None:
+                    entry[f] = m[f]
+            seen[key] = entry
+
+    results = list(seen.values())[:limit]
+    if not results:
+        return f"No matching meals in the last {days} days."
+    lines = [f"Recent meals ({'matching ' + chr(39) + q + chr(39) + ', ' if q else ''}last {days} days):"]
+    for r in results:
+        parts = [f"last {r['last_date']}", f"{r['count']}x"]
+        if r.get("calories") is not None:
+            macros = f"{int(r['calories'])} cal"
+            if r.get("protein_g") is not None: macros += f", {r['protein_g']}P"
+            if r.get("carbs_g")   is not None: macros += f"/{r['carbs_g']}C"
+            if r.get("fat_g")     is not None: macros += f"/{r['fat_g']}F"
+            parts.append(macros)
+        lines.append(f"- {r['name']} ({'; '.join(parts)})")
+    return "\n".join(lines)
+
+
+def _get_exercise_summary(user_id: str, inputs: dict) -> str:
+    from datetime import timedelta
+    table = db.get_table(HEALTH_TABLE)
+    today = date.today()
+    d_to   = inputs.get("to")   or today.isoformat()
+    d_from = inputs.get("from") or (today - timedelta(days=29)).isoformat()
+    items  = [i for i in db.query_by_user(table, user_id) if d_from <= i.get("log_date", "") <= d_to]
+
+    total_vol  = Decimal("0")
+    total_dur  = Decimal("0")
+    total_dist = Decimal("0")
+    workout_days = 0
+    ex_count = 0
+    for item in items:
+        ex_list = item.get("exercises") or []
+        if not ex_list:
+            continue
+        workout_days += 1
+        ex_count += len(ex_list)
+        for ex in ex_list:
+            if ex.get("duration_min") is not None: total_dur += Decimal(str(ex["duration_min"]))
+            if ex.get("distance_km")  is not None: total_dist += Decimal(str(ex["distance_km"]))
+            for s in ex.get("sets") or []:
+                if s.get("reps") is not None and s.get("weight") is not None:
+                    total_vol += Decimal(str(s["reps"])) * Decimal(str(s["weight"]))
+
+    lines = [f"Exercise summary {d_from} to {d_to}:",
+             f"- {workout_days} workout day(s), {ex_count} exercise(s)"]
+    if total_vol:  lines.append(f"- Total volume: {int(total_vol)} lbs")
+    if total_dur:  lines.append(f"- Total duration: {int(total_dur)} min")
+    if total_dist: lines.append(f"- Total distance: {total_dist} km")
+    return "\n".join(lines)
+
+
+def _get_nutrition_summary(user_id: str, inputs: dict) -> str:
+    from datetime import timedelta
+    table = db.get_table(NUTRITION_TABLE)
+    today = date.today()
+    d_to   = inputs.get("to")   or today.isoformat()
+    d_from = inputs.get("from") or (today - timedelta(days=29)).isoformat()
+    items  = [i for i in db.query_by_user(table, user_id) if d_from <= i.get("log_date", "") <= d_to]
+
+    totals = {f: Decimal("0") for f in ("calories", "protein_g", "carbs_g", "fat_g")}
+    logged_days = 0
+    meal_count = 0
+    for item in items:
+        meals = item.get("meals") or []
+        if not meals:
+            continue
+        logged_days += 1
+        meal_count += len(meals)
+        for m in meals:
+            for f in totals:
+                if m.get(f) is not None:
+                    totals[f] += Decimal(str(m[f]))
+
+    lines = [f"Nutrition summary {d_from} to {d_to}:",
+             f"- {logged_days} logged day(s), {meal_count} meal(s)"]
+    if logged_days:
+        avg_cal = int(totals["calories"] / logged_days)
+        lines.append(f"- Avg/day: {avg_cal} cal, "
+                     f"{int(totals['protein_g']/logged_days)}g P, "
+                     f"{int(totals['carbs_g']/logged_days)}g C, "
+                     f"{int(totals['fat_g']/logged_days)}g F")
+    return "\n".join(lines)
 
 
 def _get_exercise_log(user_id: str, inputs: dict) -> str:

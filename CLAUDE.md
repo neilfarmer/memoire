@@ -14,6 +14,37 @@ Types: `feat`, `fix`, `chore`, `refactor`, `test`, `ci`, `docs`, `build`
 
 Scope is optional but encouraged for larger repos (e.g. `feat(notes)`, `fix(auth)`). Breaking changes append `!` after the type: `feat!: ...`
 
+## Pre-commit checks (MANDATORY)
+
+Before every `git commit` that touches code, Claude MUST run these locally and
+confirm they all pass. No exceptions — CI enforces the same gates and a failure
+after push wastes a round-trip.
+
+1. `make lint` — ruff + djlint + `terraform fmt -check`.
+2. `make test-unit` — pytest with **`--cov-fail-under=80`**. Running
+   `pytest --no-cov` is insufficient; it will not catch coverage drops and the
+   CI job *will* fail even when every test passes locally.
+3. `make security` — bandit + pip-audit, when Python dependencies or imports
+   change.
+4. `make test-terraform` — when anything under `terraform/` changes.
+
+If any of the above fails, **fix it before committing**. Common failure modes:
+
+- **Coverage drop below 80%**: new assistant tool handlers, watcher branches,
+  and `lambda/home/` code are the usual suspects because they are hard to
+  exercise indirectly. Add unit tests that call the new handler through
+  `tools.handle_tool(...)` (see `tests/unit/test_assistant.py`) rather than
+  relying on coverage from other modules.
+- **Ruff E702 / E701 / F401**: don't chain statements with `;` or leave unused
+  imports. E402 and E701 are globally ignored in `ruff.toml`; everything else
+  fails CI.
+- **djlint on `frontend/index.html`**: run `make lint` — the file is huge and
+  djlint catches unclosed tags and indentation issues that are easy to miss.
+
+If `make test-unit` is impractical in the current environment (e.g. network
+sandboxing, missing deps), say so explicitly in the commit message and flag it
+to the user rather than committing blind.
+
 ## Commands
 
 Use `make` targets for all operations. Do not run raw shell commands directly — propose a new make target and get approval before adding one.

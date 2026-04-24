@@ -75,6 +75,8 @@ resource "aws_apigatewayv2_integration" "health" {
 locals {
   health_routes = [
     "GET /health",
+    "GET /health/summary",
+    "GET /health/exercises/recent",
     "GET /health/{date}",
     "PUT /health/{date}",
     "DELETE /health/{date}",

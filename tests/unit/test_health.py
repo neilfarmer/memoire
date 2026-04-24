@@ -5,6 +5,7 @@ import os
 
 import boto3
 import pytest
+from freezegun import freeze_time
 from moto import mock_aws
 
 from conftest import USER, load_lambda, make_table
@@ -156,3 +157,153 @@ class TestDeleteLog:
 
     def test_invalid_date_returns_400(self, tbl):
         assert crud.delete_log(USER, "bad")["statusCode"] == 400
+
+
+# ── Schema enrichment (type / distance / intensity / muscle_groups) ───────────
+
+class TestExerciseSchema:
+    def test_stores_type_and_extras(self, tbl):
+        r = crud.upsert_log(USER, "2024-05-01", {"exercises": [{
+            "name": "Run", "type": "cardio", "duration_min": 30,
+            "distance_km": 5.2, "intensity": 7, "muscle_groups": ["legs", "core"],
+        }]})
+        ex = json.loads(r["body"])["exercises"][0]
+        assert ex["type"] == "cardio"
+        assert ex["duration_min"] == 30
+        assert float(ex["distance_km"]) == 5.2
+        assert ex["intensity"] == 7
+        assert ex["muscle_groups"] == ["legs", "core"]
+
+    def test_rejects_unknown_type(self, tbl):
+        r = crud.upsert_log(USER, "2024-05-01", {"exercises": [{
+            "name": "Bench", "type": "invalid",
+        }]})
+        ex = json.loads(r["body"])["exercises"][0]
+        assert "type" not in ex
+
+    def test_rejects_negative_sets(self, tbl):
+        r = crud.upsert_log(USER, "2024-05-01", {"exercises": [{
+            "name": "Squat",
+            "sets": [{"reps": 5, "weight": 225}, {"reps": -1, "weight": 225}],
+        }]})
+        ex = json.loads(r["body"])["exercises"][0]
+        assert len(ex["sets"]) == 1
+
+    def test_drops_empty_name_exercise(self, tbl):
+        r = crud.upsert_log(USER, "2024-05-01", {"exercises": [
+            {"name": ""},
+            {"name": "  "},
+            {"name": "Pushups"},
+        ]})
+        exs = json.loads(r["body"])["exercises"]
+        assert len(exs) == 1
+        assert exs[0]["name"] == "Pushups"
+
+    def test_intensity_clamped_to_range(self, tbl):
+        # intensity > 10 is dropped silently
+        r = crud.upsert_log(USER, "2024-05-01", {"exercises": [{
+            "name": "Heavy", "intensity": 12,
+        }]})
+        ex = json.loads(r["body"])["exercises"][0]
+        assert "intensity" not in ex
+
+    def test_created_at_backfills_on_legacy_record(self, tbl):
+        # Record without created_at — must not KeyError
+        ddb = boto3.resource("dynamodb", region_name="us-east-1")
+        ddb.Table(TABLE).put_item(Item={
+            "user_id": USER, "log_date": "2023-01-01",
+            "exercises": [], "notes": "",
+        })
+        r = crud.upsert_log(USER, "2023-01-01", {"exercises": []})
+        assert r["statusCode"] == 200
+        assert json.loads(r["body"])["created_at"]
+
+
+class TestSummaryEndpoint:
+    @freeze_time("2024-05-20")
+    def test_defaults_last_30_days(self, tbl):
+        crud.upsert_log(USER, "2024-05-19", {"exercises": [{
+            "name": "Squat", "sets": [{"reps": 5, "weight": 100}, {"reps": 5, "weight": 100}],
+        }]})
+        crud.upsert_log(USER, "2024-05-20", {"exercises": [{
+            "name": "Run", "duration_min": 20, "distance_km": 3,
+        }]})
+        r = crud.summary(USER, {})
+        body = json.loads(r["body"])
+        assert body["workout_days"] == 2
+        assert body["exercise_count"] == 2
+        assert body["total_volume"] == 1000  # 5*100 + 5*100
+        assert body["total_duration"] == 20
+        assert body["total_distance"] == 3
+
+    @freeze_time("2024-05-20")
+    def test_streak_counts_consecutive_days_ending_today(self, tbl):
+        for d in ("2024-05-18", "2024-05-19", "2024-05-20"):
+            crud.upsert_log(USER, d, {"exercises": [{"name": "X", "sets": []}]})
+        r = crud.summary(USER, {})
+        body = json.loads(r["body"])
+        assert body["streak_days"] == 3
+
+    @freeze_time("2024-05-20")
+    def test_streak_breaks_on_gap(self, tbl):
+        crud.upsert_log(USER, "2024-05-18", {"exercises": [{"name": "X", "sets": []}]})
+        # Gap at 2024-05-19, then today
+        crud.upsert_log(USER, "2024-05-20", {"exercises": [{"name": "Y", "sets": []}]})
+        r = crud.summary(USER, {})
+        assert json.loads(r["body"])["streak_days"] == 1
+
+    def test_respects_explicit_range(self, tbl):
+        crud.upsert_log(USER, "2024-01-01", {"exercises": [{"name": "X", "sets": []}]})
+        crud.upsert_log(USER, "2024-06-01", {"exercises": [{"name": "Y", "sets": []}]})
+        r = crud.summary(USER, {"from": "2024-01-01", "to": "2024-01-31"})
+        assert json.loads(r["body"])["workout_days"] == 1
+
+    def test_invalid_from_returns_400(self, tbl):
+        assert crud.summary(USER, {"from": "bad"})["statusCode"] == 400
+
+
+class TestRecentExercises:
+    @freeze_time("2024-05-20")
+    def test_returns_distinct_by_name(self, tbl):
+        crud.upsert_log(USER, "2024-05-18", {"exercises": [
+            {"name": "Bench", "sets": [{"reps": 5, "weight": 135}]},
+        ]})
+        crud.upsert_log(USER, "2024-05-20", {"exercises": [
+            {"name": "bench", "sets": [{"reps": 6, "weight": 140}]},
+            {"name": "Squat", "sets": []},
+        ]})
+        r = crud.recent_exercises(USER, {})
+        names = [x["name"] for x in json.loads(r["body"])]
+        # Case-insensitive de-dupe; most recent ordering
+        assert sorted(x.lower() for x in names) == ["bench", "squat"]
+
+    @freeze_time("2024-05-20")
+    def test_most_recent_config_wins(self, tbl):
+        crud.upsert_log(USER, "2024-05-10", {"exercises": [
+            {"name": "Bench", "sets": [{"reps": 5, "weight": 135}]},
+        ]})
+        crud.upsert_log(USER, "2024-05-18", {"exercises": [
+            {"name": "Bench", "sets": [{"reps": 8, "weight": 155}]},
+        ]})
+        r = crud.recent_exercises(USER, {})
+        rec = [x for x in json.loads(r["body"]) if x["name"].lower() == "bench"][0]
+        assert rec["last_date"] == "2024-05-18"
+        assert rec["count"] == 2
+        assert rec["sets"][0]["weight"] == 155
+
+    @freeze_time("2024-05-20")
+    def test_filter_by_q(self, tbl):
+        crud.upsert_log(USER, "2024-05-18", {"exercises": [
+            {"name": "Bench Press"}, {"name": "Squat"},
+        ]})
+        r = crud.recent_exercises(USER, {"q": "bench"})
+        names = [x["name"] for x in json.loads(r["body"])]
+        assert names == ["Bench Press"]
+
+    @freeze_time("2024-05-20")
+    def test_respects_days_window(self, tbl):
+        crud.upsert_log(USER, "2024-01-01", {"exercises": [{"name": "Ancient"}]})
+        crud.upsert_log(USER, "2024-05-18", {"exercises": [{"name": "Recent"}]})
+        r = crud.recent_exercises(USER, {"days": 30})
+        names = [x["name"] for x in json.loads(r["body"])]
+        assert names == ["Recent"]
