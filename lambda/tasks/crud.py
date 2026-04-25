@@ -6,6 +6,7 @@ import uuid
 import boto3
 from response import ok, created, no_content, error, not_found
 import db
+import links_util
 from utils import now_iso, build_update_expression
 
 _dynamodb_client = boto3.client("dynamodb")
@@ -88,6 +89,7 @@ def create_task(user_id: str, body: dict) -> dict:
     task = {k: v for k, v in task.items() if v is not None}
 
     _table().put_item(Item=task)
+    links_util.sync_links(user_id, "task", task["task_id"], [title, description])
     return created(task)
 
 
@@ -140,7 +142,12 @@ def update_task(user_id: str, task_id: str, body: dict) -> dict:
     except _dynamodb_client.exceptions.ConditionalCheckFailedException:
         return not_found("Task")
 
-    return ok(result["Attributes"])
+    updated = result["Attributes"]
+    links_util.sync_links(
+        user_id, "task", task_id,
+        [updated.get("title", ""), updated.get("description", "")],
+    )
+    return ok(updated)
 
 
 # ── Delete ────────────────────────────────────────────────────────────────────
@@ -154,4 +161,5 @@ def delete_task(user_id: str, task_id: str) -> dict:
     except _dynamodb_client.exceptions.ConditionalCheckFailedException:
         return not_found("Task")
 
+    links_util.delete_source_links(user_id, "task", task_id)
     return no_content()

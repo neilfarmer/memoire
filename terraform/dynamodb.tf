@@ -690,3 +690,57 @@ resource "aws_dynamodb_table" "bookmarks" {
     enabled = true
   }
 }
+
+# ── Links table ───────────────────────────────────────────────────────────────
+#
+# Wiki-style `[[type:id]]` links parsed out of notes, journal entries, and
+# tasks. One row per (source -> target) edge, scoped by user.
+#
+# PK: user_id  (String)
+# SK: link_key (String) — "{source_type}#{source_id}#{target_type}#{target_id}"
+#
+# Attributes: source_type, source_id, target_type, target_id,
+#             target_key ("{target_type}#{target_id}"), created_at
+#
+# GSI reverse-index:
+#   PK: user_id, SK: target_key — find all inbound links to an entity
+#   (backlinks panel) without scanning.
+#
+# Access patterns:
+#   Outbound links from an entity → Query PK=user_id, SK begins_with
+#                                   "{source_type}#{source_id}#"
+#   Inbound  links to an entity   → Query GSI PK=user_id, SK=target_key
+#   Delete all outbound from src  → Query, then batch delete
+
+resource "aws_dynamodb_table" "links" {
+  name         = "${local.name_prefix}-links"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "link_key"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "link_key"
+    type = "S"
+  }
+
+  attribute {
+    name = "target_key"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "reverse-index"
+    hash_key        = "user_id"
+    range_key       = "target_key"
+    projection_type = "ALL"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}

@@ -24,7 +24,8 @@ resource "aws_lambda_function" "journal" {
 
   environment {
     variables = {
-      TABLE_NAME = aws_dynamodb_table.journal.name
+      TABLE_NAME  = aws_dynamodb_table.journal.name
+      LINKS_TABLE = aws_dynamodb_table.links.name
     }
   }
 }
@@ -40,17 +41,29 @@ resource "aws_iam_role_policy" "journal_dynamodb" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "dynamodb:GetItem",
-        "dynamodb:PutItem",
-        "dynamodb:DeleteItem",
-        "dynamodb:Query",
-        "dynamodb:Scan",
-      ]
-      Resource = aws_dynamodb_table.journal.arn
-    }]
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:Scan",
+        ]
+        Resource = aws_dynamodb_table.journal.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:BatchWriteItem",
+        ]
+        Resource = aws_dynamodb_table.links.arn
+      },
+    ]
   })
 }
 

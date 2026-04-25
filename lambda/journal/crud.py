@@ -3,6 +3,7 @@
 import os
 
 import db
+import links_util
 from response import ok, no_content, error, not_found
 from utils import now_iso, validate_date, parse_tags
 
@@ -95,6 +96,10 @@ def upsert_entry(user_id: str, entry_date: str, body: dict) -> dict:
     item = {k: v for k, v in item.items() if v is not None and v != "" or k in ("body", "tags", "mood", "title")}
 
     _table().put_item(Item=item)
+    links_util.sync_links(
+        user_id, "journal", entry_date,
+        [item.get("title", ""), item.get("body", "")],
+    )
     return ok(item)
 
 
@@ -110,4 +115,5 @@ def delete_entry(user_id: str, entry_date: str) -> dict:
         return not_found("Entry")
 
     _table().delete_item(Key={"user_id": user_id, "entry_date": entry_date})
+    links_util.delete_source_links(user_id, "journal", entry_date)
     return no_content()

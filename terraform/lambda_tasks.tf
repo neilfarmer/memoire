@@ -26,6 +26,7 @@ resource "aws_lambda_function" "tasks" {
     variables = {
       TABLE_NAME    = aws_dynamodb_table.tasks.name
       FOLDERS_TABLE = aws_dynamodb_table.task_folders.name
+      LINKS_TABLE   = aws_dynamodb_table.links.name
     }
   }
 }
@@ -42,20 +43,32 @@ resource "aws_iam_role_policy" "tasks_dynamodb" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "dynamodb:GetItem",
-        "dynamodb:PutItem",
-        "dynamodb:UpdateItem",
-        "dynamodb:DeleteItem",
-        "dynamodb:Query",
-      ]
-      Resource = [
-        aws_dynamodb_table.tasks.arn,
-        aws_dynamodb_table.task_folders.arn,
-      ]
-    }]
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+        ]
+        Resource = [
+          aws_dynamodb_table.tasks.arn,
+          aws_dynamodb_table.task_folders.arn,
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:BatchWriteItem",
+        ]
+        Resource = aws_dynamodb_table.links.arn
+      },
+    ]
   })
 }
 

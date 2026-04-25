@@ -62,6 +62,7 @@ BOOKMARKS_TABLE    = os.environ.get("BOOKMARKS_TABLE", "")
 FAVORITES_TABLE    = os.environ.get("FAVORITES_TABLE", "")
 FEEDS_TABLE        = os.environ.get("FEEDS_TABLE", "")
 FEEDS_READ_TABLE   = os.environ.get("FEEDS_READ_TABLE", "")
+LINKS_TABLE        = os.environ.get("LINKS_TABLE", "")
 
 
 def _now() -> str:
@@ -890,6 +891,34 @@ TOOL_SPECS = [
             "feed_id": {"type": "string"},
         }, "required": ["feed_id"]}},
     }},
+
+    # ── Links graph ────────────────────────────────────────────────────────
+    {"toolSpec": {
+        "name": "get_links",
+        "description": (
+            "Traverse the wiki-link graph for an entity. Notes, journal "
+            "entries, and tasks may reference other items via [[type:id]] "
+            "tags in their body. Use this tool to fetch outbound references "
+            "(what this entity links to), inbound backlinks (what links to "
+            "this entity), or both. Useful for cross-feature questions "
+            "like 'what notes mention this task?'."
+        ),
+        "inputSchema": {"json": {"type": "object", "properties": {
+            "entity_type": {
+                "type": "string",
+                "description": "Type of the entity, e.g. note, task, journal, goal, habit, bookmark.",
+            },
+            "entity_id": {
+                "type": "string",
+                "description": "Id of the entity (for journal, the YYYY-MM-DD date).",
+            },
+            "direction": {
+                "type": "string",
+                "enum": ["outbound", "inbound", "both"],
+                "description": "outbound = links this entity emits; inbound = links pointing at it. Defaults to both.",
+            },
+        }, "required": ["entity_type", "entity_id"]}},
+    }},
 ]
 
 
@@ -973,6 +1002,8 @@ def handle_tool(user_id: str, name: str, inputs: dict, local_date: str | None = 
         "list_feeds":           _list_feeds,
         "add_feed":             _add_feed,
         "delete_feed":          _delete_feed,
+        # Links graph
+        "get_links":            _get_links,
     }
     handler = handlers.get(name)
     if not handler:
@@ -2379,3 +2410,41 @@ def _delete_feed(user_id: str, inputs: dict) -> str:
         return f"Feed {fid} not found."
     db.delete_item(table, user_id, "feed_id", fid)
     return f"Deleted feed '{existing.get('name', existing.get('url', fid))}'."
+
+
+# ── Links graph ──────────────────────────────────────────────────────────────
+
+def _get_links(user_id: str, inputs: dict) -> str:
+    import links_util
+
+    entity_type = (inputs.get("entity_type") or "").strip().lower()
+    entity_id   = (inputs.get("entity_id")   or "").strip()
+    direction   = (inputs.get("direction")   or "both").strip().lower()
+
+    if not entity_type or not entity_id:
+        return "entity_type and entity_id are required."
+    if entity_type not in links_util.LINK_TYPES:
+        return f"Unsupported entity_type: {entity_type}"
+    if direction not in ("outbound", "inbound", "both"):
+        return "direction must be one of: outbound, inbound, both"
+
+    outbound: list[dict] = []
+    inbound:  list[dict] = []
+    if direction in ("outbound", "both"):
+        outbound = links_util.query_outbound(user_id, entity_type, entity_id)
+    if direction in ("inbound", "both"):
+        inbound  = links_util.query_inbound(user_id, entity_type, entity_id)
+
+    if not outbound and not inbound:
+        return f"No links found for {entity_type}:{entity_id}."
+
+    lines: list[str] = []
+    if outbound:
+        lines.append(f"Outbound ({len(outbound)}):")
+        for edge in outbound:
+            lines.append(f"- {edge['target_type']}:{edge['target_id']}")
+    if inbound:
+        lines.append(f"Inbound ({len(inbound)}):")
+        for edge in inbound:
+            lines.append(f"- {edge['source_type']}:{edge['source_id']}")
+    return "\n".join(lines)

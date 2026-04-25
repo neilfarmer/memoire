@@ -26,6 +26,7 @@ resource "aws_lambda_function" "notes" {
     variables = {
       FOLDERS_TABLE   = aws_dynamodb_table.note_folders.name
       NOTES_TABLE     = aws_dynamodb_table.notes.name
+      LINKS_TABLE     = aws_dynamodb_table.links.name
       FRONTEND_BUCKET = aws_s3_bucket.frontend.id
       CLOUDFRONT_URL  = "https://${aws_cloudfront_distribution.frontend.domain_name}"
     }
@@ -68,6 +69,16 @@ resource "aws_iam_role_policy" "notes_dynamodb" {
           "dynamodb:BatchWriteItem",
         ]
         Resource = aws_dynamodb_table.notes.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:BatchWriteItem",
+        ]
+        Resource = aws_dynamodb_table.links.arn
       },
     ]
   })

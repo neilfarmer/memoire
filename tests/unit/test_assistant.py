@@ -8,7 +8,7 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from conftest import USER, load_lambda, make_table
+from conftest import USER, load_lambda, make_table, make_links_table
 from freezegun import freeze_time
 
 # ── env vars must be set before module load ───────────────────────────────────
@@ -70,6 +70,7 @@ def tbls():
         make_table(ddb, "test-favorites-asst",    "user_id", "favorite_id")
         make_table(ddb, "test-feeds-asst",        "user_id", "feed_id")
         make_table(ddb, "test-feeds-read-asst",   "user_id", "article_url")
+        make_links_table(ddb)
         # Tokens table with token-hash GSI (used by token_auth PAT lookup)
         ddb.create_table(
             TableName="test-tokens",
@@ -1031,6 +1032,47 @@ class TestToolsUnknown:
     def test_unknown_tool_returns_error(self, tbls):
         result = tools.handle_tool(USER, "nonexistent_tool", {})
         assert "Unknown tool" in result
+
+
+# ── tools: get_links ──────────────────────────────────────────────────────────
+
+class TestToolsGetLinks:
+    def test_rejects_missing_inputs(self, tbls):
+        assert "required" in tools.handle_tool(USER, "get_links", {}).lower()
+
+    def test_rejects_unknown_entity_type(self, tbls):
+        result = tools.handle_tool(USER, "get_links", {
+            "entity_type": "mystery", "entity_id": "x",
+        })
+        assert "Unsupported" in result
+
+    def test_empty_returns_friendly_message(self, tbls):
+        result = tools.handle_tool(USER, "get_links", {
+            "entity_type": "note", "entity_id": "missing",
+        })
+        assert "No links found" in result
+
+    def test_returns_inbound_and_outbound(self, tbls):
+        import links_util
+        links_util.sync_links(USER, "note", "n1", ["[[task:t1]]"])
+        links_util.sync_links(USER, "journal", "2026-04-24", ["[[note:n1]]"])
+
+        result = tools.handle_tool(USER, "get_links", {
+            "entity_type": "note", "entity_id": "n1",
+        })
+        assert "Outbound" in result and "task:t1" in result
+        assert "Inbound"  in result and "journal:2026-04-24" in result
+
+    def test_direction_outbound_only(self, tbls):
+        import links_util
+        links_util.sync_links(USER, "note", "n1", ["[[task:t1]]"])
+        links_util.sync_links(USER, "journal", "2026-04-24", ["[[note:n1]]"])
+
+        result = tools.handle_tool(USER, "get_links", {
+            "entity_type": "note", "entity_id": "n1", "direction": "outbound",
+        })
+        assert "Outbound" in result
+        assert "Inbound" not in result
 
 
 # ── chat: chat_stream ─────────────────────────────────────────────────────────

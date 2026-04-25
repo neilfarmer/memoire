@@ -8,7 +8,7 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from conftest import USER, load_lambda, make_table
+from conftest import USER, load_lambda, make_table, make_links_table
 
 # ── env vars before module load ───────────────────────────────────────────────
 os.environ["NOTES_TABLE"] = "test-notes"
@@ -34,6 +34,7 @@ def tbls():
         ddb = boto3.resource("dynamodb", region_name="us-east-1")
         make_table(ddb, NOTES_TABLE, "user_id", "note_id")
         make_table(ddb, FOLDERS_TABLE_NAME, "user_id", "folder_id")
+        make_links_table(ddb)
         s3 = boto3.client("s3", region_name="us-east-1")
         s3.create_bucket(Bucket=BUCKET)
         yield ddb, s3

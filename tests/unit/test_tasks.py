@@ -7,7 +7,7 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from conftest import USER, load_lambda, make_table
+from conftest import USER, load_lambda, make_table, make_links_table
 
 # ── env vars before module load ───────────────────────────────────────────────
 os.environ["TABLE_NAME"] = "test-tasks"
@@ -26,6 +26,7 @@ def tbls():
         ddb = boto3.resource("dynamodb", region_name="us-east-1")
         make_table(ddb, TASKS_TABLE, "user_id", "task_id")
         make_table(ddb, FOLDERS_TABLE_NAME, "user_id", "folder_id")
+        make_links_table(ddb)
         yield
 
 
