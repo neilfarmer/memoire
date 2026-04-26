@@ -75,10 +75,6 @@ run "all_tables_have_pitr_enabled" {
     error_message = "assistant_memory: PITR must be enabled"
   }
   assert {
-    condition     = aws_dynamodb_table.task_folders.point_in_time_recovery[0].enabled
-    error_message = "task_folders: PITR must be enabled"
-  }
-  assert {
     condition     = aws_dynamodb_table.links.point_in_time_recovery[0].enabled
     error_message = "links: PITR must be enabled"
   }

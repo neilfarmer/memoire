@@ -77,18 +77,15 @@ def api(method: str, path: str, token: str, body: dict = None, params: dict = No
 # ── Tasks ─────────────────────────────────────────────────────────────────────
 
 def test_tasks(token: str) -> None:
-    created_ids:        list[str] = []
-    created_folder_ids: list[str] = []
+    created_ids: list[str] = []
     try:
-        _test_tasks_body(token, created_ids, created_folder_ids)
+        _test_tasks_body(token, created_ids)
     finally:
         for tid in created_ids:
             api("DELETE", f"/tasks/{tid}", token)
-        for fid in created_folder_ids:
-            api("DELETE", f"/tasks/folders/{fid}", token)
 
 
-def _test_tasks_body(token: str, created_ids: list, created_folder_ids: list) -> None:
+def _test_tasks_body(token: str, created_ids: list) -> None:
     section("Tasks — auth enforcement")
     r = requests.get(f"{API_URL}/tasks", timeout=10)
     check("No token returns 401/403", r.status_code in (401, 403), f"Got {r.status_code}")
@@ -176,16 +173,13 @@ def _test_tasks_body(token: str, created_ids: list, created_folder_ids: list) ->
           api("PUT", f"/tasks/{task_id}", token,
               {"notifications": {"recurring": "monthly"}}).status_code == 400)
 
-    section("Tasks — move between folders")
-    rf = api("POST", "/tasks/folders", token, {"name": "Temp move-target folder"})
-    move_folder_id = rf.json().get("folder_id") if rf.status_code == 201 else None
-    if move_folder_id:
-        created_folder_ids.append(move_folder_id)
-        r = api("PUT", f"/tasks/{task_id}", token, {"folder_id": move_folder_id})
-        check("Move task to folder returns 200", r.status_code == 200, f"Got {r.status_code}: {r.text}")
-        check("folder_id updated",               r.json().get("folder_id") == move_folder_id)
-    else:
-        print(f"  [{SKIP}] Skipping move-folder test — folder creation failed")
+    section("Tasks — tags")
+    r = api("PUT", f"/tasks/{task_id}", token, {"tags": ["alpha", "beta"]})
+    check("Set tags returns 200", r.status_code == 200, f"Got {r.status_code}: {r.text}")
+    check("tags persisted",       r.json().get("tags") == ["alpha", "beta"])
+    r = api("PUT", f"/tasks/{task_id}", token, {"tags": []})
+    check("Clear tags returns 200", r.status_code == 200)
+    check("tags cleared",           r.json().get("tags") == [])
 
     section("Tasks — delete")
     check("Delete returns 204",
@@ -829,81 +823,6 @@ def test_export(token: str) -> None:
     check("Response is valid ZIP",      r.content[:2] == b"PK", f"First bytes: {r.content[:4]!r}")
 
 
-# ── Task Folders ──────────────────────────────────────────────────────────────
-
-def test_task_folders(token: str) -> None:
-    created_folder_ids: list[str] = []
-    created_task_ids:   list[str] = []
-    try:
-        _test_task_folders_body(token, created_folder_ids, created_task_ids)
-    finally:
-        for tid in created_task_ids:
-            api("DELETE", f"/tasks/{tid}", token)
-        for fid in created_folder_ids:
-            api("DELETE", f"/tasks/folders/{fid}", token)
-
-
-def _test_task_folders_body(token: str, created_folder_ids: list, created_task_ids: list) -> None:
-    section("Task folders — list (auto-creates Inbox)")
-    r = api("GET", "/tasks/folders", token)
-    check("List returns 200",     r.status_code == 200, f"Got {r.status_code}: {r.text}")
-    check("Returns list",         isinstance(r.json(), list))
-    check("Inbox folder exists",  any(f["name"] == "Inbox" for f in r.json()),
-          f"Folders: {[f['name'] for f in r.json()]}")
-
-    section("Task folders — create")
-    r = api("POST", "/tasks/folders", token, {"name": "Integration test folder"})
-    check("Create returns 201",   r.status_code == 201, f"Got {r.status_code}: {r.text}")
-    folder    = r.json()
-    folder_id = folder.get("folder_id")
-    check("Has folder_id",        bool(folder_id))
-    check("Name matches",         folder.get("name") == "Integration test folder")
-    check("Has created_at",       "created_at" in folder)
-
-    if folder_id:
-        created_folder_ids.append(folder_id)
-
-    check("Missing name → 400",
-          api("POST", "/tasks/folders", token, {}).status_code == 400)
-
-    if not folder_id:
-        print(f"  [{SKIP}] Skipping remaining folder tests — creation failed")
-        return
-
-    section("Task folders — rename")
-    r = api("PUT", f"/tasks/folders/{folder_id}", token, {"name": "Renamed folder"})
-    check("Rename returns 200",       r.status_code == 200)
-    check("Name updated",             r.json().get("name") == "Renamed folder")
-    check("Missing name → 400",
-          api("PUT", f"/tasks/folders/{folder_id}", token, {}).status_code == 400)
-    check("Rename non-existent → 404",
-          api("PUT", "/tasks/folders/no-such-id", token, {"name": "X"}).status_code == 404)
-
-    section("Task folders — assign task to folder")
-    rt = api("POST", "/tasks", token, {"title": "Folder task", "folder_id": folder_id})
-    check("Create task with folder_id returns 201", rt.status_code == 201, f"Got {rt.status_code}: {rt.text}")
-    task_id = rt.json().get("task_id")
-    check("Task has folder_id set",   rt.json().get("folder_id") == folder_id)
-    if task_id:
-        created_task_ids.append(task_id)
-
-    section("Task folders — delete (cascade)")
-    check("Delete folder returns 204",
-          api("DELETE", f"/tasks/folders/{folder_id}", token).status_code == 204)
-    created_folder_ids.remove(folder_id)
-
-    check("Deleted folder gone from list",
-          folder_id not in [f["folder_id"] for f in api("GET", "/tasks/folders", token).json()])
-
-    if task_id and task_id in created_task_ids:
-        check("Task inside deleted folder also deleted",
-              api("GET", f"/tasks/{task_id}", token).status_code == 404)
-        created_task_ids.remove(task_id)
-
-    check("Delete non-existent folder → 404",
-          api("DELETE", "/tasks/folders/no-such-id", token).status_code == 404)
-
-
 # ── Assistant ─────────────────────────────────────────────────────────────────
 
 def test_assistant(token: str) -> None:
@@ -987,7 +906,6 @@ def test_home(token: str) -> None:
 
 SUITES = {
     "tasks":        test_tasks,
-    "task_folders": test_task_folders,
     "habits":       test_habits,
     "journal":      test_journal,
     "notes":        test_notes,

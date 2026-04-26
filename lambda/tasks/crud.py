@@ -25,6 +25,8 @@ VALID_RECURRENCE_FREQ = {"daily", "weekly", "weekdays"}
 
 MAX_TITLE_LEN       = 500
 MAX_DESCRIPTION_LEN = 10_000
+MAX_TAG_LEN         = 50
+MAX_TAGS_PER_TASK   = 20
 
 SLOT_MINUTES        = 30
 MAX_DURATION_MIN    = 8 * 60
@@ -95,6 +97,31 @@ def _validate_scheduling(body: dict) -> str | None:
     return None
 
 
+def _normalize_tags(raw) -> list[str] | None:
+    """Return a sanitized tag list, or None if input is missing.
+
+    Accepts a list of strings or a comma-separated string. Strips whitespace,
+    drops empties, deduplicates while preserving order.
+    """
+    if raw is None:
+        return None
+    if isinstance(raw, str):
+        raw = [t for t in raw.split(",")]
+    if not isinstance(raw, list):
+        return []
+    seen = set()
+    out: list[str] = []
+    for tag in raw:
+        if not isinstance(tag, str):
+            continue
+        norm = tag.strip()
+        if not norm or norm.lower() in seen:
+            continue
+        seen.add(norm.lower())
+        out.append(norm)
+    return out
+
+
 def _validate_fields(body: dict) -> str | None:
     """Return an error message if any provided fields are invalid, else None."""
     if "status" in body and body["status"] not in VALID_STATUSES:
@@ -111,6 +138,13 @@ def _validate_fields(body: dict) -> str | None:
         recurring = n.get("recurring")
         if recurring and recurring not in VALID_RECURRING:
             return f"notifications.recurring must be one of: {', '.join(sorted(VALID_RECURRING))}"
+    if "tags" in body and body["tags"] is not None:
+        tags = _normalize_tags(body["tags"])
+        if len(tags) > MAX_TAGS_PER_TASK:
+            return f"tags must contain no more than {MAX_TAGS_PER_TASK} entries"
+        if any(len(t) > MAX_TAG_LEN for t in tags):
+            return f"each tag must be at most {MAX_TAG_LEN} characters"
+        body["tags"] = tags
     return _validate_scheduling(body)
 
 
@@ -187,6 +221,7 @@ def create_task(user_id: str, body: dict) -> dict:
         return error("scheduled_start overlaps an existing block", status=409)
 
     now = now_iso()
+    tags = _normalize_tags(body.get("tags")) if body.get("tags") is not None else []
     task = {
         "user_id": user_id,
         "task_id": str(uuid.uuid4()),
@@ -196,7 +231,7 @@ def create_task(user_id: str, body: dict) -> dict:
         "priority": body.get("priority", "medium"),
         "due_date": body.get("due_date"),
         "notifications": body.get("notifications"),
-        "folder_id": body.get("folder_id"),
+        "tags": tags,
         "scheduled_start": sched.isoformat() if sched else None,
         "duration_minutes": duration,
         "recurrence_rule": body.get("recurrence_rule"),
@@ -227,7 +262,7 @@ def get_task(user_id: str, task_id: str) -> dict:
 def update_task(user_id: str, task_id: str, body: dict) -> dict:
     updatable = {
         "title", "description", "status", "priority", "due_date", "notifications",
-        "folder_id", "scheduled_start", "duration_minutes",
+        "tags", "scheduled_start", "duration_minutes",
         "recurrence_rule", "recurrence_parent_id",
     }
     fields = {k: v for k, v in body.items() if k in updatable}

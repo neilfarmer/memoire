@@ -199,10 +199,10 @@ components:
           type: string
           format: date
           nullable: true
-        folder_id:
-          type: string
-          format: uuid
-          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
         notifications:
           $ref: '#/components/schemas/TaskNotifications'
         created_at:
@@ -230,38 +230,12 @@ components:
           type: string
           format: date
           nullable: true
-        folder_id:
-          type: string
-          format: uuid
-          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
         notifications:
           $ref: '#/components/schemas/TaskNotifications'
-
-    TaskFolder:
-      type: object
-      properties:
-        user_id:
-          type: string
-        folder_id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        parent_id:
-          type: string
-          format: uuid
-          nullable: true
-
-    TaskFolderWrite:
-      type: object
-      required: [name]
-      properties:
-        name:
-          type: string
-        parent_id:
-          type: string
-          format: uuid
-          nullable: true
 
     # ── Notes ─────────────────────────────────────────────────────────────────
 
@@ -1680,67 +1654,6 @@ paths:
     delete:
       tags: [Tasks]
       summary: Delete a task
-      responses:
-        "204":
-          description: Deleted
-
-  /tasks/folders:
-    get:
-      tags: [Tasks]
-      summary: List all task folders
-      responses:
-        "200":
-          description: Array of folders
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/TaskFolder'
-    post:
-      tags: [Tasks]
-      summary: Create a task folder
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TaskFolderWrite'
-      responses:
-        "201":
-          description: Created folder
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TaskFolder'
-
-  /tasks/folders/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    put:
-      tags: [Tasks]
-      summary: Update a task folder
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TaskFolderWrite'
-      responses:
-        "200":
-          description: Updated folder
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TaskFolder'
-    delete:
-      tags: [Tasks]
-      summary: Delete a task folder
       responses:
         "204":
           description: Deleted

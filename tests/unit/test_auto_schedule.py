@@ -12,7 +12,6 @@ from moto import mock_aws
 from conftest import USER, load_lambda, make_table, make_links_table
 
 os.environ["TABLE_NAME"]     = "test-tasks"
-os.environ["FOLDERS_TABLE"]  = "test-task-folders"
 os.environ["SETTINGS_TABLE"] = "test-settings"
 
 crud = load_lambda("tasks", "crud.py")

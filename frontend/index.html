@@ -750,6 +750,31 @@
     }
     .sb-sub-link:hover { background: var(--hover); color: var(--text); }
     .sb-sub-link.active { color: var(--primary); background: var(--hover); border-left-color: var(--primary); }
+    .sb-tag-group-label {
+      font-size: 11px;
+      font-weight: var(--weight-semibold);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+      padding: 8px 14px 4px;
+    }
+    .task-tag-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 14px 6px 22px;
+      margin: 1px 4px;
+      border-left: 2px solid transparent;
+      border-radius: var(--radius);
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .task-tag-row:hover { background: var(--hover); color: var(--text); }
+    .task-tag-row.active { color: var(--primary); background: var(--hover); border-left-color: var(--primary); }
+    .task-tag-name  { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .task-tag-count { font-size: 11px; color: var(--muted); padding-left: 6px; }
+    .task-tag-row.active .task-tag-count { color: var(--primary); }
     .sb-hdr-action {
       display: inline-flex;
       align-items: center;
@@ -1279,6 +1304,13 @@
       gap: 4px;
     }
     .scheduled-chip::before { content: "Scheduled"; opacity: .7; }
+    .task-tag-chip {
+      font-size: var(--text-xs);
+      color: var(--muted);
+      background: var(--hover);
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
 
     .auto-schedule-banner {
       display: none;
@@ -5336,10 +5368,6 @@
                                     </svg>
                                 </span>
                                 <span class="sb-hdr-label">Tasks</span>
-                                <button class="sb-hdr-btn"
-                                        id="new-task-folder-btn"
-                                        onclick="event.stopPropagation()"
-                                        title="New folder">+ Folder</button>
                                 <span class="sb-arrow">
                                     <svg viewBox="0 0 10 10" fill="currentColor">
                                         <polygon points="2,1 8,5 2,9" />
@@ -5347,7 +5375,13 @@
                                 </span>
                             </div>
                             <div class="sb-section-body hidden" id="sb-tasks-body">
-                                <div id="task-folders-tree"></div>
+                                <div class="sb-section-body-inner">
+                                    <button class="sb-sub-link"
+                                            id="task-calendar-btn"
+                                            onclick="event.stopPropagation(); taskTags.openCalendar()">Calendar</button>
+                                </div>
+                                <div class="sb-tag-group-label">Tags</div>
+                                <div id="task-tags-list"></div>
                             </div>
                         </div>
                         <div class="sb-section" id="sb-notes">
@@ -7123,8 +7157,10 @@
                             <input type="date" id="task-due" />
                         </div>
                         <div class="field">
-                            <label for="task-folder">Folder</label>
-                            <select id="task-folder"></select>
+                            <label for="task-tags">Tags</label>
+                            <input type="text"
+                                   id="task-tags"
+                                   placeholder="comma-separated, e.g. work, urgent" />
                         </div>
                     </div>
                     <!-- Notifications (only shown when ntfy is configured) -->
@@ -7313,10 +7349,6 @@
     updateTask(id, body)           { return api.call("PUT",    `/tasks/${id}`, body); },
     deleteTask(id)                 { return api.call("DELETE", `/tasks/${id}`); },
     autoScheduleTasks(body)        { return api.call("POST",   "/tasks/auto-schedule", body || {}); },
-    listTaskFolders()              { return api.call("GET",    "/tasks/folders"); },
-    createTaskFolder(body)         { return api.call("POST",   "/tasks/folders", body); },
-    updateTaskFolder(id, body)     { return api.call("PUT",    `/tasks/folders/${id}`, body); },
-    deleteTaskFolder(id)           { return api.call("DELETE", `/tasks/folders/${id}`); },
 
     getSettings()              { return api.call("GET",  "/settings"); },
     updateSettings(body)       { return api.call("PUT",  "/settings", body); },
@@ -7347,7 +7379,7 @@
 
   const state = {
     tasks: [],
-    currentFolderID: null,
+    currentTag: null,
     filter: "all",
     editingId: null,
     settings: {},
@@ -7421,6 +7453,12 @@
     return 5;
   }
 
+  function filterTasksByTag(tasks, tag) {
+    if (tag == null)            return tasks;
+    if (tag === "__untagged__") return tasks.filter(t => !((t.tags || []).filter(Boolean).length));
+    return tasks.filter(t => (t.tags || []).includes(tag));
+  }
+
   function taskCardHtml(task) {
     const active  = task.status !== "done";
     const overdue = active && isOverdue(task.due_date);
@@ -7445,6 +7483,7 @@
             <span class="badge badge-${task.priority}">${task.priority}</span>
             ${task.due_date ? `<span class="${dateClass}">${formatDueDate(task.due_date)}</span>` : ""}
             ${task.scheduled_start ? `<span class="scheduled-chip" title="Scheduled block">${formatScheduledStart(task.scheduled_start)}</span>` : ""}
+            ${(task.tags || []).map(tag => `<span class="task-tag-chip">${escHtml(tag)}</span>`).join("")}
           </div>
         </div>
         ${active ? `<button class="pomo-focus-btn${isFocus ? ' active' : ''}" title="Focus on this task" onclick="event.stopPropagation(); pomodoro.focusTask('${task.task_id}')">&#9654;</button>` : ""}
@@ -7515,16 +7554,13 @@
     weekEl.classList.add("hidden");
 
     const list = $("task-list");
-    const isDefault   = taskFolders.data.length > 0 && taskFolders.data[0].folder_id === state.currentFolderID;
-    const folderTasks = state.currentFolderID
-      ? state.tasks.filter(t => t.folder_id === state.currentFolderID || (!t.folder_id && isDefault))
-      : state.tasks;
+    const tagTasks = filterTasksByTag(state.tasks, state.currentTag);
 
-    updateFilterCounts(folderTasks);
+    updateFilterCounts(tagTasks);
 
     const visibleUnsorted = state.filter === "all"
-      ? folderTasks
-      : folderTasks.filter(t => t.status === state.filter);
+      ? tagTasks
+      : tagTasks.filter(t => t.status === state.filter);
     const visible = sortTasks(visibleUnsorted);
 
     if (visible.length === 0) {
@@ -7572,14 +7608,10 @@
     const monthNames = ["January","February","March","April","May","June",
                         "July","August","September","October","November","December"];
 
-    // Group filtered tasks by due date
-    const isDefault    = taskFolders.data.length > 0 && taskFolders.data[0].folder_id === state.currentFolderID;
-    const folderTasks  = state.currentFolderID
-      ? state.tasks.filter(t => t.folder_id === state.currentFolderID || (!t.folder_id && isDefault))
-      : state.tasks;
+    const tagTasks = filterTasksByTag(state.tasks, state.currentTag);
     const filtered = state.filter === "all"
-      ? folderTasks
-      : folderTasks.filter(t => t.status === state.filter);
+      ? tagTasks
+      : tagTasks.filter(t => t.status === state.filter);
     const byDate = {};
     filtered.forEach(t => {
       // Prefer due_date for the bucket, otherwise fall back to the
@@ -7812,6 +7844,7 @@
         $("task-status").value   = task.status;
         $("task-priority").value = task.priority;
         $("task-due").value      = task.due_date || "";
+        $("task-tags").value     = (task.tags || []).join(", ");
         $("delete-btn").classList.remove("hidden");
       } else {
         $("modal-title").textContent = "New task";
@@ -7820,6 +7853,7 @@
         $("task-status").value   = "todo";
         $("task-priority").value = "medium";
         $("task-due").value      = "";
+        $("task-tags").value     = state.currentTag && state.currentTag !== "__untagged__" ? state.currentTag : "";
         $("delete-btn").classList.add("hidden");
       }
 
@@ -7835,16 +7869,6 @@
         $("notif-section").classList.add("hidden");
       }
 
-      // Populate folder dropdown
-      const folderSel = $("task-folder");
-      folderSel.innerHTML = taskFolders.data.map(f =>
-        `<option value="${f.folder_id}">${escHtml(f.name)}</option>`
-      ).join("");
-      const taskFolderId = taskId
-        ? (state.tasks.find(t => t.task_id === taskId) || {}).folder_id
-        : state.currentFolderID;
-      folderSel.value = taskFolderId || (taskFolders.data[0]?.folder_id ?? "");
-
       renderBacklinksPanel("task-backlinks", "task", taskId);
 
       $("modal-overlay").classList.remove("hidden");
@@ -7857,123 +7881,55 @@
     },
   };
 
-  // ── Task folders ─────────────────────────────────────────────────────────────
+  // ── Task tags (sidebar) ──────────────────────────────────────────────────────
 
-  const taskFolders = {
-    data: [],
-
-    async load() {
-      try {
-        taskFolders.data = await api.listTaskFolders() || [];
-      } catch (e) {
-        console.error("Failed to load task folders:", e);
-        return;
-      }
-      if (!state.currentFolderID && taskFolders.data.length > 0) {
-        state.currentFolderID = taskFolders.data[0].folder_id;
-      }
-      taskFolders.renderTree();
-      renderTasks();
+  const taskTags = {
+    distinct() {
+      const counts = new Map();
+      let untagged = 0;
+      (state.tasks || []).forEach(t => {
+        const tags = (t.tags || []).filter(Boolean);
+        if (!tags.length) { untagged++; return; }
+        tags.forEach(tag => counts.set(tag, (counts.get(tag) || 0) + 1));
+      });
+      return {
+        tags: [...counts.entries()].sort((a, b) => a[0].toLowerCase().localeCompare(b[0].toLowerCase())),
+        untagged,
+      };
     },
 
-    renderTree() {
-      const container = $("task-folders-tree");
+    renderList() {
+      const container = $("task-tags-list");
       if (!container) return;
-      if (!taskFolders.data.length) {
-        container.innerHTML = `<div style="padding:8px 12px;font-size:13px;color:var(--muted);">No folders yet.</div>`;
-        return;
+      const { tags, untagged } = taskTags.distinct();
+      const rows = [];
+      const allActive       = !state.currentTag        ? "active" : "";
+      const untaggedActive  = state.currentTag === "__untagged__" ? "active" : "";
+      rows.push(`<div class="task-tag-row ${allActive}" onclick="taskTags.select(null)"><span class="task-tag-name">All</span><span class="task-tag-count">${(state.tasks || []).length}</span></div>`);
+      if (untagged > 0) {
+        rows.push(`<div class="task-tag-row ${untaggedActive}" onclick="taskTags.select('__untagged__')"><span class="task-tag-name">Untagged</span><span class="task-tag-count">${untagged}</span></div>`);
       }
-      container.innerHTML = taskFolders.data.map(f => `
-        <div class="tree-folder-row ${f.folder_id === state.currentFolderID ? "active" : ""}" data-folder-id="${f.folder_id}" onclick="taskFolders.select('${f.folder_id}')">
-          <span class="tree-arrow"><svg viewBox="0 0 10 10" fill="currentColor" style="opacity:0.35"><circle cx="5" cy="5" r="2.5" /></svg></span>
-          <span class="tree-folder-name">${escHtml(f.name)}</span>
-          <div class="tree-actions">
-            <button class="tree-action-btn" title="Rename" onclick="event.stopPropagation(); taskFolders.rename('${f.folder_id}')">&#9998;</button>
-            <button class="tree-action-btn danger" title="Delete" onclick="event.stopPropagation(); taskFolders.deleteFolder('${f.folder_id}')">&#x2715;</button>
-          </div>
-        </div>`).join("");
+      tags.forEach(([tag, count]) => {
+        const active = state.currentTag === tag ? "active" : "";
+        rows.push(`<div class="task-tag-row ${active}" onclick="taskTags.select(${JSON.stringify(tag)})"><span class="task-tag-name">${escHtml(tag)}</span><span class="task-tag-count">${count}</span></div>`);
+      });
+      container.innerHTML = rows.join("");
     },
 
-    select(folderId) {
-      state.currentFolderID = folderId;
-      taskFolders.renderTree();
+    select(tag) {
+      state.currentTag = tag;
+      state.taskView = "list";
+      taskTags.renderList();
       if (pages.current !== "tasks") pages.show("tasks");
       else renderTasks();
     },
 
-    async promptNew() {
-      const name = prompt("Folder name:");
-      if (!name || !name.trim()) return;
-      try {
-        const folder = await api.createTaskFolder({ name: name.trim() });
-        taskFolders.data.push(folder);
-        state.currentFolderID = folder.folder_id;
-        taskFolders.renderTree();
-        if (pages.current !== "tasks") pages.show("tasks");
-        else renderTasks();
-      } catch (e) {
-        console.error("Failed to create task folder:", e);
-      }
-    },
-
-    rename(folderId) {
-      const folder = taskFolders.data.find(f => f.folder_id === folderId);
-      if (!folder) return;
-      const row    = document.querySelector(`#task-folders-tree [data-folder-id="${folderId}"]`);
-      const nameEl = row?.querySelector(".tree-folder-name");
-      if (!nameEl) return;
-      const input  = document.createElement("input");
-      input.value  = folder.name;
-      input.className = "tree-rename-input";
-      nameEl.replaceWith(input);
-      input.focus();
-      input.select();
-
-      const save = async () => {
-        const name    = input.value.trim();
-        const changed = name && name !== folder.name;
-        input.replaceWith(nameEl);
-        if (!changed) return;
-        try {
-          const updated = await api.updateTaskFolder(folderId, { name });
-          const idx = taskFolders.data.findIndex(f => f.folder_id === folderId);
-          if (idx >= 0) taskFolders.data[idx] = { ...taskFolders.data[idx], name: updated.name || name };
-          taskFolders.renderTree();
-        } catch (e) {
-          console.error("Rename failed:", e);
-          taskFolders.renderTree();
-        }
-      };
-
-      input.addEventListener("blur", save);
-      input.addEventListener("keydown", e => {
-        if (e.key === "Enter")  { e.preventDefault(); input.blur(); }
-        if (e.key === "Escape") { input.replaceWith(nameEl); }
-      });
-    },
-
-    async deleteFolder(folderId) {
-      const folder = taskFolders.data.find(f => f.folder_id === folderId);
-      if (!folder) return;
-      const isDefault   = taskFolders.data.length > 0 && taskFolders.data[0].folder_id === folderId;
-      const taskCount   = state.tasks.filter(t =>
-        t.folder_id === folderId || (!t.folder_id && isDefault)
-      ).length;
-      const msg = taskCount > 0
-        ? `Delete "${folder.name}"? This will also delete ${taskCount} task${taskCount !== 1 ? "s" : ""}.`
-        : `Delete "${folder.name}"?`;
-      if (!await confirmDialog(msg)) return;
-      try {
-        await api.deleteTaskFolder(folderId);
-        taskFolders.data = taskFolders.data.filter(f => f.folder_id !== folderId);
-        if (state.currentFolderID === folderId) {
-          state.currentFolderID = taskFolders.data.length > 0 ? taskFolders.data[0].folder_id : null;
-        }
-        await app.loadTasks();
-        taskFolders.renderTree();
-      } catch (e) {
-        console.error("Failed to delete folder:", e);
-      }
+    openCalendar() {
+      state.taskView = "week";
+      state.currentTag = null;
+      taskTags.renderList();
+      if (pages.current !== "tasks") pages.show("tasks");
+      else renderTasks();
     },
   };
 
@@ -8027,7 +7983,6 @@
       document.dispatchEvent(new Event("pal:show"));
       await app.loadSettings();
       app.loadTasks();   // preload so [[task: references work from any page
-      taskFolders.load(); // preload sidebar folder list
       notesApp.load();   // preload so global search finds notes immediately
       journal.load();    // preload so global search finds journal entries immediately
       habits.load();     // preload so home dashboard shows habit status
@@ -8075,6 +8030,7 @@
       showLoader("tasks-loader");
       try {
         state.tasks = await api.listTasks() || [];
+        taskTags.renderList();
         renderTasks();
         if (pages.current === "home") renderHomeDashboard();
         if ($("journal-calendar") && journal.calMonth) journal.renderCalendar();
@@ -8097,7 +8053,6 @@
   $("logout-btn").addEventListener("click", () => app.logout());
 
   $("new-task-btn").addEventListener("click", () => modal.open());
-  $("new-task-folder-btn").addEventListener("click", () => taskFolders.promptNew());
 
   $("modal-close").addEventListener("click", () => modal.close());
   $("cancel-btn").addEventListener("click", () => modal.close());
@@ -8378,6 +8333,11 @@
       recurring:  $("notif-recurring").value || null,
     } : null;
 
+    const tags = ($("task-tags").value || "")
+      .split(",")
+      .map(t => t.trim())
+      .filter(Boolean);
+
     const body = {
       title,
       description:   $("task-desc").value.trim(),
@@ -8385,9 +8345,8 @@
       priority:      $("task-priority").value,
       due_date:      $("task-due").value || undefined,
       notifications,
+      tags,
     };
-    const selectedFolder = $("task-folder").value;
-    if (selectedFolder) body.folder_id = selectedFolder;
 
     // If the modal was opened from a week-grid slot, attach the schedule
     if (!state.editingId && state.pendingScheduledStart) {
@@ -13363,14 +13322,8 @@
       if (name === "admin")    { if (!admin.loaded) admin.load(); }
       if (name === "settings") { renderSettings(); if (!feeds.loaded) feeds.loadFeeds(); }
       if (name === "tasks") {
-        if (taskFolders.data.length === 0) taskFolders.load();
-        else {
-          if (!state.currentFolderID && taskFolders.data.length > 0)
-            state.currentFolderID = taskFolders.data[0].folder_id;
-          taskFolders.renderTree();
-        }
         if (state.tasks.length === 0) app.loadTasks();
-        else renderTasks();
+        else { taskTags.renderList(); renderTasks(); }
       }
       if (name === "habits"  && habits.data.length === 0) habits.load();
       if (name === "goals"   && goals.data.length === 0) goals.load();

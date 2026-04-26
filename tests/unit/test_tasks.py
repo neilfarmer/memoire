@@ -1,4 +1,4 @@
-"""Unit tests for lambda/tasks/crud.py and lambda/tasks/folders.py."""
+"""Unit tests for lambda/tasks/crud.py."""
 
 import json
 import os
@@ -11,13 +11,10 @@ from conftest import USER, load_lambda, make_table, make_links_table
 
 # ── env vars before module load ───────────────────────────────────────────────
 os.environ["TABLE_NAME"] = "test-tasks"
-os.environ["FOLDERS_TABLE"] = "test-task-folders"
 
 crud = load_lambda("tasks", "crud.py")
-folders = load_lambda("tasks", "folders.py")
 
 TASKS_TABLE = "test-tasks"
-FOLDERS_TABLE_NAME = "test-task-folders"
 
 
 @pytest.fixture
@@ -25,7 +22,6 @@ def tbls():
     with mock_aws():
         ddb = boto3.resource("dynamodb", region_name="us-east-1")
         make_table(ddb, TASKS_TABLE, "user_id", "task_id")
-        make_table(ddb, FOLDERS_TABLE_NAME, "user_id", "folder_id")
         make_links_table(ddb)
         yield
 
@@ -376,82 +372,39 @@ class TestDeleteTask:
         assert r["statusCode"] == 404
 
 
-# ── folders: list ─────────────────────────────────────────────────────────────
+# ── tags ──────────────────────────────────────────────────────────────────────
 
-class TestListFolders:
-    def test_creates_inbox_when_empty(self, tbls):
-        items = json.loads(folders.list_folders(USER)["body"])
-        assert len(items) == 1
-        assert items[0]["name"] == "Inbox"
-
-    def test_does_not_duplicate_inbox_on_second_call(self, tbls):
-        folders.list_folders(USER)
-        items = json.loads(folders.list_folders(USER)["body"])
-        assert len(items) == 1
-
-    def test_returns_created_folders(self, tbls):
-        folders.create_folder(USER, {"name": "Work"})
-        items = json.loads(folders.list_folders(USER)["body"])
-        names = {i["name"] for i in items}
-        assert "Work" in names
-
-
-# ── folders: create ───────────────────────────────────────────────────────────
-
-class TestCreateFolder:
-    def test_requires_name(self, tbls):
-        r = folders.create_folder(USER, {})
-        assert r["statusCode"] == 400
-
-    def test_blank_name_rejected(self, tbls):
-        r = folders.create_folder(USER, {"name": "   "})
-        assert r["statusCode"] == 400
-
-    def test_creates_folder(self, tbls):
-        r = folders.create_folder(USER, {"name": "Personal"})
-        assert r["statusCode"] == 201
+class TestTags:
+    def test_create_with_tags(self, tbls):
+        r = crud.create_task(USER, {"title": "T", "tags": ["work", "urgent"]})
         body = json.loads(r["body"])
-        assert body["name"] == "Personal"
-        assert "folder_id" in body
+        assert body["tags"] == ["work", "urgent"]
 
+    def test_create_default_empty_tags(self, tbls):
+        r = crud.create_task(USER, {"title": "T"})
+        body = json.loads(r["body"])
+        assert body["tags"] == []
 
-# ── folders: update ───────────────────────────────────────────────────────────
+    def test_tags_dedup_case_insensitive(self, tbls):
+        r = crud.create_task(USER, {"title": "T", "tags": ["Work", "work", "  WORK  "]})
+        body = json.loads(r["body"])
+        assert body["tags"] == ["Work"]
 
-class TestUpdateFolder:
-    def test_renames_folder(self, tbls):
-        folder_id = json.loads(folders.create_folder(USER, {"name": "Old"})["body"])["folder_id"]
-        r = folders.update_folder(USER, folder_id, {"name": "New"})
-        assert r["statusCode"] == 200
-        assert json.loads(r["body"])["name"] == "New"
+    def test_tags_accept_csv_string(self, tbls):
+        r = crud.create_task(USER, {"title": "T", "tags": "a, b, c"})
+        body = json.loads(r["body"])
+        assert body["tags"] == ["a", "b", "c"]
 
-    def test_nonexistent_folder_returns_404(self, tbls):
-        r = folders.update_folder(USER, "ghost", {"name": "x"})
-        assert r["statusCode"] == 404
-
-    def test_blank_name_rejected(self, tbls):
-        folder_id = json.loads(folders.create_folder(USER, {"name": "X"})["body"])["folder_id"]
-        r = folders.update_folder(USER, folder_id, {"name": ""})
+    def test_tag_length_limit(self, tbls):
+        r = crud.create_task(USER, {"title": "T", "tags": ["x" * 51]})
         assert r["statusCode"] == 400
 
+    def test_too_many_tags(self, tbls):
+        r = crud.create_task(USER, {"title": "T", "tags": [f"t{i}" for i in range(21)]})
+        assert r["statusCode"] == 400
 
-# ── folders: delete ───────────────────────────────────────────────────────────
-
-class TestDeleteFolder:
-    def test_deletes_folder(self, tbls):
-        folder_id = json.loads(folders.create_folder(USER, {"name": "Temp"})["body"])["folder_id"]
-        r = folders.delete_folder(USER, folder_id)
-        assert r["statusCode"] == 204
-
-    def test_nonexistent_returns_404(self, tbls):
-        r = folders.delete_folder(USER, "ghost")
-        assert r["statusCode"] == 404
-
-    def test_cascade_deletes_tasks_in_folder(self, tbls):
-        folder_id = json.loads(folders.create_folder(USER, {"name": "Proj"})["body"])["folder_id"]
-        crud.create_task(USER, {"title": "Task A", "folder_id": folder_id})
-        crud.create_task(USER, {"title": "Task B", "folder_id": folder_id})
-        crud.create_task(USER, {"title": "Task C"})  # no folder — should survive
-        folders.delete_folder(USER, folder_id)
-        remaining = json.loads(crud.list_tasks(USER)["body"])
-        assert len(remaining) == 1
-        assert remaining[0]["title"] == "Task C"
+    def test_update_replaces_tags(self, tbls):
+        created = json.loads(crud.create_task(USER, {"title": "T", "tags": ["a"]})["body"])
+        r = crud.update_task(USER, created["task_id"], {"tags": ["b", "c"]})
+        body = json.loads(r["body"])
+        assert body["tags"] == ["b", "c"]

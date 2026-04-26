@@ -86,6 +86,7 @@ TOOL_SPECS = [
                         "description": {"type": "string", "description": "Optional details"},
                         "due_date":    {"type": "string", "description": "Due date in YYYY-MM-DD format"},
                         "priority":    {"type": "string", "enum": ["low", "medium", "high"]},
+                        "tags":        {"type": "array", "items": {"type": "string"}, "description": "Optional tag list for grouping/filtering"},
                     },
                     "required": ["title"],
                 }
@@ -97,8 +98,8 @@ TOOL_SPECS = [
             "name": "update_task",
             "description": (
                 "Update an EXISTING task — use this to change the title, due date, priority, "
-                "status, description, or folder of a task that already exists. If the user says "
-                "'change', 'rename', 'reschedule', 'move to', 'update', 'set due to', etc. about "
+                "status, description, or tags of a task that already exists. If the user says "
+                "'change', 'rename', 'reschedule', 'tag as', 'update', 'set due to', etc. about "
                 "a task from this session OR a task they can see in their list, ALWAYS use "
                 "update_task, NEVER create_task. If you don't know the task_id, call list_tasks "
                 "first to find it."
@@ -113,6 +114,7 @@ TOOL_SPECS = [
                         "due_date":    {"type": "string", "description": "New due date YYYY-MM-DD (optional)"},
                         "priority":    {"type": "string", "enum": ["low", "medium", "high"]},
                         "status":      {"type": "string", "enum": ["todo", "in_progress", "done"]},
+                        "tags":        {"type": "array", "items": {"type": "string"}, "description": "Replace tag list. Use [] to clear."},
                     },
                     "required": ["task_id"],
                 }
@@ -1063,6 +1065,7 @@ def _create_task(user_id: str, inputs: dict) -> str:
         "description": inputs.get("description", ""),
         "status":     "todo",
         "priority":   inputs.get("priority", "medium"),
+        "tags":       _normalize_tag_input(inputs.get("tags")),
         "created_at": now,
         "updated_at": now,
     }
@@ -1071,6 +1074,25 @@ def _create_task(user_id: str, inputs: dict) -> str:
     task = {k: v for k, v in task.items() if v is not None and v != ""}
     table.put_item(Item=task)
     return f"Created task: {task['title']} [pal-link:task:{task['task_id']}:Open task →]"
+
+
+def _normalize_tag_input(raw) -> list[str]:
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        raw = [t for t in raw.split(",")]
+    if not isinstance(raw, list):
+        return []
+    seen, out = set(), []
+    for tag in raw:
+        if not isinstance(tag, str):
+            continue
+        norm = tag.strip()
+        if not norm or norm.lower() in seen:
+            continue
+        seen.add(norm.lower())
+        out.append(norm)
+    return out
 
 
 def _schedule_tasks(user_id: str, inputs: dict) -> str:
@@ -1337,6 +1359,8 @@ def _update_task(user_id: str, inputs: dict) -> str:
     for k in ("title", "description", "due_date", "priority", "status"):
         if k in inputs and inputs[k] is not None and inputs[k] != "":
             fields[k] = inputs[k]
+    if "tags" in inputs and inputs["tags"] is not None:
+        fields["tags"] = _normalize_tag_input(inputs["tags"])
     if not fields:
         return "No fields supplied to update."
 
