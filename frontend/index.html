@@ -5694,34 +5694,6 @@
                                 </svg>
                                 Pomodoro
                             </button>
-                            <button class="btn btn-secondary u-row-sm" id="task-view-btn">
-                                <svg width="14"
-                                     height="14"
-                                     viewBox="0 0 24 24"
-                                     fill="none"
-                                     stroke="currentColor"
-                                     stroke-width="2"
-                                     stroke-linecap="round"
-                                     stroke-linejoin="round">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-                                </svg>
-                                Calendar
-                            </button>
-                            <button class="btn btn-secondary u-row-sm"
-                                    id="task-week-btn"
-                                    title="Week view">
-                                <svg width="14"
-                                     height="14"
-                                     viewBox="0 0 24 24"
-                                     fill="none"
-                                     stroke="currentColor"
-                                     stroke-width="2"
-                                     stroke-linecap="round"
-                                     stroke-linejoin="round">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="8" y1="4" x2="8" y2="22" /><line x1="13" y1="4" x2="13" y2="22" /><line x1="18" y1="4" x2="18" y2="22" />
-                                </svg>
-                                Week
-                            </button>
                             <button class="btn btn-secondary u-row-sm"
                                     id="auto-schedule-btn"
                                     title="Auto-schedule unscheduled tasks">
@@ -5799,7 +5771,6 @@
                             <div class="spinner"></div>
                         </div>
                         <div id="task-list"></div>
-                        <div id="task-calendar" class="hidden"></div>
                         <div id="task-week" class="hidden"></div>
                     </main>
                     <!-- Habits page -->
@@ -7392,8 +7363,6 @@
     editingId: null,
     settings: {},
     taskView: "list",
-    taskCalMonth: null,
-    taskCalSelectedDate: null,
     taskSort: "smart",
     taskGroup: true,
   };
@@ -7541,24 +7510,14 @@
 
   function renderTasks() {
     const listEl = $("task-list");
-    const calEl  = $("task-calendar");
     const weekEl = $("task-week");
-    if (state.taskView === "calendar") {
-      listEl.classList.add("hidden");
-      calEl.classList.remove("hidden");
-      weekEl.classList.add("hidden");
-      renderTaskCalendar();
-      return;
-    }
     if (state.taskView === "week") {
       listEl.classList.add("hidden");
-      calEl.classList.add("hidden");
       weekEl.classList.remove("hidden");
       renderTaskWeek();
       return;
     }
     listEl.classList.remove("hidden");
-    calEl.classList.add("hidden");
     weekEl.classList.add("hidden");
 
     const list = $("task-list");
@@ -7604,137 +7563,6 @@
           ${groups[k].map(taskCardHtml).join("")}
         </section>`;
     }).join("");
-  }
-
-  function renderTaskCalendar() {
-    if (!state.taskCalMonth) {
-      const now = new Date();
-      state.taskCalMonth = { year: now.getFullYear(), month: now.getMonth() };
-    }
-    const { year, month } = state.taskCalMonth;
-    const today = todayStr();
-    const monthNames = ["January","February","March","April","May","June",
-                        "July","August","September","October","November","December"];
-
-    const tagTasks = filterTasksByTag(state.tasks, state.currentTag);
-    const filtered = state.filter === "all"
-      ? tagTasks
-      : tagTasks.filter(t => t.status === state.filter);
-    const byDate = {};
-    filtered.forEach(t => {
-      // Prefer due_date for the bucket, otherwise fall back to the
-      // scheduled_start's local date so auto-scheduled tasks without a
-      // due date still appear on the month grid.
-      let bucket = t.due_date;
-      if (!bucket && t.scheduled_start) {
-        const d = new Date(t.scheduled_start);
-        if (!isNaN(d.getTime())) {
-          bucket = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        }
-      }
-      if (!bucket) return;
-      if (!(bucket in byDate)) byDate[bucket] = [];
-      byDate[bucket].push(t);
-    });
-
-    const firstDay  = new Date(year, month, 1).getDay();
-    const daysInMon = new Date(year, month + 1, 0).getDate();
-    const startPad  = (firstDay + 6) % 7;
-
-    const dotClass = { high: "cal-dot-high", medium: "cal-dot-medium", low: "cal-dot-low" };
-
-    let cells = "";
-    for (let i = 0; i < startPad; i++) cells += `<div class="cal-day cal-empty"></div>`;
-    for (let d = 1; d <= daysInMon; d++) {
-      const dateStr    = `${year}-${String(month + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-      const isToday    = dateStr === today;
-      const isSelected = dateStr === state.taskCalSelectedDate;
-      const dayTasks   = byDate[dateStr] || [];
-      const hasTasks   = dayTasks.length > 0;
-      const dotsToShow = dayTasks.slice(0, 3);
-      const overflow   = dayTasks.length > 3 ? dayTasks.length - 3 : 0;
-      const dots = dotsToShow.map(t =>
-        `<span class="cal-dot ${dotClass[t.priority] || "cal-dot-low"}"></span>`
-      ).join("");
-
-      cells += `
-        <div class="cal-day ${isToday ? "cal-today" : ""} ${hasTasks ? "cal-has-entry" : ""} ${isSelected ? "cal-selected" : ""}" onclick="taskCalSelectDay('${dateStr}')">
-          <span>${d}</span>
-          ${hasTasks ? `<div class="cal-day-dots">${dots}${overflow ? `<span class="cal-day-overflow">+${overflow}</span>` : ""}</div>` : ""}
-        </div>`;
-    }
-
-    let panel = "";
-    if (state.taskCalSelectedDate) {
-      const selTasks = byDate[state.taskCalSelectedDate] || [];
-      const labelDate = new Date(state.taskCalSelectedDate + "T12:00:00").toLocaleDateString(
-        undefined, { weekday: "long", month: "long", day: "numeric" }
-      );
-      if (selTasks.length === 0) {
-        panel = `
-          <div class="task-cal-panel">
-            <div class="task-cal-panel-title">${labelDate}</div>
-            <div class="empty-state" style="padding:20px 0">
-              <p>No tasks due on this day.</p>
-              <button class="btn btn-primary" onclick="modal.open()">+ New task</button>
-            </div>
-          </div>`;
-      } else {
-        const items = selTasks.map(t => {
-          const overdue = t.status !== "done" && isOverdue(t.due_date);
-          const dueToday = t.status !== "done" && isDueToday(t.due_date);
-          return `
-            <div class="task-cal-item ${overdue ? "is-overdue" : dueToday ? "is-due-today" : ""}" onclick="modal.open('${t.task_id}')">
-              <span class="badge badge-${t.priority}">${t.priority}</span>
-              <span class="task-cal-item-title ${t.status === "done" ? "done-title" : ""}">${escHtml(t.title)}</span>
-              <span class="badge badge-${t.status}">${statusLabel(t.status)}</span>
-            </div>`;
-        }).join("");
-        panel = `
-          <div class="task-cal-panel">
-            <div class="task-cal-panel-title">${labelDate} &mdash; ${selTasks.length} task${selTasks.length !== 1 ? "s" : ""}</div>
-            ${items}
-          </div>`;
-      }
-    }
-
-    $("task-calendar").innerHTML = `
-      <div class="calendar">
-        <div class="calendar-nav">
-          <button class="cal-nav-btn" onclick="taskCalPrevMonth()">&#8592;</button>
-          <h3>${monthNames[month]} ${year}</h3>
-          <button class="cal-nav-btn" onclick="taskCalNextMonth()">&#8594;</button>
-        </div>
-        <div class="calendar-grid">
-          <div class="cal-header">Mon</div><div class="cal-header">Tue</div>
-          <div class="cal-header">Wed</div><div class="cal-header">Thu</div>
-          <div class="cal-header">Fri</div><div class="cal-header">Sat</div>
-          <div class="cal-header">Sun</div>
-          ${cells}
-        </div>
-      </div>
-      ${panel}`;
-  }
-
-  function taskCalPrevMonth() {
-    let { year, month } = state.taskCalMonth;
-    month--;
-    if (month < 0) { month = 11; year--; }
-    state.taskCalMonth = { year, month };
-    renderTaskCalendar();
-  }
-
-  function taskCalNextMonth() {
-    let { year, month } = state.taskCalMonth;
-    month++;
-    if (month > 11) { month = 0; year++; }
-    state.taskCalMonth = { year, month };
-    renderTaskCalendar();
-  }
-
-  function taskCalSelectDay(dateStr) {
-    state.taskCalSelectedDate = state.taskCalSelectedDate === dateStr ? null : dateStr;
-    renderTaskCalendar();
   }
 
   function escHtml(str) {
@@ -8113,19 +7941,6 @@
     });
   }
 
-  $("task-view-btn").addEventListener("click", () => {
-    state.taskView = state.taskView === "calendar" ? "list" : "calendar";
-    taskTags.renderChips();
-    taskTags.updateSidebarHighlight();
-    renderTasks();
-  });
-
-  $("task-week-btn").addEventListener("click", () => {
-    state.taskView = state.taskView === "week" ? "list" : "week";
-    taskTags.renderChips();
-    taskTags.updateSidebarHighlight();
-    renderTasks();
-  });
 
   $("auto-schedule-btn").addEventListener("click", async () => {
     const btn = $("auto-schedule-btn");
