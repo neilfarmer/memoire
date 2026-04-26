@@ -14,6 +14,7 @@ import boto3
 from boto3.dynamodb.conditions import Attr
 
 import sanitize as san
+import scheduler
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -74,6 +75,29 @@ def lambda_handler(event, context):
             _run_profile_inference(settings_table, now)
         except Exception as e:
             logger.error("Profile inference run failed: %s", e)
+
+    # ── Calendar pass: missed-block reschedule + recurrence materialization ────
+    # Runs for every user that has a settings record. ntfy_url is optional —
+    # users without it just won't get rescheduled-task push notifications.
+    try:
+        ntfy_lookup = {uid: url for uid, url in _users_with_ntfy(settings_table)}
+        for user_id, settings_item in _all_user_settings(settings_table):
+            try:
+                created, bumped = scheduler.run_calendar_pass(
+                    tasks_table, user_id, settings_item, now,
+                    ntfy_post=_ntfy_post,
+                    ntfy_url=ntfy_lookup.get(user_id),
+                    query_user=_query_user,
+                )
+                if created or bumped:
+                    logger.info(
+                        "Calendar pass for %s: materialized %d, bumped %d",
+                        user_id, created, bumped,
+                    )
+            except Exception as e:
+                logger.error("Calendar pass failed for user %s: %s", user_id, e)
+    except Exception as e:
+        logger.error("Calendar pass scan failed: %s", e)
 
     # Scan only the settings table (one row per user) to find users who have
     # ntfy_url configured.  Then query tasks/habits per user by PK instead of

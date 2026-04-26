@@ -29,6 +29,7 @@ os.environ["BOOKMARKS_TABLE"]     = "test-bookmarks-asst"
 os.environ["FAVORITES_TABLE"]     = "test-favorites-asst"
 os.environ["FEEDS_TABLE"]         = "test-feeds-asst"
 os.environ["FEEDS_READ_TABLE"]    = "test-feeds-read-asst"
+os.environ["SETTINGS_TABLE"]      = "test-settings-asst"
 os.environ["AWS_REGION"]          = "us-east-1"
 os.environ["TOKENS_TABLE"]        = "test-tokens"
 os.environ["JWKS_URI"]            = "https://cognito.example.com/.well-known/jwks.json"
@@ -70,6 +71,7 @@ def tbls():
         make_table(ddb, "test-favorites-asst",    "user_id", "favorite_id")
         make_table(ddb, "test-feeds-asst",        "user_id", "feed_id")
         make_table(ddb, "test-feeds-read-asst",   "user_id", "article_url")
+        make_table(ddb, "test-settings-asst",     "user_id")
         make_links_table(ddb)
         # Tokens table with token-hash GSI (used by token_auth PAT lookup)
         ddb.create_table(
@@ -1609,3 +1611,51 @@ class TestChatStreamEdgeCases:
             chunks = []
             chat.chat_stream(USER, "list tasks", emit=lambda b: chunks.append(json.loads(b.rstrip(b"\n"))))
         assert any(c["type"] == "done" for c in chunks)
+
+
+# ── _schedule_tasks tool handler ──────────────────────────────────────────────
+
+class TestScheduleTasksTool:
+    def test_no_unscheduled_tasks(self, tbls):
+        result = tools.handle_tool(USER, "schedule_tasks", {})
+        assert "No tasks needed scheduling" in result
+
+    def test_schedules_unscheduled_tasks(self, tbls):
+        ddb = boto3.resource("dynamodb", region_name="us-east-1")
+        ddb.Table("test-settings-asst").put_item(Item={
+            "user_id": USER,
+            "calendar": {
+                "timezone": "America/New_York",
+                "working_hours_start": "09:00",
+                "working_hours_end":   "17:00",
+                "working_days": [1, 2, 3, 4, 5],
+                "slot_minutes": 30,
+                "horizon_days": 14,
+                "reschedule_min_gap_days": 2,
+                "max_reschedules": 3,
+            },
+        })
+        tasks_table = ddb.Table("test-tasks-asst")
+        tasks_table.put_item(Item={
+            "user_id": USER, "task_id": "a", "title": "Alpha",
+            "status": "todo", "priority": "high",
+        })
+        tasks_table.put_item(Item={
+            "user_id": USER, "task_id": "b", "title": "Beta",
+            "status": "todo", "priority": "low",
+        })
+        with freeze_time("2026-04-28T13:00:00+00:00"):
+            result = tools.handle_tool(USER, "schedule_tasks", {})
+        assert "Scheduled 2 task" in result
+        assert "[pal-link:task:a]" in result
+        assert "[pal-link:task:b]" in result
+        # high priority gets the earlier slot
+        a_pos = result.index("Alpha")
+        b_pos = result.index("Beta")
+        assert a_pos < b_pos
+
+    def test_contract_passes_for_no_op(self, tbls):
+        # Empty result still passes contract because of the alternate phrase
+        result = tools.handle_tool(USER, "schedule_tasks", {})
+        assert tools.verify_tool_result("schedule_tasks", result) is None
+

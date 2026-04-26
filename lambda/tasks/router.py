@@ -3,6 +3,7 @@
 from response import error, not_found
 import crud
 import folders as f
+import auto_schedule as auto
 
 
 def route(route_key: str, user_id: str, body: dict,
@@ -30,6 +31,12 @@ def route(route_key: str, user_id: str, body: dict,
         # ── Tasks ─────────────────────────────────────────────────────────────
         case "GET /tasks":
             return crud.list_tasks(user_id)
+
+        case "GET /tasks/calendar":
+            return crud.list_calendar(user_id, query_params)
+
+        case "POST /tasks/auto-schedule":
+            return auto.auto_schedule(user_id, body)
 
         case "POST /tasks":
             return crud.create_task(user_id, body)

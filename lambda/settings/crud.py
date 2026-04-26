@@ -2,6 +2,7 @@
 
 import ipaddress
 import os
+import re
 import socket
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
@@ -11,6 +12,17 @@ from response import ok, error
 from utils import build_update_expression
 
 TABLE_NAME = os.environ["TABLE_NAME"]
+
+CALENDAR_DEFAULTS = {
+    "timezone":                "America/New_York",
+    "working_hours_start":     "09:00",
+    "working_hours_end":       "17:00",
+    "working_days":            [1, 2, 3, 4, 5],
+    "slot_minutes":            30,
+    "horizon_days":            14,
+    "reschedule_min_gap_days": 2,
+    "max_reschedules":         3,
+}
 
 DEFAULTS = {
     "dark_mode":               False,
@@ -23,10 +35,13 @@ DEFAULTS = {
     "home_finances_widget":    False,
     "chat_retention_days":     30,
     "supervisor_enabled":      True,
+    "calendar":                CALENDAR_DEFAULTS,
 }
 
 ALLOWED_KEYS = set(DEFAULTS.keys())
 CHAT_RETENTION_MAX_DAYS = 3650
+
+_HHMM_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 
 def _table():
@@ -63,12 +78,60 @@ def _validate_ntfy_url(url: str) -> str | None:
     return None
 
 
+def _validate_calendar(cal: dict) -> tuple[str | None, dict | None]:
+    """Validate a calendar settings sub-object. Returns (error, normalized) tuple."""
+    if not isinstance(cal, dict):
+        return "calendar must be an object", None
+
+    out = dict(CALENDAR_DEFAULTS)
+    out.update({k: v for k, v in cal.items() if k in CALENDAR_DEFAULTS})
+
+    if not isinstance(out["timezone"], str) or not out["timezone"]:
+        return "calendar.timezone must be a non-empty string", None
+
+    for key in ("working_hours_start", "working_hours_end"):
+        if not isinstance(out[key], str) or not _HHMM_RE.match(out[key]):
+            return f"calendar.{key} must be HH:MM (24-hour)", None
+    if out["working_hours_start"] >= out["working_hours_end"]:
+        return "calendar.working_hours_start must be before working_hours_end", None
+
+    days = out["working_days"]
+    if not isinstance(days, list) or not days or not all(isinstance(d, int) and 1 <= d <= 7 for d in days):
+        return "calendar.working_days must be a non-empty list of 1..7", None
+    out["working_days"] = sorted(set(days))
+
+    for key, lo, hi in (
+        ("slot_minutes", 5, 240),
+        ("horizon_days", 1, 60),
+        ("reschedule_min_gap_days", 0, 30),
+        ("max_reschedules", 0, 50),
+    ):
+        try:
+            v = int(out[key])
+        except (TypeError, ValueError):
+            return f"calendar.{key} must be an integer", None
+        if v < lo or v > hi:
+            return f"calendar.{key} must be between {lo} and {hi}", None
+        out[key] = v
+
+    return None, out
+
+
+def _merge_calendar(item: dict) -> dict:
+    """Merge stored calendar partial onto defaults so reads always see all keys."""
+    cal = item.get("calendar") or {}
+    if not isinstance(cal, dict):
+        cal = {}
+    item["calendar"] = {**CALENDAR_DEFAULTS, **cal}
+    return item
+
+
 def get_settings(user_id: str) -> dict:
     item = _table().get_item(Key={"user_id": user_id}).get("Item")
     if not item:
         return ok(DEFAULTS)
     item.pop("user_id", None)
-    return ok({**DEFAULTS, **item})
+    return ok(_merge_calendar({**DEFAULTS, **item}))
 
 
 def update_settings(user_id: str, body: dict) -> dict:
@@ -91,6 +154,12 @@ def update_settings(user_id: str, body: dict) -> dict:
             return error(f"chat_retention_days must be between 0 and {CHAT_RETENTION_MAX_DAYS}")
         fields["chat_retention_days"] = days
 
+    if "calendar" in fields:
+        err, normalized = _validate_calendar(fields["calendar"])
+        if err:
+            return error(err)
+        fields["calendar"] = normalized
+
     update_expr, names, values = build_update_expression(fields)
 
     result = _table().update_item(
@@ -103,7 +172,7 @@ def update_settings(user_id: str, body: dict) -> dict:
 
     item = result["Attributes"]
     item.pop("user_id", None)
-    return ok({**DEFAULTS, **item})
+    return ok(_merge_calendar({**DEFAULTS, **item}))
 
 
 def test_notification(user_id: str, body: dict) -> dict:

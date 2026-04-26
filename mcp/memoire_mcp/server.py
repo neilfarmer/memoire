@@ -86,6 +86,9 @@ async def create_task(
     due_date: str | None = None,
     folder_id: str | None = None,
     notifications: dict | None = None,
+    scheduled_start: str | None = None,
+    duration_minutes: int | None = None,
+    recurrence_rule: dict | None = None,
 ) -> str:
     """Create a task.
 
@@ -98,6 +101,11 @@ async def create_task(
         folder_id: Optional folder UUID.
         notifications: Optional reminder config. Shape: {"before_due": [...], "recurring": "1h"|"1d"|"1w"}.
             before_due values must be from: "1h", "1d", "3d".
+        scheduled_start: ISO 8601 UTC datetime aligned to a 30-minute slot
+            (e.g. "2026-04-28T13:00:00Z").
+        duration_minutes: Block length, multiple of 30, max 480.
+        recurrence_rule: {"freq":"daily|weekly|weekdays","interval":int,
+            "by_weekday":[1..7],"until":"YYYY-MM-DD"}.
     """
     body: dict = {"title": title, "description": description, "status": status, "priority": priority}
     if due_date:
@@ -106,6 +114,12 @@ async def create_task(
         body["folder_id"] = folder_id
     if notifications is not None:
         body["notifications"] = notifications
+    if scheduled_start:
+        body["scheduled_start"] = scheduled_start
+    if duration_minutes is not None:
+        body["duration_minutes"] = duration_minutes
+    if recurrence_rule is not None:
+        body["recurrence_rule"] = recurrence_rule
     return json.dumps(await _request("POST", "/tasks", body=body))
 
 
@@ -119,6 +133,9 @@ async def update_task(
     due_date: str | None = None,
     folder_id: str | None = None,
     notifications: dict | None = None,
+    scheduled_start: str | None = None,
+    duration_minutes: int | None = None,
+    recurrence_rule: dict | None = None,
 ) -> str:
     """Update a task. Only provided fields are changed.
 
@@ -132,6 +149,9 @@ async def update_task(
         folder_id: Folder UUID or empty string to clear.
         notifications: Reminder config {"before_due": [...], "recurring": "1h"|"1d"|"1w"}. Pass {} to clear.
             before_due values must be from: "1h", "1d", "3d".
+        scheduled_start: ISO 8601 UTC datetime aligned to a 30-minute slot.
+        duration_minutes: Block length, multiple of 30, max 480.
+        recurrence_rule: Recurrence template; see create_task for shape.
     """
     body: dict = {}
     if title is not None:
@@ -148,7 +168,45 @@ async def update_task(
         body["folder_id"] = folder_id if folder_id else None
     if notifications is not None:
         body["notifications"] = notifications or None
+    if scheduled_start is not None:
+        body["scheduled_start"] = scheduled_start or None
+    if duration_minutes is not None:
+        body["duration_minutes"] = duration_minutes
+    if recurrence_rule is not None:
+        body["recurrence_rule"] = recurrence_rule or None
     return json.dumps(await _request("PUT", f"/tasks/{task_id}", body=body))
+
+
+@mcp.tool()
+async def auto_schedule_tasks(
+    task_ids: list[str] | None = None,
+    horizon_days: int | None = None,
+    respect_priority: bool = True,
+) -> str:
+    """Auto-schedule unscheduled tasks into free working-hour slots.
+
+    Args:
+        task_ids: Only schedule these specific task ids. Omit for all unscheduled.
+        horizon_days: How many days ahead to consider when finding free slots.
+        respect_priority: If true (default), schedule high priority before low.
+    """
+    body: dict = {"respect_priority": respect_priority}
+    if task_ids:
+        body["task_ids"] = task_ids
+    if horizon_days is not None:
+        body["horizon_days"] = horizon_days
+    return json.dumps(await _request("POST", "/tasks/auto-schedule", body=body))
+
+
+@mcp.tool()
+async def list_tasks_calendar(from_date: str, to_date: str) -> str:
+    """List scheduled tasks whose start falls within [from_date, to_date].
+
+    Args:
+        from_date: Inclusive start date (YYYY-MM-DD).
+        to_date:   Inclusive end date   (YYYY-MM-DD).
+    """
+    return json.dumps(await _request("GET", f"/tasks/calendar?from={from_date}&to={to_date}"))
 
 
 @mcp.tool()

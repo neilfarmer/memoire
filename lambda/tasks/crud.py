@@ -1,7 +1,9 @@
 """Tasks CRUD operations against DynamoDB."""
 
 import os
+import re
 import uuid
+from datetime import datetime, timezone
 
 import boto3
 from response import ok, created, no_content, error, not_found
@@ -19,12 +21,78 @@ VALID_PRIORITIES  = {"low", "medium", "high"}
 VALID_BEFORE_DUE  = {"1h", "1d", "3d"}
 VALID_RECURRING   = {"1h", "1d", "1w"}
 
+VALID_RECURRENCE_FREQ = {"daily", "weekly", "weekdays"}
+
 MAX_TITLE_LEN       = 500
 MAX_DESCRIPTION_LEN = 10_000
+
+SLOT_MINUTES        = 30
+MAX_DURATION_MIN    = 8 * 60
+
+_ISO_WEEKDAY_RANGE  = range(1, 8)
 
 
 def _table():
     return db.get_table(TABLE_NAME)
+
+
+def _parse_scheduled_start(value: str) -> datetime | None:
+    """Parse an ISO-8601 datetime; return tz-aware UTC datetime or None on failure."""
+    if not value or not isinstance(value, str):
+        return None
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _validate_scheduling(body: dict) -> str | None:
+    """Validate scheduled_start, duration_minutes, and recurrence_rule together."""
+    if "scheduled_start" in body and body["scheduled_start"] is not None:
+        dt = _parse_scheduled_start(body["scheduled_start"])
+        if dt is None:
+            return "scheduled_start must be an ISO 8601 datetime"
+        if dt.minute % SLOT_MINUTES != 0 or dt.second != 0 or dt.microsecond != 0:
+            return f"scheduled_start must align to a {SLOT_MINUTES}-minute slot"
+
+    if "duration_minutes" in body and body["duration_minutes"] is not None:
+        try:
+            dur = int(body["duration_minutes"])
+        except (TypeError, ValueError):
+            return "duration_minutes must be an integer"
+        if dur <= 0 or dur % SLOT_MINUTES != 0 or dur > MAX_DURATION_MIN:
+            return (
+                f"duration_minutes must be a positive multiple of {SLOT_MINUTES} "
+                f"and at most {MAX_DURATION_MIN}"
+            )
+
+    if "recurrence_rule" in body and body["recurrence_rule"] is not None:
+        rr = body["recurrence_rule"]
+        if not isinstance(rr, dict):
+            return "recurrence_rule must be an object"
+        freq = rr.get("freq")
+        if freq not in VALID_RECURRENCE_FREQ:
+            return f"recurrence_rule.freq must be one of: {', '.join(sorted(VALID_RECURRENCE_FREQ))}"
+        interval = rr.get("interval", 1)
+        try:
+            interval_int = int(interval)
+        except (TypeError, ValueError):
+            return "recurrence_rule.interval must be an integer"
+        if interval_int < 1 or interval_int > 365:
+            return "recurrence_rule.interval must be between 1 and 365"
+        by_weekday = rr.get("by_weekday")
+        if by_weekday is not None:
+            if not isinstance(by_weekday, list) or not all(
+                isinstance(d, int) and d in _ISO_WEEKDAY_RANGE for d in by_weekday
+            ):
+                return "recurrence_rule.by_weekday must be a list of ISO weekday integers (1=Mon..7=Sun)"
+        until = rr.get("until")
+        if until is not None and (not isinstance(until, str) or not re.match(r"^\d{4}-\d{2}-\d{2}$", until)):
+            return "recurrence_rule.until must be YYYY-MM-DD"
+    return None
 
 
 def _validate_fields(body: dict) -> str | None:
@@ -43,7 +111,28 @@ def _validate_fields(body: dict) -> str | None:
         recurring = n.get("recurring")
         if recurring and recurring not in VALID_RECURRING:
             return f"notifications.recurring must be one of: {', '.join(sorted(VALID_RECURRING))}"
-    return None
+    return _validate_scheduling(body)
+
+
+def _check_overlap(user_id: str, start: datetime, duration: int, exclude_id: str | None) -> bool:
+    """Return True if an existing scheduled task overlaps [start, start+duration)."""
+    end = start.timestamp() + duration * 60
+    for t in db.query_by_user(_table(), user_id):
+        if exclude_id and t.get("task_id") == exclude_id:
+            continue
+        if t.get("status") == "done":
+            continue
+        other_start = _parse_scheduled_start(t.get("scheduled_start") or "")
+        if not other_start:
+            continue
+        try:
+            other_dur = int(t.get("duration_minutes") or SLOT_MINUTES)
+        except (TypeError, ValueError):
+            continue
+        other_end = other_start.timestamp() + other_dur * 60
+        if other_start.timestamp() < end and other_end > start.timestamp():
+            return True
+    return False
 
 
 # ── List ──────────────────────────────────────────────────────────────────────
@@ -51,6 +140,28 @@ def _validate_fields(body: dict) -> str | None:
 def list_tasks(user_id: str) -> dict:
     tasks = db.query_by_user(_table(), user_id)
     return ok(tasks)
+
+
+def list_calendar(user_id: str, query_params: dict) -> dict:
+    """Return only scheduled tasks whose start falls in [from, to] (ISO dates)."""
+    frm = (query_params or {}).get("from")
+    to  = (query_params or {}).get("to")
+    if not frm or not to:
+        return error("from and to query parameters are required (YYYY-MM-DD)")
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", frm) or not re.match(r"^\d{4}-\d{2}-\d{2}$", to):
+        return error("from/to must be YYYY-MM-DD")
+
+    start_ts = datetime.fromisoformat(frm + "T00:00:00+00:00").timestamp()
+    end_ts   = datetime.fromisoformat(to  + "T23:59:59+00:00").timestamp()
+
+    items = []
+    for t in db.query_by_user(_table(), user_id):
+        sch = _parse_scheduled_start(t.get("scheduled_start") or "")
+        if not sch:
+            continue
+        if start_ts <= sch.timestamp() <= end_ts:
+            items.append(t)
+    return ok(items)
 
 
 # ── Create ────────────────────────────────────────────────────────────────────
@@ -70,6 +181,11 @@ def create_task(user_id: str, body: dict) -> dict:
     if err:
         return error(err)
 
+    sched = _parse_scheduled_start(body.get("scheduled_start") or "")
+    duration = int(body.get("duration_minutes") or SLOT_MINUTES) if sched else None
+    if sched and _check_overlap(user_id, sched, duration, exclude_id=None):
+        return error("scheduled_start overlaps an existing block", status=409)
+
     now = now_iso()
     task = {
         "user_id": user_id,
@@ -81,6 +197,10 @@ def create_task(user_id: str, body: dict) -> dict:
         "due_date": body.get("due_date"),
         "notifications": body.get("notifications"),
         "folder_id": body.get("folder_id"),
+        "scheduled_start": sched.isoformat() if sched else None,
+        "duration_minutes": duration,
+        "recurrence_rule": body.get("recurrence_rule"),
+        "recurrence_parent_id": body.get("recurrence_parent_id"),
         "created_at": now,
         "updated_at": now,
     }
@@ -105,7 +225,11 @@ def get_task(user_id: str, task_id: str) -> dict:
 # ── Update ────────────────────────────────────────────────────────────────────
 
 def update_task(user_id: str, task_id: str, body: dict) -> dict:
-    updatable = {"title", "description", "status", "priority", "due_date", "notifications", "folder_id"}
+    updatable = {
+        "title", "description", "status", "priority", "due_date", "notifications",
+        "folder_id", "scheduled_start", "duration_minutes",
+        "recurrence_rule", "recurrence_parent_id",
+    }
     fields = {k: v for k, v in body.items() if k in updatable}
 
     if not fields:
@@ -123,6 +247,18 @@ def update_task(user_id: str, task_id: str, body: dict) -> dict:
     err = _validate_fields(fields)
     if err:
         return error(err)
+
+    if "scheduled_start" in fields and fields["scheduled_start"] is not None:
+        sched = _parse_scheduled_start(fields["scheduled_start"])
+        existing = db.get_item(_table(), user_id, SORT_KEY, task_id) or {}
+        duration = fields.get("duration_minutes")
+        if duration is None:
+            duration = int(existing.get("duration_minutes") or SLOT_MINUTES)
+        else:
+            duration = int(duration)
+        if sched and _check_overlap(user_id, sched, duration, exclude_id=task_id):
+            return error("scheduled_start overlaps an existing block", status=409)
+        fields["scheduled_start"] = sched.isoformat()
 
     fields["updated_at"] = now_iso()
     if "notifications" in fields:

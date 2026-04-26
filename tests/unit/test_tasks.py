@@ -73,6 +73,58 @@ class TestValidateFields:
     def test_empty_body_valid(self):
         assert crud._validate_fields({}) is None
 
+    def test_scheduled_start_must_be_iso(self):
+        err = crud._validate_fields({"scheduled_start": "tomorrow"})
+        assert err is not None
+        assert "scheduled_start" in err
+
+    def test_scheduled_start_must_align_to_slot(self):
+        err = crud._validate_fields({"scheduled_start": "2026-04-26T09:15:00Z"})
+        assert err is not None and "30-minute slot" in err
+
+    def test_scheduled_start_z_suffix_ok(self):
+        assert crud._validate_fields({"scheduled_start": "2026-04-26T09:30:00Z"}) is None
+
+    def test_scheduled_start_offset_ok(self):
+        assert crud._validate_fields({"scheduled_start": "2026-04-26T09:30:00+00:00"}) is None
+
+    def test_duration_must_be_multiple_of_30(self):
+        err = crud._validate_fields({"duration_minutes": 45})
+        assert err is not None
+
+    def test_duration_must_be_positive(self):
+        err = crud._validate_fields({"duration_minutes": 0})
+        assert err is not None
+
+    def test_duration_max_8h(self):
+        err = crud._validate_fields({"duration_minutes": 600})
+        assert err is not None
+
+    def test_duration_valid(self):
+        assert crud._validate_fields({"duration_minutes": 60}) is None
+        assert crud._validate_fields({"duration_minutes": 30}) is None
+
+    def test_recurrence_freq_validated(self):
+        err = crud._validate_fields({"recurrence_rule": {"freq": "monthly"}})
+        assert err is not None
+        assert crud._validate_fields({"recurrence_rule": {"freq": "weekly"}}) is None
+
+    def test_recurrence_by_weekday_range(self):
+        err = crud._validate_fields(
+            {"recurrence_rule": {"freq": "weekly", "by_weekday": [0]}}
+        )
+        assert err is not None
+        ok = crud._validate_fields(
+            {"recurrence_rule": {"freq": "weekly", "by_weekday": [1, 5]}}
+        )
+        assert ok is None
+
+    def test_recurrence_until_format(self):
+        err = crud._validate_fields(
+            {"recurrence_rule": {"freq": "daily", "until": "2026/12/31"}}
+        )
+        assert err is not None
+
 
 # ── list_tasks ────────────────────────────────────────────────────────────────
 
@@ -146,6 +198,108 @@ class TestCreateTask:
 
     def test_description_too_long_rejected(self, tbls):
         r = crud.create_task(USER, {"title": "OK", "description": "x" * 10_001})
+        assert r["statusCode"] == 400
+
+
+# ── scheduling: overlap + calendar ────────────────────────────────────────────
+
+class TestScheduling:
+    def test_create_with_schedule(self, tbls):
+        r = crud.create_task(USER, {
+            "title": "Standup",
+            "scheduled_start": "2026-04-27T13:00:00Z",
+            "duration_minutes": 30,
+        })
+        assert r["statusCode"] == 201
+        body = json.loads(r["body"])
+        assert body["scheduled_start"].startswith("2026-04-27T13:00:00")
+        assert body["duration_minutes"] == 30
+
+    def test_overlap_rejected(self, tbls):
+        crud.create_task(USER, {
+            "title": "First",
+            "scheduled_start": "2026-04-27T13:00:00Z",
+            "duration_minutes": 60,
+        })
+        r = crud.create_task(USER, {
+            "title": "Overlap",
+            "scheduled_start": "2026-04-27T13:30:00Z",
+            "duration_minutes": 30,
+        })
+        assert r["statusCode"] == 409
+
+    def test_back_to_back_allowed(self, tbls):
+        crud.create_task(USER, {
+            "title": "First",
+            "scheduled_start": "2026-04-27T13:00:00Z",
+            "duration_minutes": 30,
+        })
+        r = crud.create_task(USER, {
+            "title": "Next",
+            "scheduled_start": "2026-04-27T13:30:00Z",
+            "duration_minutes": 30,
+        })
+        assert r["statusCode"] == 201
+
+    def test_done_tasks_dont_block(self, tbls):
+        first = json.loads(crud.create_task(USER, {
+            "title": "Old",
+            "scheduled_start": "2026-04-27T13:00:00Z",
+            "duration_minutes": 60,
+        })["body"])
+        crud.update_task(USER, first["task_id"], {"status": "done"})
+        r = crud.create_task(USER, {
+            "title": "Reuse",
+            "scheduled_start": "2026-04-27T13:30:00Z",
+            "duration_minutes": 30,
+        })
+        assert r["statusCode"] == 201
+
+    def test_update_scheduled_start_with_overlap(self, tbls):
+        a = json.loads(crud.create_task(USER, {
+            "title": "A",
+            "scheduled_start": "2026-04-27T13:00:00Z",
+            "duration_minutes": 60,
+        })["body"])
+        json.loads(crud.create_task(USER, {
+            "title": "B",
+            "scheduled_start": "2026-04-27T15:00:00Z",
+            "duration_minutes": 30,
+        })["body"])
+        r = crud.update_task(USER, a["task_id"], {
+            "scheduled_start": "2026-04-27T14:30:00Z",
+        })
+        assert r["statusCode"] == 409
+
+    def test_update_self_does_not_count_as_overlap(self, tbls):
+        a = json.loads(crud.create_task(USER, {
+            "title": "A",
+            "scheduled_start": "2026-04-27T13:00:00Z",
+            "duration_minutes": 60,
+        })["body"])
+        r = crud.update_task(USER, a["task_id"], {"duration_minutes": 90})
+        assert r["statusCode"] == 200
+
+    def test_list_calendar_returns_only_in_range(self, tbls):
+        crud.create_task(USER, {
+            "title": "in",
+            "scheduled_start": "2026-04-27T09:00:00Z",
+            "duration_minutes": 30,
+        })
+        crud.create_task(USER, {
+            "title": "out",
+            "scheduled_start": "2026-05-15T09:00:00Z",
+            "duration_minutes": 30,
+        })
+        crud.create_task(USER, {"title": "no schedule"})
+        r = crud.list_calendar(USER, {"from": "2026-04-26", "to": "2026-04-30"})
+        assert r["statusCode"] == 200
+        body = json.loads(r["body"])
+        titles = [t["title"] for t in body]
+        assert titles == ["in"]
+
+    def test_list_calendar_requires_params(self, tbls):
+        r = crud.list_calendar(USER, {})
         assert r["statusCode"] == 400
 
 

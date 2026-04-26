@@ -24,9 +24,10 @@ resource "aws_lambda_function" "tasks" {
 
   environment {
     variables = {
-      TABLE_NAME    = aws_dynamodb_table.tasks.name
-      FOLDERS_TABLE = aws_dynamodb_table.task_folders.name
-      LINKS_TABLE   = aws_dynamodb_table.links.name
+      TABLE_NAME     = aws_dynamodb_table.tasks.name
+      FOLDERS_TABLE  = aws_dynamodb_table.task_folders.name
+      LINKS_TABLE    = aws_dynamodb_table.links.name
+      SETTINGS_TABLE = aws_dynamodb_table.settings.name
     }
   }
 }
@@ -57,6 +58,13 @@ resource "aws_iam_role_policy" "tasks_dynamodb" {
           aws_dynamodb_table.tasks.arn,
           aws_dynamodb_table.task_folders.arn,
         ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+        ]
+        Resource = aws_dynamodb_table.settings.arn
       },
       {
         Effect = "Allow"
@@ -97,6 +105,8 @@ locals {
     "GET /tasks/{id}",
     "PUT /tasks/{id}",
     "DELETE /tasks/{id}",
+    "GET /tasks/calendar",
+    "POST /tasks/auto-schedule",
     "GET /tasks/folders",
     "POST /tasks/folders",
     "PUT /tasks/folders/{id}",
