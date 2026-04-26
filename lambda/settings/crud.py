@@ -14,14 +14,15 @@ from utils import build_update_expression
 TABLE_NAME = os.environ["TABLE_NAME"]
 
 CALENDAR_DEFAULTS = {
-    "timezone":                "America/New_York",
-    "working_hours_start":     "09:00",
-    "working_hours_end":       "17:00",
-    "working_days":            [1, 2, 3, 4, 5],
-    "slot_minutes":            30,
-    "horizon_days":            14,
-    "reschedule_min_gap_days": 2,
-    "max_reschedules":         3,
+    "timezone":                 "America/New_York",
+    "working_hours_start":      "09:00",
+    "working_hours_end":        "17:00",
+    "working_days":             [1, 2, 3, 4, 5],
+    "slot_minutes":             30,
+    "horizon_days":             14,
+    "reschedule_min_gap_days":  2,
+    "max_reschedules":          3,
+    "default_duration_minutes": 60,
 }
 
 DEFAULTS = {
@@ -105,6 +106,7 @@ def _validate_calendar(cal: dict) -> tuple[str | None, dict | None]:
         ("horizon_days", 1, 60),
         ("reschedule_min_gap_days", 0, 30),
         ("max_reschedules", 0, 50),
+        ("default_duration_minutes", 5, 480),
     ):
         try:
             v = int(out[key])
@@ -113,6 +115,9 @@ def _validate_calendar(cal: dict) -> tuple[str | None, dict | None]:
         if v < lo or v > hi:
             return f"calendar.{key} must be between {lo} and {hi}", None
         out[key] = v
+
+    if out["default_duration_minutes"] % out["slot_minutes"] != 0:
+        return "calendar.default_duration_minutes must be a multiple of slot_minutes", None
 
     return None, out
 

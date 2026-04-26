@@ -139,6 +139,18 @@ class TestCalendarSettings:
         assert cal["slot_minutes"] == 30
         assert cal["reschedule_min_gap_days"] == 2
         assert cal["max_reschedules"] == 3
+        assert cal["default_duration_minutes"] == 60
+
+    def test_calendar_default_duration_validated(self, tbl):
+        r = crud.update_settings(USER, {"calendar": {"default_duration_minutes": 0}})
+        assert r["statusCode"] == 400
+
+    def test_calendar_default_duration_must_be_slot_multiple(self, tbl):
+        r = crud.update_settings(USER, {"calendar": {
+            "slot_minutes": 30,
+            "default_duration_minutes": 35,
+        }})
+        assert r["statusCode"] == 400
 
     def test_calendar_partial_update_fills_defaults(self, tbl):
         r = crud.update_settings(USER, {

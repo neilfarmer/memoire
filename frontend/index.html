@@ -6210,6 +6210,10 @@
                                         <span class="settings-label" style="font-weight:500;">Max reschedules</span>
                                         <input type="number" id="cal-max-reschedules" min="0" max="50" />
                                     </label>
+                                    <label style="display:flex; flex-direction:column; gap:4px; font-size:12px;">
+                                        <span class="settings-label" style="font-weight:500;">Default task duration (minutes)</span>
+                                        <input type="number" id="cal-default-duration" min="5" max="480" step="5" />
+                                    </label>
                                 </div>
                                 <div>
                                     <div class="settings-label" style="font-weight:500;font-size:12px;">Working days</div>
@@ -7135,11 +7139,20 @@
                             <input type="date" id="task-due" />
                         </div>
                         <div class="field">
-                            <label for="task-tags">Tags</label>
-                            <input type="text"
-                                   id="task-tags"
-                                   placeholder="comma-separated, e.g. work, urgent" />
+                            <label for="task-duration">Estimated time (minutes)</label>
+                            <input type="number"
+                                   id="task-duration"
+                                   min="5"
+                                   max="480"
+                                   step="5"
+                                   placeholder="60" />
                         </div>
+                    </div>
+                    <div class="field">
+                        <label for="task-tags">Tags</label>
+                        <input type="text"
+                               id="task-tags"
+                               placeholder="comma-separated, e.g. work, urgent" />
                     </div>
                     <!-- Notifications (only shown when ntfy is configured) -->
                     <div id="notif-section"
@@ -7670,6 +7683,9 @@
         ? (state.tasks.find(t => t.task_id === taskId) || {}).notifications || {}
         : {};
 
+      const cal = (state.settings && state.settings.calendar) || {};
+      const defaultDuration = cal.default_duration_minutes || 60;
+
       if (taskId) {
         const task = state.tasks.find(t => t.task_id === taskId);
         if (!task) return;
@@ -7679,6 +7695,7 @@
         $("task-status").value   = task.status;
         $("task-priority").value = task.priority;
         $("task-due").value      = task.due_date || "";
+        $("task-duration").value = task.duration_minutes ?? "";
         $("task-tags").value     = (task.tags || []).join(", ");
         $("delete-btn").classList.remove("hidden");
       } else {
@@ -7688,6 +7705,7 @@
         $("task-status").value   = "todo";
         $("task-priority").value = "medium";
         $("task-due").value      = "";
+        $("task-duration").value = defaultDuration;
         $("task-tags").value     = state.currentTag && state.currentTag !== "__untagged__" ? state.currentTag : "";
         $("delete-btn").classList.add("hidden");
       }
@@ -8184,6 +8202,9 @@
       .map(t => t.trim())
       .filter(Boolean);
 
+    const durationRaw = ($("task-duration").value || "").trim();
+    const duration = durationRaw === "" ? null : parseInt(durationRaw, 10);
+
     const body = {
       title,
       description:   $("task-desc").value.trim(),
@@ -8193,6 +8214,7 @@
       notifications,
       tags,
     };
+    if (duration && !Number.isNaN(duration)) body.duration_minutes = duration;
 
     // If the modal was opened from a week-grid slot, attach the schedule
     if (!state.editingId && state.pendingScheduledStart) {
@@ -8259,6 +8281,7 @@
       horizon_days: 14,
       reschedule_min_gap_days: 2,
       max_reschedules: 3,
+      default_duration_minutes: 60,
     },
     populate(cal) {
       const c = { ...this.DEFAULTS, ...(cal || {}) };
@@ -8266,6 +8289,7 @@
       $("cal-hours-start").value      = c.working_hours_start;
       $("cal-hours-end").value        = c.working_hours_end;
       $("cal-slot-minutes").value     = c.slot_minutes;
+      $("cal-default-duration").value = c.default_duration_minutes;
       $("cal-min-gap").value          = c.reschedule_min_gap_days;
       $("cal-max-reschedules").value  = c.max_reschedules;
       const wrap = $("cal-working-days");
@@ -8282,14 +8306,15 @@
         .filter(cb => cb.checked)
         .map(cb => parseInt(cb.dataset.day, 10));
       return {
-        timezone:                $("cal-timezone").value.trim() || "America/New_York",
-        working_hours_start:     $("cal-hours-start").value || "09:00",
-        working_hours_end:       $("cal-hours-end").value   || "17:00",
-        working_days:            days.length ? days : [1,2,3,4,5],
-        slot_minutes:            parseInt($("cal-slot-minutes").value, 10) || 30,
-        horizon_days:            14,
-        reschedule_min_gap_days: parseInt($("cal-min-gap").value, 10) || 2,
-        max_reschedules:         parseInt($("cal-max-reschedules").value, 10) || 3,
+        timezone:                 $("cal-timezone").value.trim() || "America/New_York",
+        working_hours_start:      $("cal-hours-start").value || "09:00",
+        working_hours_end:        $("cal-hours-end").value   || "17:00",
+        working_days:             days.length ? days : [1,2,3,4,5],
+        slot_minutes:             parseInt($("cal-slot-minutes").value, 10) || 30,
+        horizon_days:             14,
+        reschedule_min_gap_days:  parseInt($("cal-min-gap").value, 10) || 2,
+        max_reschedules:          parseInt($("cal-max-reschedules").value, 10) || 3,
+        default_duration_minutes: parseInt($("cal-default-duration").value, 10) || 60,
       };
     },
   };

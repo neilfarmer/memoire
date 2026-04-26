@@ -88,11 +88,13 @@ def auto_schedule(user_id: str, body: dict) -> dict:
     scheduled = []
     skipped = []
 
+    default_duration = cal.get("default_duration_minutes") or cal["slot_minutes"]
+
     for task in targets:
         try:
-            duration = int(task.get("duration_minutes") or cal["slot_minutes"])
+            duration = int(task.get("duration_minutes") or default_duration)
         except (TypeError, ValueError):
-            duration = cal["slot_minutes"]
+            duration = default_duration
 
         cutoff = _due_horizon(task)
         slot = scheduler._find_free_slot(now, duration, cal, tz, busy, exclude_id=task.get("task_id"))

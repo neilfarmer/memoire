@@ -168,6 +168,30 @@ class TestAutoSchedule:
         r = auto.auto_schedule(USER, {"horizon_days": "lots"})
         assert r["statusCode"] == 400
 
+    def test_uses_settings_default_duration_when_task_has_none(self, tbls):
+        # Set non-default duration in settings (90 min)
+        tbls.Table(SETTINGS_TABLE).put_item(Item={
+            "user_id": USER,
+            "calendar": {
+                "timezone": "America/New_York",
+                "working_hours_start": "09:00",
+                "working_hours_end":   "17:00",
+                "working_days": [1, 2, 3, 4, 5],
+                "slot_minutes": 30,
+                "horizon_days": 14,
+                "reschedule_min_gap_days": 2,
+                "max_reschedules": 3,
+                "default_duration_minutes": 90,
+            },
+        })
+        crud.create_task(USER, {"title": "Estimate me"})
+        with patch("auto_schedule.datetime") as dt:
+            dt.now.return_value = NOW_UTC
+            dt.fromisoformat = datetime.fromisoformat
+            r = auto.auto_schedule(USER, {})
+        body = json.loads(r["body"])
+        assert body["scheduled"][0]["duration_minutes"] == 90
+
     def test_respect_priority_false(self, tbls):
         json.loads(crud.create_task(USER, {"title": "A", "priority": "low"})["body"])
         json.loads(crud.create_task(USER, {"title": "B", "priority": "high"})["body"])
