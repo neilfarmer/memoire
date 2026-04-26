@@ -80,6 +80,14 @@ def _tasks_section(tasks: list[dict]) -> str:
             lines.append(f"- {cb} {priority} {title}")
             if t.get("due_date"):
                 lines.append(f"  Due: {t['due_date']}")
+            if t.get("scheduled_start"):
+                dur = t.get("duration_minutes") or 30
+                lines.append(f"  Scheduled: {t['scheduled_start']} ({dur} min)")
+            if t.get("recurrence_rule"):
+                rr = t["recurrence_rule"]
+                lines.append(f"  Recurs: {rr.get('freq', '?')} every {rr.get('interval', 1)}")
+            if t.get("reschedule_count"):
+                lines.append(f"  Rescheduled {t['reschedule_count']} time(s)")
             if t.get("description"):
                 lines.append(f"  {t['description']}")
             lines.append("")
