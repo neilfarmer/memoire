@@ -8196,8 +8196,11 @@
 
     if (!state.taskWeekStart) {
       const d = new Date();
-      const dow = d.getDay() || 7; // Sun=0 → 7
-      d.setDate(d.getDate() - (dow - 1));
+      const dow = d.getDay() || 7; // Sun=0 → 7, Mon=1, ..., Sat=6
+      // Weekend → jump to upcoming Monday so the user sees the working week ahead.
+      // Weekday → snap back to this week's Monday.
+      if (dow >= 6) d.setDate(d.getDate() + (8 - dow));
+      else          d.setDate(d.getDate() - (dow - 1));
       d.setHours(0, 0, 0, 0);
       state.taskWeekStart = d.toISOString().slice(0, 10);
     }
