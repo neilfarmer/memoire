@@ -1268,6 +1268,42 @@
     .due-date.overdue::before   { content: "Overdue •"; font-size: var(--text-xs); letter-spacing: .3px; text-transform: uppercase; }
     .due-date.due-today { color: var(--warning-soft); font-weight: var(--weight-semibold); }
     .due-date.due-today::before { content: "Today •"; font-size: var(--text-xs); letter-spacing: .3px; text-transform: uppercase; }
+    .scheduled-chip {
+      font-size: var(--text-xs);
+      color: var(--primary);
+      background: rgba(59, 130, 246, 0.08);
+      padding: 2px 8px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .scheduled-chip::before { content: "Scheduled"; opacity: .7; }
+
+    .auto-schedule-banner {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      margin: 12px 0;
+      padding: 10px 14px;
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: var(--text-sm);
+    }
+    .auto-schedule-banner.is-visible { display: flex; }
+    .auto-schedule-banner-body  { flex: 1; }
+    .auto-schedule-banner-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1;
+      padding: 4px 8px;
+    }
+    .auto-schedule-banner-close:hover { color: var(--text); }
 
     .task-card.is-overdue {
       border-left: 3px solid var(--danger);
@@ -7346,6 +7382,21 @@
     return dueDate === todayStr();
   }
 
+  function formatScheduledStart(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    const today = new Date(); today.setHours(0,0,0,0);
+    const dayStart = new Date(d); dayStart.setHours(0,0,0,0);
+    const diffDays = Math.round((dayStart - today) / 86400000);
+    const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    if (diffDays === 0)  return `Today ${time}`;
+    if (diffDays === 1)  return `Tomorrow ${time}`;
+    if (diffDays === -1) return `Yesterday ${time}`;
+    const day = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return `${day} ${time}`;
+  }
+
   function formatDueDate(dueDate) {
     if (!dueDate) return "";
     const today  = todayStr();
@@ -7393,6 +7444,7 @@
             </select>
             <span class="badge badge-${task.priority}">${task.priority}</span>
             ${task.due_date ? `<span class="${dateClass}">${formatDueDate(task.due_date)}</span>` : ""}
+            ${task.scheduled_start ? `<span class="scheduled-chip" title="Scheduled block">${formatScheduledStart(task.scheduled_start)}</span>` : ""}
           </div>
         </div>
         ${active ? `<button class="pomo-focus-btn${isFocus ? ' active' : ''}" title="Focus on this task" onclick="event.stopPropagation(); pomodoro.focusTask('${task.task_id}')">&#9654;</button>` : ""}
@@ -8085,11 +8137,12 @@
     btn.textContent = "Scheduling...";
     try {
       const result = await api.autoScheduleTasks({});
-      const n = (result && result.scheduled) ? result.scheduled.length : 0;
-      const skipped = (result && result.skipped) ? result.skipped.length : 0;
-      btn.textContent = n
-        ? `Scheduled ${n}${skipped ? ` (${skipped} skipped)` : ""}`
-        : "Nothing to schedule";
+      const scheduled = (result && result.scheduled) || [];
+      const skipped   = (result && result.skipped)   || [];
+      btn.textContent = scheduled.length
+        ? `Scheduled ${scheduled.length}${skipped.length ? ` (${skipped.length} skipped)` : ""}`
+        : (skipped.length ? `Skipped ${skipped.length}` : "Nothing to schedule");
+      autoScheduleResult.show(scheduled, skipped);
       await app.loadTasks();
     } catch (e) {
       btn.textContent = "Error";
@@ -8098,6 +8151,40 @@
       setTimeout(() => { btn.disabled = false; btn.textContent = orig; }, 2400);
     }
   });
+
+  const autoScheduleResult = {
+    show(scheduled, skipped) {
+      let banner = $("auto-schedule-banner");
+      if (!banner) {
+        banner = document.createElement("div");
+        banner.id = "auto-schedule-banner";
+        banner.className = "auto-schedule-banner";
+        const tasksPage = $("page-tasks");
+        const filters = tasksPage && tasksPage.querySelector(".filters");
+        if (filters && filters.parentNode) filters.parentNode.insertBefore(banner, filters.nextSibling);
+        else if (tasksPage) tasksPage.prepend(banner);
+      }
+
+      const reasons = {};
+      skipped.forEach(s => { reasons[s.reason] = (reasons[s.reason] || 0) + 1; });
+      const reasonText = Object.entries(reasons)
+        .map(([r, n]) => `${n} ${r}`)
+        .join(", ");
+
+      const parts = [];
+      if (scheduled.length) parts.push(`<strong>Scheduled ${scheduled.length}</strong> task${scheduled.length === 1 ? "" : "s"}.`);
+      if (skipped.length)   parts.push(`<strong>Skipped ${skipped.length}</strong> (${reasonText}).`);
+      if (!scheduled.length && !skipped.length) parts.push("No eligible tasks to schedule.");
+
+      banner.innerHTML = `
+        <div class="auto-schedule-banner-body">
+          ${parts.join(" ")}
+        </div>
+        <button class="auto-schedule-banner-close" type="button" aria-label="Dismiss">&times;</button>`;
+      banner.classList.add("is-visible");
+      banner.querySelector(".auto-schedule-banner-close").onclick = () => banner.classList.remove("is-visible");
+    },
+  };
 
   function renderTaskWeek() {
     const cal = (state.settings && state.settings.calendar) || {};
