@@ -92,6 +92,8 @@ def load_lambda(feature: str, filename: str):
         _register(LAYER_DIR / "sanitize.py", "sanitize")
     if "links_util" not in sys.modules:
         _register(LAYER_DIR / "links_util.py", "links_util")
+    if "scheduler" not in sys.modules:
+        _register(LAYER_DIR / "scheduler.py", "scheduler")
 
     feature_dir = REPO_ROOT / "lambda" / feature
     stem = Path(filename).stem
