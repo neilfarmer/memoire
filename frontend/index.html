@@ -750,31 +750,37 @@
     }
     .sb-sub-link:hover { background: var(--hover); color: var(--text); }
     .sb-sub-link.active { color: var(--primary); background: var(--hover); border-left-color: var(--primary); }
-    .sb-tag-group-label {
-      font-size: 11px;
-      font-weight: var(--weight-semibold);
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      color: var(--muted);
-      padding: 8px 14px 4px;
-    }
-    .task-tag-row {
+    .task-tags-chips {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 6px 14px 6px 22px;
-      margin: 1px 4px;
-      border-left: 2px solid transparent;
-      border-radius: var(--radius);
-      font-size: 13px;
-      color: var(--muted);
-      cursor: pointer;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 8px 0 12px;
     }
-    .task-tag-row:hover { background: var(--hover); color: var(--text); }
-    .task-tag-row.active { color: var(--primary); background: var(--hover); border-left-color: var(--primary); }
-    .task-tag-name  { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .task-tag-count { font-size: 11px; color: var(--muted); padding-left: 6px; }
-    .task-tag-row.active .task-tag-count { color: var(--primary); }
+    .task-tags-chips:empty { display: none; }
+    .task-tag-chip-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      border-radius: 999px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background .1s, color .1s, border-color .1s;
+    }
+    .task-tag-chip-btn:hover { color: var(--text); border-color: var(--text); }
+    .task-tag-chip-btn.active {
+      color: var(--primary);
+      border-color: var(--primary);
+      background: rgba(59, 130, 246, 0.08);
+    }
+    .task-tag-chip-count {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .task-tag-chip-btn.active .task-tag-chip-count { color: var(--primary); }
     .sb-hdr-action {
       display: inline-flex;
       align-items: center;
@@ -5377,11 +5383,12 @@
                             <div class="sb-section-body hidden" id="sb-tasks-body">
                                 <div class="sb-section-body-inner">
                                     <button class="sb-sub-link"
-                                            id="task-calendar-btn"
+                                            id="task-list-link"
+                                            onclick="event.stopPropagation(); taskTags.showList()">List</button>
+                                    <button class="sb-sub-link"
+                                            id="task-calendar-link"
                                             onclick="event.stopPropagation(); taskTags.openCalendar()">Calendar</button>
                                 </div>
-                                <div class="sb-tag-group-label">Tags</div>
-                                <div id="task-tags-list"></div>
                             </div>
                         </div>
                         <div class="sb-section" id="sb-notes">
@@ -5732,6 +5739,7 @@
                             </button>
                             <button class="btn btn-primary" id="new-task-btn">+ New task</button>
                         </div>
+                        <div id="task-tags-chips" class="task-tags-chips"></div>
                         <div class="filters">
                             <button class="filter-btn active" data-filter="all">
                                 All <span class="filter-count" id="fc-all">0</span>
@@ -7881,7 +7889,7 @@
     },
   };
 
-  // ── Task tags (sidebar) ──────────────────────────────────────────────────────
+  // ── Task tags (rendered as chip row inside the tasks page body) ──────────────
 
   const taskTags = {
     distinct() {
@@ -7898,37 +7906,55 @@
       };
     },
 
-    renderList() {
-      const container = $("task-tags-list");
+    renderChips() {
+      const container = $("task-tags-chips");
       if (!container) return;
       const { tags, untagged } = taskTags.distinct();
-      const rows = [];
-      const allActive       = !state.currentTag        ? "active" : "";
-      const untaggedActive  = state.currentTag === "__untagged__" ? "active" : "";
-      rows.push(`<div class="task-tag-row ${allActive}" onclick="taskTags.select(null)"><span class="task-tag-name">All</span><span class="task-tag-count">${(state.tasks || []).length}</span></div>`);
+      const chips = [];
+      const totalCount = (state.tasks || []).length;
+      const allActive  = !state.currentTag ? "active" : "";
+      chips.push(`<button type="button" class="task-tag-chip-btn ${allActive}" onclick="taskTags.select(null)">All <span class="task-tag-chip-count">${totalCount}</span></button>`);
       if (untagged > 0) {
-        rows.push(`<div class="task-tag-row ${untaggedActive}" onclick="taskTags.select('__untagged__')"><span class="task-tag-name">Untagged</span><span class="task-tag-count">${untagged}</span></div>`);
+        const untaggedActive = state.currentTag === "__untagged__" ? "active" : "";
+        chips.push(`<button type="button" class="task-tag-chip-btn ${untaggedActive}" onclick="taskTags.select('__untagged__')">Untagged <span class="task-tag-chip-count">${untagged}</span></button>`);
       }
       tags.forEach(([tag, count]) => {
         const active = state.currentTag === tag ? "active" : "";
         const safe = escHtml(JSON.stringify(tag));
-        rows.push(`<div class="task-tag-row ${active}" onclick="taskTags.select(${safe})"><span class="task-tag-name">${escHtml(tag)}</span><span class="task-tag-count">${count}</span></div>`);
+        chips.push(`<button type="button" class="task-tag-chip-btn ${active}" onclick="taskTags.select(${safe})">${escHtml(tag)} <span class="task-tag-chip-count">${count}</span></button>`);
       });
-      container.innerHTML = rows.join("");
+      container.innerHTML = chips.join("");
+      container.style.display = state.taskView === "list" ? "" : "none";
+    },
+
+    updateSidebarHighlight() {
+      const listLink = $("task-list-link");
+      const calLink  = $("task-calendar-link");
+      if (listLink) listLink.classList.toggle("active", state.taskView === "list");
+      if (calLink)  calLink.classList.toggle("active",  state.taskView === "week");
     },
 
     select(tag) {
       state.currentTag = tag;
       state.taskView = "list";
-      taskTags.renderList();
+      taskTags.renderChips();
+      taskTags.updateSidebarHighlight();
+      if (pages.current !== "tasks") pages.show("tasks");
+      else renderTasks();
+    },
+
+    showList() {
+      state.taskView = "list";
+      taskTags.renderChips();
+      taskTags.updateSidebarHighlight();
       if (pages.current !== "tasks") pages.show("tasks");
       else renderTasks();
     },
 
     openCalendar() {
       state.taskView = "week";
-      state.currentTag = null;
-      taskTags.renderList();
+      taskTags.renderChips();
+      taskTags.updateSidebarHighlight();
       if (pages.current !== "tasks") pages.show("tasks");
       else renderTasks();
     },
@@ -8031,7 +8057,8 @@
       showLoader("tasks-loader");
       try {
         state.tasks = await api.listTasks() || [];
-        taskTags.renderList();
+        taskTags.renderChips();
+        taskTags.updateSidebarHighlight();
         renderTasks();
         if (pages.current === "home") renderHomeDashboard();
         if ($("journal-calendar") && journal.calMonth) journal.renderCalendar();
@@ -8088,11 +8115,15 @@
 
   $("task-view-btn").addEventListener("click", () => {
     state.taskView = state.taskView === "calendar" ? "list" : "calendar";
+    taskTags.renderChips();
+    taskTags.updateSidebarHighlight();
     renderTasks();
   });
 
   $("task-week-btn").addEventListener("click", () => {
     state.taskView = state.taskView === "week" ? "list" : "week";
+    taskTags.renderChips();
+    taskTags.updateSidebarHighlight();
     renderTasks();
   });
 
@@ -13324,7 +13355,7 @@
       if (name === "settings") { renderSettings(); if (!feeds.loaded) feeds.loadFeeds(); }
       if (name === "tasks") {
         if (state.tasks.length === 0) app.loadTasks();
-        else { taskTags.renderList(); renderTasks(); }
+        else { taskTags.renderChips(); taskTags.updateSidebarHighlight(); renderTasks(); }
       }
       if (name === "habits"  && habits.data.length === 0) habits.load();
       if (name === "goals"   && goals.data.length === 0) goals.load();
