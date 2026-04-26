@@ -84,8 +84,8 @@ class TestValidateFields:
     def test_scheduled_start_offset_ok(self):
         assert crud._validate_fields({"scheduled_start": "2026-04-26T09:30:00+00:00"}) is None
 
-    def test_duration_must_be_multiple_of_30(self):
-        err = crud._validate_fields({"duration_minutes": 45})
+    def test_duration_must_be_multiple_of_15(self):
+        err = crud._validate_fields({"duration_minutes": 20})
         assert err is not None
 
     def test_duration_must_be_positive(self):
@@ -97,8 +97,8 @@ class TestValidateFields:
         assert err is not None
 
     def test_duration_valid(self):
-        assert crud._validate_fields({"duration_minutes": 60}) is None
-        assert crud._validate_fields({"duration_minutes": 30}) is None
+        for mins in (15, 30, 45, 60, 120, 180, 240):
+            assert crud._validate_fields({"duration_minutes": mins}) is None
 
     def test_recurrence_freq_validated(self):
         err = crud._validate_fields({"recurrence_rule": {"freq": "monthly"}})

@@ -103,7 +103,7 @@ async def create_task(
             before_due values must be from: "1h", "1d", "3d".
         scheduled_start: ISO 8601 UTC datetime aligned to a 30-minute slot
             (e.g. "2026-04-28T13:00:00Z").
-        duration_minutes: Block length, multiple of 30, max 480.
+        duration_minutes: Estimated/scheduled block length in minutes. Multiple of 30, max 480. Falls back to the user's calendar.default_duration_minutes setting (60 by default) when unset.
         recurrence_rule: {"freq":"daily|weekly|weekdays","interval":int,
             "by_weekday":[1..7],"until":"YYYY-MM-DD"}.
     """
@@ -150,7 +150,7 @@ async def update_task(
         notifications: Reminder config {"before_due": [...], "recurring": "1h"|"1d"|"1w"}. Pass {} to clear.
             before_due values must be from: "1h", "1d", "3d".
         scheduled_start: ISO 8601 UTC datetime aligned to a 30-minute slot.
-        duration_minutes: Block length, multiple of 30, max 480.
+        duration_minutes: Estimated/scheduled block length in minutes. Multiple of 30, max 480. Falls back to the user's calendar.default_duration_minutes setting (60 by default) when unset.
         recurrence_rule: Recurrence template; see create_task for shape.
     """
     body: dict = {}
@@ -207,6 +207,34 @@ async def list_tasks_calendar(from_date: str, to_date: str) -> str:
         to_date:   Inclusive end date   (YYYY-MM-DD).
     """
     return json.dumps(await _request("GET", f"/tasks/calendar?from={from_date}&to={to_date}"))
+
+
+@mcp.tool()
+async def auto_schedule_tasks(
+    task_ids: list[str] | None = None,
+    horizon_days: int | None = None,
+    respect_priority: bool = True,
+) -> str:
+    """Greedily fit unscheduled tasks into the user's free working-hour slots.
+
+    Returns {"scheduled": [...], "skipped": [{"task_id":..., "reason": ...}]}.
+
+    Args:
+        task_ids: Optional list of task UUIDs to limit scheduling. Defaults to
+            every eligible task (todo/in_progress, no scheduled_start, no
+            recurrence_rule). Past-due tasks are still scheduled into the next
+            free slot rather than skipped.
+        horizon_days: Override the search horizon (1..60). Defaults to the
+            user's calendar setting (14).
+        respect_priority: When true (default), targets are sorted high → low
+            priority and then by due date. When false, ordered by created_at.
+    """
+    body: dict = {"respect_priority": respect_priority}
+    if task_ids:
+        body["task_ids"] = task_ids
+    if horizon_days is not None:
+        body["horizon_days"] = horizon_days
+    return json.dumps(await _request("POST", "/tasks/auto-schedule", body=body))
 
 
 @mcp.tool()

@@ -28,7 +28,8 @@ MAX_DESCRIPTION_LEN = 10_000
 MAX_TAG_LEN         = 50
 MAX_TAGS_PER_TASK   = 20
 
-SLOT_MINUTES        = 30
+SLOT_MINUTES        = 30  # alignment grain for scheduled_start (matches calendar grid)
+DURATION_GRAIN_MIN  = 15  # allowed grain for duration_minutes (15-minute increments)
 MAX_DURATION_MIN    = 8 * 60
 
 _ISO_WEEKDAY_RANGE  = range(1, 8)
@@ -65,9 +66,9 @@ def _validate_scheduling(body: dict) -> str | None:
             dur = int(body["duration_minutes"])
         except (TypeError, ValueError):
             return "duration_minutes must be an integer"
-        if dur <= 0 or dur % SLOT_MINUTES != 0 or dur > MAX_DURATION_MIN:
+        if dur <= 0 or dur % DURATION_GRAIN_MIN != 0 or dur > MAX_DURATION_MIN:
             return (
-                f"duration_minutes must be a positive multiple of {SLOT_MINUTES} "
+                f"duration_minutes must be a positive multiple of {DURATION_GRAIN_MIN} "
                 f"and at most {MAX_DURATION_MIN}"
             )
 

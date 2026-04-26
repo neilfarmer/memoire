@@ -7,13 +7,27 @@ A self-hosted personal productivity app — tasks, habits, goals, journal, notes
 
 **~$0.30/month** at daily personal use. ~$0 at idle.
 
+![Home dashboard](docs/screenshots/01-home.png)
+
 ---
 
 ## What it does
 
-Memoire gives you one place to manage your daily life: track tasks with Pomodoro focus sessions, build habits with streak history, write a daily journal with mood tracking, take notes in a folder tree, draw diagrams with Excalidraw, log meals and workouts, and set long-term goals. An AI assistant (powered by Amazon Bedrock) can create, read, update, and delete data across every feature using plain language.
+Memoire gives you one place to manage your daily life: track tasks with Pomodoro focus sessions and an auto-scheduler that fits work into your calendar, build habits with streak history, write a daily journal with mood tracking, take notes in a folder tree, draw diagrams with Excalidraw, log meals and workouts, and set long-term goals. An AI assistant (powered by Amazon Bedrock) can create, read, update, and delete data across every feature using plain language.
 
 Everything is multi-tenant by design — each user's data is isolated by Cognito `user_id` at the database level.
+
+### Tasks with tags, scheduling, and an auto-scheduler
+
+Tag tasks instead of foldering them, set an estimated time per task (default configurable in settings), and let the auto-scheduler fit the working week into your free slots.
+
+![Tasks page](docs/screenshots/02-tasks.png)
+
+### AI Pal
+
+Pip is your in-app assistant. Create or update anything — tasks, notes, journal entries, habits, goals — by asking. Backed by Amazon Bedrock with full per-feature tool access.
+
+![AI Pal chat](docs/screenshots/03-ai-pal.png)
 
 ---
 
@@ -21,7 +35,7 @@ Everything is multi-tenant by design — each user's data is isolated by Cognito
 
 | Feature | Highlights |
 |---|---|
-| Tasks | Status, priority, due dates, folders, Pomodoro timer, ntfy push notifications |
+| Tasks | Status, priority, due dates, tags, estimated time, scheduled blocks + auto-scheduler, week calendar, recurring rules, Pomodoro timer, ntfy push notifications |
 | Habits | Daily check-in, current streak, best streak, 30-day heatmap |
 | Goals | Title, description, target date, progress tracking |
 | Journal | One entry/day, mood, markdown, calendar view, full-text search |

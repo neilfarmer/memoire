@@ -31,3 +31,10 @@ tests/.test-content-ids.json
 htmlcov/
 coverage.xml
 .coverage
+
+# macOS
+.DS_Store
+
+# Stray screenshots in the repo root (the canonical README screenshots
+# live under docs/screenshots/)
+/*.png
