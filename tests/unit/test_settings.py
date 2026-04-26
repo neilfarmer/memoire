@@ -126,6 +126,75 @@ class TestUpdateSettings:
         assert "user_id" not in body
 
 
+# ── calendar settings ─────────────────────────────────────────────────────────
+
+class TestCalendarSettings:
+    def test_calendar_defaults_present(self, tbl):
+        body = json.loads(crud.get_settings(USER)["body"])
+        cal = body["calendar"]
+        assert cal["timezone"] == "America/New_York"
+        assert cal["working_hours_start"] == "09:00"
+        assert cal["working_hours_end"] == "17:00"
+        assert cal["working_days"] == [1, 2, 3, 4, 5]
+        assert cal["slot_minutes"] == 30
+        assert cal["reschedule_min_gap_days"] == 2
+        assert cal["max_reschedules"] == 3
+
+    def test_calendar_partial_update_fills_defaults(self, tbl):
+        r = crud.update_settings(USER, {
+            "calendar": {"timezone": "America/Los_Angeles"}
+        })
+        assert r["statusCode"] == 200
+        cal = json.loads(crud.get_settings(USER)["body"])["calendar"]
+        assert cal["timezone"] == "America/Los_Angeles"
+        assert cal["working_hours_start"] == "09:00"
+
+    def test_calendar_full_update_persists(self, tbl):
+        r = crud.update_settings(USER, {"calendar": {
+            "timezone": "Europe/Berlin",
+            "working_hours_start": "08:00",
+            "working_hours_end": "16:30",
+            "working_days": [2, 3, 4],
+            "slot_minutes": 30,
+            "horizon_days": 21,
+            "reschedule_min_gap_days": 3,
+            "max_reschedules": 5,
+        }})
+        assert r["statusCode"] == 200
+        cal = json.loads(crud.get_settings(USER)["body"])["calendar"]
+        assert cal["timezone"] == "Europe/Berlin"
+        assert cal["working_days"] == [2, 3, 4]
+        assert cal["max_reschedules"] == 5
+
+    def test_calendar_must_be_object(self, tbl):
+        r = crud.update_settings(USER, {"calendar": "broken"})
+        assert r["statusCode"] == 400
+
+    def test_calendar_bad_time_format(self, tbl):
+        r = crud.update_settings(USER, {"calendar": {"working_hours_start": "9am"}})
+        assert r["statusCode"] == 400
+
+    def test_calendar_end_before_start_rejected(self, tbl):
+        r = crud.update_settings(USER, {"calendar": {
+            "working_hours_start": "17:00",
+            "working_hours_end": "09:00",
+        }})
+        assert r["statusCode"] == 400
+
+    def test_calendar_working_days_validated(self, tbl):
+        r = crud.update_settings(USER, {"calendar": {"working_days": [0, 1]}})
+        assert r["statusCode"] == 400
+
+    def test_calendar_max_reschedules_range(self, tbl):
+        r = crud.update_settings(USER, {"calendar": {"max_reschedules": 100}})
+        assert r["statusCode"] == 400
+
+    def test_calendar_dedupes_working_days(self, tbl):
+        crud.update_settings(USER, {"calendar": {"working_days": [3, 1, 1, 5, 3]}})
+        cal = json.loads(crud.get_settings(USER)["body"])["calendar"]
+        assert cal["working_days"] == [1, 3, 5]
+
+
 # ── test_notification ─────────────────────────────────────────────────────────
 
 class TestTestNotification:
