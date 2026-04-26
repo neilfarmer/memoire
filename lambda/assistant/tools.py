@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # silently — treat it as a tool error so the model retries.
 WRITE_TOOL_TAG_PATTERNS: dict[str, re.Pattern] = {
     "create_task":          re.compile(r"\[pal-link:task:[^\]]+\]"),
+    "schedule_tasks":       re.compile(r"\[pal-link:task:[^\]]+\]|No tasks needed scheduling|Couldn't fit any tasks"),
     "create_note":          re.compile(r"\[pal-link:note:[^\]]+\]"),
     "create_goal":          re.compile(r"\[pal-link:goal:[^\]]+\]"),
     "create_journal_entry": re.compile(r"\[pal-link:journal:[^\]]+\]"),
@@ -63,6 +64,7 @@ FAVORITES_TABLE    = os.environ.get("FAVORITES_TABLE", "")
 FEEDS_TABLE        = os.environ.get("FEEDS_TABLE", "")
 FEEDS_READ_TABLE   = os.environ.get("FEEDS_READ_TABLE", "")
 LINKS_TABLE        = os.environ.get("LINKS_TABLE", "")
+SETTINGS_TABLE     = os.environ.get("SETTINGS_TABLE", "")
 
 
 def _now() -> str:
@@ -113,6 +115,37 @@ TOOL_SPECS = [
                         "status":      {"type": "string", "enum": ["todo", "in_progress", "done"]},
                     },
                     "required": ["task_id"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "schedule_tasks",
+            "description": (
+                "Auto-schedule the user's unscheduled tasks into 30-minute slots inside "
+                "their working hours. Greedy first-fit; respects existing blocks. "
+                "Use this when the user asks to 'auto-schedule', 'plan my day', "
+                "'fit these in', or 'schedule everything'."
+            ),
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "task_ids": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional. Only schedule these task ids. Omit to schedule all unscheduled tasks.",
+                        },
+                        "horizon_days": {
+                            "type": "integer",
+                            "description": "How many days ahead to consider when finding free slots (default 14).",
+                        },
+                        "respect_priority": {
+                            "type": "boolean",
+                            "description": "If true (default), schedule high priority before low.",
+                        },
+                    },
                 }
             },
         }
@@ -930,6 +963,7 @@ def handle_tool(user_id: str, name: str, inputs: dict, local_date: str | None = 
         "create_task":          _create_task,
         "update_task":          _update_task,
         "list_tasks":           _list_tasks,
+        "schedule_tasks":       _schedule_tasks,
         "complete_task":        _complete_task,
         "delete_task":          _delete_task,
         "create_note":          _create_note,
@@ -1037,6 +1071,82 @@ def _create_task(user_id: str, inputs: dict) -> str:
     task = {k: v for k, v in task.items() if v is not None and v != ""}
     table.put_item(Item=task)
     return f"Created task: {task['title']} [pal-link:task:{task['task_id']}:Open task →]"
+
+
+def _schedule_tasks(user_id: str, inputs: dict) -> str:
+    import scheduler  # shared layer
+
+    table = db.get_table(TASKS_TABLE)
+    settings_item = {}
+    if SETTINGS_TABLE:
+        settings_item = (
+            db.get_table(SETTINGS_TABLE).get_item(Key={"user_id": user_id}).get("Item") or {}
+        )
+    cal = scheduler._coerce_calendar(settings_item)
+    horizon = inputs.get("horizon_days")
+    if isinstance(horizon, int) and horizon > 0:
+        cal["horizon_days"] = min(horizon, 60)
+
+    tz = scheduler._zone(cal["timezone"])
+    now = datetime.now(timezone.utc)
+
+    requested_ids = set(inputs.get("task_ids") or [])
+    all_tasks = db.query_by_user(table, user_id)
+
+    if requested_ids:
+        targets = [t for t in all_tasks if t.get("task_id") in requested_ids]
+    else:
+        targets = [t for t in all_tasks
+                   if t.get("status") in ("todo", "in_progress")
+                   and not t.get("scheduled_start")
+                   and not t.get("recurrence_rule")]
+
+    if not targets:
+        return "No tasks needed scheduling."
+
+    priority_rank = {"high": 0, "medium": 1, "low": 2}
+    if inputs.get("respect_priority", True):
+        targets.sort(key=lambda t: (
+            priority_rank.get(t.get("priority", "medium"), 1),
+            t.get("due_date") or "9999-12-31",
+            t.get("created_at") or "",
+        ))
+
+    busy = scheduler._busy_intervals(all_tasks)
+    scheduled, skipped = [], []
+
+    for task in targets:
+        try:
+            duration = int(task.get("duration_minutes") or cal["slot_minutes"])
+        except (TypeError, ValueError):
+            duration = cal["slot_minutes"]
+        slot = scheduler._find_free_slot(now, duration, cal, tz, busy,
+                                         exclude_id=task.get("task_id"))
+        if not slot:
+            skipped.append(task.get("title", task.get("task_id", "")))
+            continue
+        table.update_item(
+            Key={"user_id": user_id, "task_id": task["task_id"]},
+            UpdateExpression="SET scheduled_start = :s, duration_minutes = :d, updated_at = :u",
+            ExpressionAttributeValues={
+                ":s": slot.isoformat(),
+                ":d": duration,
+                ":u": now.isoformat(),
+            },
+        )
+        busy.append((slot.timestamp(), slot.timestamp() + duration * 60, task["task_id"]))
+        scheduled.append((task, slot))
+
+    if not scheduled:
+        return f"Couldn't fit any tasks into your schedule. Skipped: {len(skipped)}"
+
+    lines = [f"Scheduled {len(scheduled)} task(s):"]
+    for task, slot in scheduled:
+        local = slot.astimezone(tz).strftime("%a %b %d %H:%M")
+        lines.append(f"- {task.get('title', '')} at {local} [pal-link:task:{task['task_id']}]")
+    if skipped:
+        lines.append(f"Skipped {len(skipped)} (no free slot).")
+    return "\n".join(lines)
 
 
 def _list_tasks(user_id: str, inputs: dict) -> str:
