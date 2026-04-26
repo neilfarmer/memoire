@@ -7911,7 +7911,8 @@
       }
       tags.forEach(([tag, count]) => {
         const active = state.currentTag === tag ? "active" : "";
-        rows.push(`<div class="task-tag-row ${active}" onclick="taskTags.select(${JSON.stringify(tag)})"><span class="task-tag-name">${escHtml(tag)}</span><span class="task-tag-count">${count}</span></div>`);
+        const safe = escHtml(JSON.stringify(tag));
+        rows.push(`<div class="task-tag-row ${active}" onclick="taskTags.select(${safe})"><span class="task-tag-name">${escHtml(tag)}</span><span class="task-tag-count">${count}</span></div>`);
       });
       container.innerHTML = rows.join("");
     },
