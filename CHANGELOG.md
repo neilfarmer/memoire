@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.1](https://github.com/neilfarmer/memoire/compare/v0.12.0...v0.12.1) (2026-04-27)
+
+
+### Bug Fixes
+
+* **fitbit:** prefer latest log_date row in get_today ([48e4748](https://github.com/neilfarmer/memoire/commit/48e47484bef86265672c7add2321d7440055f2a2))
+* **fitbit:** prefer the latest log_date row in get_today, not max synced_at ([503396a](https://github.com/neilfarmer/memoire/commit/503396a5db3f1cd1b565c6c1daabb2da84dfdb05))
+
 ## [0.12.0](https://github.com/neilfarmer/memoire/compare/v0.11.0...v0.12.0) (2026-04-27)
 
 
