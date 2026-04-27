@@ -1,5 +1,49 @@
 # Changelog
 
+## [0.12.0](https://github.com/neilfarmer/memoire/compare/v0.11.0...v0.12.0) (2026-04-27)
+
+
+### Features
+
+* **ai:** harden prompts against injection and validate write-tool results ([#118](https://github.com/neilfarmer/memoire/issues/118)) ([5142106](https://github.com/neilfarmer/memoire/commit/514210675bff1653f9e717435fbe259caee9be01))
+* Fitbit integration + unified Health page (with auto-schedule UX) ([d9e9f83](https://github.com/neilfarmer/memoire/commit/d9e9f83131f302bd8f882f73e1555e86c03c34e5))
+* **fitbit:** add toggleable Fitbit integration with 30-min sync ([0acba6a](https://github.com/neilfarmer/memoire/commit/0acba6a732f9896953229e6ddb7f51e803127683))
+* **fitbit:** editorial dashboard redesign ([61ceb3d](https://github.com/neilfarmer/memoire/commit/61ceb3d1dcce5308c06fdd8acf9885f2e2c909c8))
+* **fitbit:** end-of-day finalization + trend charts over time ([94d96bb](https://github.com/neilfarmer/memoire/commit/94d96bb8e8af947ed9cadd31de90094f8a31f6f3))
+* **fitbit:** list per-meal food, switch to imperial units, quick-add food ([5c9b940](https://github.com/neilfarmer/memoire/commit/5c9b940c72da4d4f74cf34a72cac11bf20338388))
+* **fitbit:** live food search autocomplete ([839ec3a](https://github.com/neilfarmer/memoire/commit/839ec3ab4d4a8a10c20144997a6cacb133fc88e3))
+* **fitbit:** live-push today to health on every 30-min sync ([abe3ed9](https://github.com/neilfarmer/memoire/commit/abe3ed9f1fd4959a5f904197a156cfa8bc3352ed))
+* **health,nutrition:** enrich exercise schema, add summary + recent search ([#120](https://github.com/neilfarmer/memoire/issues/120)) ([e48467d](https://github.com/neilfarmer/memoire/commit/e48467d10a9135988785e40bd4f3e9b0e4b8cec9))
+* **health:** single-column page with stats → nutrition → exercise ([24e2dd2](https://github.com/neilfarmer/memoire/commit/24e2dd20e2e9965ba8fc4b8ed03aa8be621e6be3))
+* **health:** trends section with line charts on the Health page ([c2514eb](https://github.com/neilfarmer/memoire/commit/c2514eb6abc234ec586c36c83c07e19e7a4e064d))
+* **health:** unify nutrition + exercise + activity into one daily log ([349fb00](https://github.com/neilfarmer/memoire/commit/349fb00749e7b818b760efa6850d11e9cc66f188))
+* **links:** wiki-style [[type:id]] linking and backlinks graph ([#155](https://github.com/neilfarmer/memoire/issues/155)) ([5eb0ea6](https://github.com/neilfarmer/memoire/commit/5eb0ea6e42949c1a3744898b42c543f725cce716))
+* **nav:** persist current page in URL hash so refresh stays on view ([a65c3e8](https://github.com/neilfarmer/memoire/commit/a65c3e8bb324c1021567fd54cd33348d52e8e042))
+* **notifications:** browser notifications for tasks due today ([d94fb92](https://github.com/neilfarmer/memoire/commit/d94fb92cf65cab45dc3a0c918b14b9363362d253))
+* **tasks:** estimated time per task with settings-controlled default ([f5aaffb](https://github.com/neilfarmer/memoire/commit/f5aaffb78a9952c5cc95d11ffb9d8bb5af406daf))
+* **tasks:** scheduling fields, overlap detection, and auto-schedule endpoint ([#156](https://github.com/neilfarmer/memoire/issues/156)) ([5b76638](https://github.com/neilfarmer/memoire/commit/5b766383f6866b7df5f9e936d002539f94da6dff))
+
+
+### Bug Fixes
+
+* **fitbit:** GET /fitbit/today returns the latest stored entry ([bbccc39](https://github.com/neilfarmer/memoire/commit/bbccc39bee964b4c25fc99162482687c340c5569))
+* **fitbit:** let food autocomplete dropdown escape the quickadd card ([f5737a9](https://github.com/neilfarmer/memoire/commit/f5737a9a0a22757686f15bb1f75bbb54ae057e40))
+* **fitbit:** make food log refresh the page synchronously ([97998af](https://github.com/neilfarmer/memoire/commit/97998afc68d76197a81acc76ec2eed315b2bc8e2))
+* **fitbit:** pick the entry with the highest synced_at, not just newest log_date ([434e034](https://github.com/neilfarmer/memoire/commit/434e034f6e43ccf6946d0efc4d8e4dd8516cdb8b))
+* **fitbit:** skip Cognito auth callback when handling Fitbit OAuth code ([c02eafe](https://github.com/neilfarmer/memoire/commit/c02eafe2c3112bf8e8033b778a86e4387f02c2a0))
+* **fitbit:** union food entries across user-tz and next-day UTC date ([dcf6523](https://github.com/neilfarmer/memoire/commit/dcf65233fed78f2e4fa97d5b4874ee9f6f57b97e))
+* **fitbit:** use the user-local YYYY-MM-DD date in API calls ([b64ff09](https://github.com/neilfarmer/memoire/commit/b64ff09959889e8648b1d120d6870d97a0eda74c))
+* **fitbit:** use user timezone today + ranged weight + sleep fallback ([29805bc](https://github.com/neilfarmer/memoire/commit/29805bcd448b684f9da9e8927b39acfed062aa33))
+* **health:** defensive _exercise_totals against malformed sets ([be8f8c0](https://github.com/neilfarmer/memoire/commit/be8f8c0da7ccf95e9ff7b6a64d715e12a5a5c493))
+* **health:** polish unified page layout ([ae60211](https://github.com/neilfarmer/memoire/commit/ae60211a215715ba04c99e990f76af294268cd31))
+* **review:** address CodeRabbit feedback on PR [#157](https://github.com/neilfarmer/memoire/issues/157) ([88c00ee](https://github.com/neilfarmer/memoire/commit/88c00ee963d60a3eca7b9377d8fbe6b39b493168))
+* **settings:** merge browser-notification toggle into the existing Notifications section ([e68c762](https://github.com/neilfarmer/memoire/commit/e68c7626c39cfa4bed327b95b4a8299f9cff795c))
+* **tasks:** auto-schedule UX — surface results, show scheduled chip, schedule overdue tasks ([e798166](https://github.com/neilfarmer/memoire/commit/e798166c6438e82b26eaa80c5b0fa68a1270c116))
+* **tasks:** escape tag JSON in sidebar onclick attribute ([76fced8](https://github.com/neilfarmer/memoire/commit/76fced8e51460849789ba750b7a4bbf74c925300))
+* **tasks:** month calendar view shows scheduled tasks without a due date ([35eceea](https://github.com/neilfarmer/memoire/commit/35eceea8a8fb57210af9fb774afc5a478d30411c))
+* **tasks:** week blocks use grid placement, no longer escape into sidebar ([038d440](https://github.com/neilfarmer/memoire/commit/038d440d2b1b7e1ac6be60b6c2d61b0b3e9f25a8))
+* **tasks:** week view defaults to upcoming Monday on weekends ([8e0348c](https://github.com/neilfarmer/memoire/commit/8e0348c037d49923253007229b4196bfc71e6bfa))
+
 ## [0.11.0](https://github.com/neilfarmer/memoire/compare/v0.10.0...v0.11.0) (2026-04-22)
 
 
