@@ -124,12 +124,6 @@ data "archive_file" "lambda_health" {
   output_path = "${path.module}/../build/health.zip"
 }
 
-data "archive_file" "lambda_nutrition" {
-  type        = "zip"
-  source_dir  = "${path.module}/../lambda/nutrition"
-  output_path = "${path.module}/../build/nutrition.zip"
-}
-
 data "archive_file" "lambda_goals" {
   type        = "zip"
   source_dir  = "${path.module}/../lambda/goals"

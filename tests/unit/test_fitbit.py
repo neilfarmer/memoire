@@ -18,6 +18,7 @@ os.environ["SETTINGS_TABLE"]        = "test-fitbit-settings"
 os.environ["FITBIT_SYNC_FUNCTION"]  = "test-fitbit-sync"
 os.environ["FITBIT_CLIENT_ID"]      = "test-client-id"
 os.environ["FITBIT_CLIENT_SECRET"]  = "test-client-secret"
+os.environ["HEALTH_TABLE"]          = "test-fitbit-health"
 
 oauth = load_lambda("fitbit", "oauth.py")
 crud  = load_lambda("fitbit", "crud.py")
@@ -31,6 +32,7 @@ sync_handler = load_lambda("fitbit_sync", "handler.py")
 TOKENS_TABLE_NAME   = sync_handler.TOKENS_TABLE
 DATA_TABLE_NAME     = sync_handler.DATA_TABLE
 SETTINGS_TABLE_NAME = sync_handler.SETTINGS_TABLE
+HEALTH_TABLE_NAME   = sync_handler.HEALTH_TABLE
 
 
 @pytest.fixture
@@ -40,6 +42,8 @@ def tables():
         make_table(ddb, TOKENS_TABLE_NAME,   "user_id")
         make_table(ddb, DATA_TABLE_NAME,     "user_id", "log_date")
         make_table(ddb, SETTINGS_TABLE_NAME, "user_id")
+        if HEALTH_TABLE_NAME:
+            make_table(ddb, HEALTH_TABLE_NAME, "user_id", "log_date")
         yield ddb
 
 

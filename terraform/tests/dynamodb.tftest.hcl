@@ -55,10 +55,6 @@ run "all_tables_have_pitr_enabled" {
     error_message = "health: PITR must be enabled"
   }
   assert {
-    condition     = aws_dynamodb_table.nutrition.point_in_time_recovery[0].enabled
-    error_message = "nutrition: PITR must be enabled"
-  }
-  assert {
     condition     = aws_dynamodb_table.goals.point_in_time_recovery[0].enabled
     error_message = "goals: PITR must be enabled"
   }

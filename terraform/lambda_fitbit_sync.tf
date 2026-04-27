@@ -33,6 +33,7 @@ resource "aws_lambda_function" "fitbit_sync" {
       FITBIT_TOKENS_TABLE  = aws_dynamodb_table.fitbit_tokens.name
       FITBIT_DATA_TABLE    = aws_dynamodb_table.fitbit_data.name
       SETTINGS_TABLE       = aws_dynamodb_table.settings.name
+      HEALTH_TABLE         = aws_dynamodb_table.health.name
       FITBIT_CLIENT_ID     = var.fitbit_client_id
       FITBIT_CLIENT_SECRET = var.fitbit_client_secret
     }
@@ -65,6 +66,7 @@ resource "aws_iam_role_policy" "fitbit_sync_dynamodb" {
         Resource = [
           aws_dynamodb_table.fitbit_tokens.arn,
           aws_dynamodb_table.fitbit_data.arn,
+          aws_dynamodb_table.health.arn,
         ]
       },
     ]

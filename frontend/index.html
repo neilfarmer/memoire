@@ -5906,6 +5906,165 @@
       .fb-ring { width: 124px; height: 124px; }
     }
 
+    /* ── Health page: unified activity + nutrition + exercise sections ── */
+    .hl-section {
+      margin: 18px 0 12px;
+    }
+    .hl-section-title {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .hl-activity-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    @media (max-width: 600px) {
+      .hl-activity-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .hl-stat {
+      background: color-mix(in oklab, var(--primary) 5%, var(--surface));
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .hl-stat-label {
+      font-family: var(--font-sans);
+      font-size: 10px;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .hl-stat-value {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -.5px;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hl-quickadd {
+      display: grid;
+      grid-template-columns: 1fr 80px 130px auto;
+      gap: 8px;
+      align-items: stretch;
+      margin-bottom: 10px;
+    }
+    @media (max-width: 600px) {
+      .hl-quickadd { grid-template-columns: 1fr 1fr; }
+      .hl-quickadd #hl-food-name { grid-column: 1 / -1; }
+      .hl-quickadd #hl-food-add  { grid-column: 1 / -1; }
+    }
+    .hl-input {
+      height: 34px;
+      padding: 0 10px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+    }
+    .hl-input:focus { outline: none; border-color: var(--accent); background: color-mix(in oklab, var(--accent) 6%, transparent); }
+    .hl-input--cal { font-variant-numeric: tabular-nums; text-align: right; }
+    .hl-totals {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: .3px;
+      margin-bottom: 8px;
+      font-variant-numeric: tabular-nums;
+    }
+    .hl-totals strong {
+      font-family: var(--font-display);
+      color: var(--text);
+      font-weight: 600;
+    }
+    .hl-food-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .hl-food-list:empty { display: none; }
+    .hl-food-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 6px;
+      border-bottom: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
+    }
+    .hl-food-item:last-child { border-bottom: none; }
+    .hl-food-meal {
+      display: inline-block;
+      padding: 2px 8px;
+      font-family: var(--font-sans);
+      font-size: 9px;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+      background: color-mix(in oklab, var(--accent) 14%, transparent);
+      color: color-mix(in oklab, var(--accent) 90%, var(--text));
+    }
+    .hl-food-meal[data-source="fitbit"] { background: color-mix(in oklab, var(--positive) 14%, transparent); color: color-mix(in oklab, var(--positive) 80%, var(--text)); }
+    .hl-food-name {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: -.1px;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .hl-food-cal {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .hl-food-del {
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      cursor: pointer;
+      transition: color .15s, border-color .15s, background .15s;
+    }
+    .hl-food-del:hover { color: var(--danger); border-color: var(--danger); background: color-mix(in oklab, var(--danger) 8%, transparent); }
+    .hl-empty {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--muted);
+      font-style: italic;
+      padding: 12px 6px;
+      text-align: center;
+    }
+    .hl-food-list:not(:empty) + .hl-empty { display: none; }
+
     /* History / trend charts */
     .fb-history-section {
       grid-column: 1 / -1;
@@ -6373,10 +6532,10 @@
                                         <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
                                     </svg>
                                 </span>
-                                <span class="sb-hdr-label">Exercise</span>
+                                <span class="sb-hdr-label">Health</span>
                             </div>
                         </div>
-                        <div class="sb-section" id="sb-nutrition">
+                        <div class="sb-section hidden" id="sb-nutrition">
                             <div class="sb-section-hdr" onclick="sidebar.navigate('nutrition')">
                                 <span class="sb-icon">
                                     <svg viewBox="0 0 24 24"
@@ -6853,6 +7012,61 @@
                                 </div>
                                 <div class="health-editor-body">
                                     <div id="health-totals" class="nutrition-totals hidden"></div>
+
+                                    <div class="hl-section">
+                                        <div class="hl-section-title">Activity</div>
+                                        <div id="hl-activity-grid" class="hl-activity-grid">
+                                            <div class="hl-stat">
+                                                <span class="hl-stat-label">Steps</span>
+                                                <span class="hl-stat-value" id="hl-stat-steps">—</span>
+                                            </div>
+                                            <div class="hl-stat">
+                                                <span class="hl-stat-label">Distance</span>
+                                                <span class="hl-stat-value" id="hl-stat-distance">—</span>
+                                            </div>
+                                            <div class="hl-stat">
+                                                <span class="hl-stat-label">Active min</span>
+                                                <span class="hl-stat-value" id="hl-stat-active">—</span>
+                                            </div>
+                                            <div class="hl-stat">
+                                                <span class="hl-stat-label">Burned</span>
+                                                <span class="hl-stat-value" id="hl-stat-burned">—</span>
+                                            </div>
+                                            <div class="hl-stat">
+                                                <span class="hl-stat-label">Sleep</span>
+                                                <span class="hl-stat-value" id="hl-stat-sleep">—</span>
+                                            </div>
+                                            <div class="hl-stat">
+                                                <span class="hl-stat-label">Weight</span>
+                                                <span class="hl-stat-value" id="hl-stat-weight">—</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="hl-section">
+                                        <div class="hl-section-title">Nutrition</div>
+                                        <div class="hl-quickadd">
+                                            <input type="text" id="hl-food-name" class="hl-input" placeholder="Add food..." autocomplete="off" />
+                                            <input type="number" id="hl-food-cal" class="hl-input hl-input--cal" min="0" max="10000" placeholder="kcal" inputmode="numeric" />
+                                            <select id="hl-food-meal" class="hl-input">
+                                                <option value="1">Breakfast</option>
+                                                <option value="2">Morning Snack</option>
+                                                <option value="3">Lunch</option>
+                                                <option value="4">Afternoon Snack</option>
+                                                <option value="5">Dinner</option>
+                                                <option value="7" selected>Anytime</option>
+                                            </select>
+                                            <button class="btn btn-primary btn-sm" id="hl-food-add">+ Add</button>
+                                        </div>
+                                        <div class="hl-totals" id="hl-food-totals"></div>
+                                        <ul class="hl-food-list" id="hl-food-list"></ul>
+                                        <p class="hl-empty" id="hl-food-empty">No food logged yet.</p>
+                                    </div>
+
+                                    <div class="hl-section">
+                                        <div class="hl-section-title">Exercise</div>
+                                    </div>
+
                                     <div id="health-repeat-picker" class="repeat-picker hidden">
                                         <input class="repeat-picker-search"
                                                id="health-repeat-search"
@@ -8992,8 +9206,7 @@
       journal.load();    // preload so global search finds journal entries immediately
       habits.load();     // preload so home dashboard shows habit status
       goals.load();      // preload so home dashboard shows active goals
-      health.load();     // preload so journal calendar shows exercise dots
-      nutrition.load();  // preload so journal calendar shows nutrition dots
+      health.load();     // preload so journal calendar shows exercise + nutrition dots
       favs.load();       // preload so heart buttons show correct state on feeds page
       if (state.settings?.home_finances_widget) finances.load(); // preload for home widget if enabled
       if (state.settings?.browser_notifications_enabled) browserNotifier.start();
@@ -11732,8 +11945,9 @@
       const { year, month } = journal.calMonth;
       const today          = todayStr();
       const dates          = journal.entryDates();
-      const healthDates    = new Set((health.logs    || []).map(l => l.log_date));
-      const nutritionDates = new Set((nutrition.logs || []).map(l => l.log_date));
+      const healthLogs     = health.logs || [];
+      const healthDates    = new Set(healthLogs.filter(l => (l.exercise_count || 0) > 0).map(l => l.log_date));
+      const nutritionDates = new Set(healthLogs.filter(l => (l.food_count || 0) > 0 || (l.calories_in || 0) > 0).map(l => l.log_date));
       const monthNames     = ["January","February","March","April","May","June",
                               "July","August","September","October","November","December"];
 
@@ -11887,14 +12101,14 @@
       Promise.allSettled([
         api.call("GET", `/journal/${dateStr}`).catch(() => null),
         api.call("GET", `/health/${dateStr}`).catch(() => null),
-        api.call("GET", `/nutrition/${dateStr}`).catch(() => null),
-      ]).then(([jRes, hRes, nRes]) => {
+      ]).then(([jRes, hRes]) => {
         const sections = $("day-view-sections");
         if (!sections) return;
 
         const entry    = jRes.status === "fulfilled" ? jRes.value : null;
         const workout  = hRes.status === "fulfilled" ? hRes.value : null;
-        const nutLog   = nRes.status === "fulfilled" ? nRes.value : null;
+        // Health and nutrition share one row now; foods live on the same record.
+        const nutLog   = workout && (workout.foods || []).length > 0 ? workout : null;
 
         // Journal
         let journalBody;
@@ -11962,7 +12176,7 @@
         // Nutrition
         let nutritionBody;
         if (nutLog) {
-          const meals = nutLog.meals || [];
+          const meals = nutLog.foods || [];
           const mealItems = meals.map(m => `
             <div class="day-view-meal">
               <span>${escHtml(m.name || "Unnamed meal")}</span>
@@ -12012,7 +12226,7 @@
           <div class="day-section">
             <div class="day-section-header">
               <span>Nutrition</span>
-              <button class="btn btn-secondary btn-sm" onclick="pages.show('nutrition'); nutrition.openLog('${dateStr}')">
+              <button class="btn btn-secondary btn-sm" onclick="pages.show('health'); health.openLog('${dateStr}')">
                 ${nutLog ? "Edit" : "Log"}
               </button>
             </div>
@@ -12282,6 +12496,8 @@
     async openLog(dateStr) {
       health.currentDate = dateStr;
       health.exercises   = [];
+      health.foods       = [];
+      health.totals      = {};
       $("health-date-label").textContent = new Date(dateStr + "T12:00:00").toLocaleDateString(undefined, { weekday:"long", year:"numeric", month:"long", day:"numeric" });
       $("health-notes").value = "";
       $("health-save-status").textContent = "";
@@ -12290,6 +12506,8 @@
       $("health-editor").classList.remove("hidden");
       $("health-repeat-picker").classList.add("hidden");
       health.renderExercises();
+      health.renderActivityTotals();
+      health.renderFoods();
       health.renderCalendar();
       health.renderLogList();
 
@@ -12297,14 +12515,114 @@
         const log = await api.call("GET", `/health/${dateStr}`);
         if (log) {
           health.exercises = log.exercises || [];
+          health.foods     = log.foods     || [];
+          health.totals    = {
+            steps:          log.steps,
+            distance_mi:    log.distance_mi,
+            active_minutes: log.active_minutes,
+            calories_out:   log.calories_out,
+            weight:         log.weight,
+            weight_unit:    log.weight_unit,
+            weight_date:    log.weight_date,
+            sleep:          log.sleep,
+          };
           $("health-notes").value = log.notes || "";
           $("health-delete-btn").classList.remove("hidden");
           health.renderExercises();
+          health.renderActivityTotals();
+          health.renderFoods();
         }
       } catch (e) {
         if (!e.message?.includes("not found") && !e.message?.includes("404")) {
           console.error("Failed to load health log:", e);
         }
+      }
+    },
+
+    renderActivityTotals() {
+      const t = health.totals || {};
+      const fmt = n => (n == null || n === "") ? "—" : Number(n).toLocaleString();
+      $("hl-stat-steps").textContent    = fmt(t.steps);
+      $("hl-stat-distance").textContent = (t.distance_mi != null && t.distance_mi !== "")
+        ? `${Number(t.distance_mi).toFixed(2)} mi` : "—";
+      $("hl-stat-active").textContent   = fmt(t.active_minutes);
+      $("hl-stat-burned").textContent   = t.calories_out ? `${fmt(t.calories_out)} kcal` : "—";
+      const sleepMin = t.sleep && t.sleep.minutes_asleep ? Number(t.sleep.minutes_asleep) : 0;
+      $("hl-stat-sleep").textContent    = sleepMin
+        ? `${Math.floor(sleepMin / 60)}h ${sleepMin % 60}m` : "—";
+      $("hl-stat-weight").textContent   = t.weight
+        ? `${Number(t.weight).toFixed(1)} ${t.weight_unit || "lb"}` : "—";
+    },
+
+    renderFoods() {
+      const ul    = $("hl-food-list");
+      const empty = $("hl-food-empty");
+      const totalsEl = $("hl-food-totals");
+      const foods = health.foods || [];
+      if (!foods.length) {
+        ul.innerHTML = "";
+        empty.classList.remove("hidden");
+        totalsEl.textContent = "";
+        return;
+      }
+      empty.classList.add("hidden");
+      const meals = { 1: "Breakfast", 2: "Snack", 3: "Lunch", 4: "Snack", 5: "Dinner", 7: "Anytime" };
+      const order = [1, 2, 3, 4, 5, 7];
+      const sorted = [...foods].sort((a, b) => {
+        const ai = order.indexOf(Number(a.meal_type_id) || 7);
+        const bi = order.indexOf(Number(b.meal_type_id) || 7);
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      });
+      ul.innerHTML = sorted.map(f => {
+        const meal = meals[Number(f.meal_type_id) || 7] || "Anytime";
+        const cal  = f.calories ? `${Number(f.calories).toLocaleString()} kcal` : "";
+        const src  = (f.source || "manual");
+        const id   = escHtml(f.id || "");
+        return `<li class="hl-food-item">
+          <span class="hl-food-meal" data-source="${escHtml(src)}">${escHtml(meal)}</span>
+          <span class="hl-food-name">${escHtml(f.name || "")}</span>
+          <span class="hl-food-cal">${escHtml(cal)}</span>
+          <button class="hl-food-del" type="button" title="Remove" onclick="health.deleteFood('${id}')" aria-label="Remove">&times;</button>
+        </li>`;
+      }).join("");
+      const totalCal = foods.reduce((s, f) => s + (Number(f.calories) || 0), 0);
+      totalsEl.innerHTML = `<strong>${totalCal.toLocaleString()}</strong> kcal · ${foods.length} item${foods.length === 1 ? "" : "s"}`;
+    },
+
+    async addFood() {
+      if (!health.currentDate) return;
+      const name = $("hl-food-name").value.trim();
+      const cal  = parseInt($("hl-food-cal").value, 10);
+      const meal = parseInt($("hl-food-meal").value, 10) || 7;
+      if (!name) { $("hl-food-name").focus(); return; }
+      if (!Number.isFinite(cal) || cal < 0) { $("hl-food-cal").focus(); return; }
+      const btn = $("hl-food-add");
+      btn.disabled = true;
+      try {
+        const r = await api.call("POST", `/health/${health.currentDate}/foods`, {
+          name, calories: cal, meal_type_id: meal, source: "manual",
+        });
+        $("hl-food-name").value = "";
+        $("hl-food-cal").value  = "";
+        if (r && r.log) {
+          health.foods = r.log.foods || [];
+          health.renderFoods();
+        }
+      } catch (e) {
+        alert(e.message || "Failed to add food");
+      } finally {
+        btn.disabled = false;
+      }
+    },
+
+    async deleteFood(foodId) {
+      if (!health.currentDate || !foodId) return;
+      try {
+        await api.call("DELETE", `/health/${health.currentDate}/foods/${encodeURIComponent(foodId)}`);
+        health.foods = (health.foods || []).filter(f => f.id !== foodId);
+        health.renderFoods();
+      } catch (e) {
+        alert(e.message || "Failed to remove food");
       }
     },
 
@@ -12538,7 +12856,17 @@
   $("health-repeat-btn").addEventListener("click", () => health.openRepeat());
   $("health-repeat-search").addEventListener("input", (e) => health.renderRepeatResults(e.target.value));
 
-  // ── Nutrition ─────────────────────────────────────────────────────────────────
+  $("hl-food-add")?.addEventListener("click", () => health.addFood());
+  ["hl-food-name", "hl-food-cal"].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); health.addFood(); }
+    });
+  });
+
+  // ── Nutrition (legacy module, retained for journal-calendar callsites; ──
+  // ── nutrition is now a section inside the Health page and is fed by the
+  // ── unified /health table. The module here is a no-op shell.) ──────────
 
   const nutrition = {
     logs: [],
@@ -12547,16 +12875,12 @@
     calMonth: null,
 
     async load() {
-      showLoader("nutrition-loader");
+      // Data now lives in the unified health table; nothing to fetch here.
+      nutrition.logs = [];
+      return;
+      // eslint-disable-next-line no-unreachable
       try {
-        nutrition.logs = await api.call("GET", "/nutrition") || [];
-        const nToday = todayStr();
-        nutrition.logs.sort((a, b) => {
-          const aFuture = (a.log_date || "") > nToday;
-          const bFuture = (b.log_date || "") > nToday;
-          if (aFuture !== bFuture) return aFuture ? 1 : -1;
-          return (b.log_date || "").localeCompare(a.log_date || "");
-        });
+        nutrition.logs = [];
       } catch (e) {
         console.error("Failed to load nutrition logs:", e);
       } finally {
@@ -15019,7 +15343,7 @@
     },
 
     expand(name) {
-      const sections = ["home", "tasks", "notes", "journal", "habits", "goals", "health", "nutrition", "finances", "feeds", "bookmarks", "diagrams", "fitbit", "settings", "admin", "profile"];
+      const sections = ["home", "tasks", "notes", "journal", "habits", "goals", "health", "finances", "feeds", "bookmarks", "diagrams", "fitbit", "settings", "admin", "profile"];
       sections.forEach(s => {
         const sect = $(`sb-${s}`);
         const body = $(`sb-${s}-body`);
@@ -15047,7 +15371,7 @@
 
   const pages = {
     current: "home",
-    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "bookmarks", "diagrams", "finances", "fitbit", "settings", "admin", "profile", "pal-chats"],
+    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "feeds", "favorites", "bookmarks", "diagrams", "finances", "fitbit", "settings", "admin", "profile", "pal-chats"],
 
     fromHash() {
       const raw = (location.hash || "").replace(/^#\/?/, "");

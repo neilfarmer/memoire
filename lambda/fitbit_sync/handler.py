@@ -31,6 +31,8 @@ CLIENT_SECRET     = os.environ.get("FITBIT_CLIENT_SECRET", "")
 TOKENS_TABLE      = os.environ["FITBIT_TOKENS_TABLE"]
 DATA_TABLE        = os.environ["FITBIT_DATA_TABLE"]
 SETTINGS_TABLE    = os.environ["SETTINGS_TABLE"]
+HEALTH_TABLE      = os.environ.get("HEALTH_TABLE", "")
+SOURCE            = "fitbit"
 
 _dynamodb = boto3.resource("dynamodb")
 
@@ -107,12 +109,13 @@ def _sync_user(user_id: str) -> bool:
             Key={"user_id": user_id, "log_date": yesterday}
         ).get("Item")
         if existing and not existing.get("finalized"):
-            _write_day(user_id, access_token, yesterday, finalized=True)
+            summary = _write_day(user_id, access_token, yesterday, finalized=True)
+            _push_to_health(user_id, yesterday, summary)
             logger.info("Finalized end-of-day row for %s on %s", user_id, yesterday)
     return True
 
 
-def _write_day(user_id: str, access_token: str, log_date: str, finalized: bool) -> None:
+def _write_day(user_id: str, access_token: str, log_date: str, finalized: bool) -> dict:
     summary = _fetch_summary(access_token, log_date)
     summary = _to_dynamo_safe(summary)
     summary.update({
@@ -122,6 +125,59 @@ def _write_day(user_id: str, access_token: str, log_date: str, finalized: bool) 
         "finalized": bool(finalized),
     })
     _dynamodb.Table(DATA_TABLE).put_item(Item=summary)
+    return summary
+
+
+def _push_to_health(user_id: str, log_date: str, summary: dict) -> None:
+    """Write Fitbit's view of a day into the canonical health table.
+
+    Foods tagged source=fitbit are replaced wholesale; manual + other-source
+    entries are kept untouched. Activity scalars (steps, sleep, weight, ...)
+    are upserted.
+    """
+    if not HEALTH_TABLE:
+        return
+    table    = _dynamodb.Table(HEALTH_TABLE)
+    existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item") or {}
+
+    # Foods: keep non-fitbit, append fitbit
+    keep_foods = [f for f in (existing.get("foods") or []) if f.get("source") != SOURCE]
+    fitbit_foods = []
+    for entry in (summary.get("foods") or []):
+        food = dict(entry)
+        food["source"] = SOURCE
+        if "log_id" in food and "fitbit_log_id" not in food:
+            food["fitbit_log_id"] = food.pop("log_id")
+        food.setdefault("id", food.get("fitbit_log_id") or _new_uuid())
+        fitbit_foods.append(food)
+
+    now = _now_iso()
+    item = {
+        **existing,
+        "user_id":    user_id,
+        "log_date":   log_date,
+        "foods":      keep_foods + fitbit_foods,
+        "exercises":  list(existing.get("exercises") or []),
+        "created_at": existing.get("created_at") or now,
+        "updated_at": now,
+    }
+
+    # Activity scalars (only set what Fitbit reported, leave the rest alone)
+    for k in ("steps", "active_minutes", "calories_out", "distance_mi",
+              "weight", "weight_unit", "weight_date"):
+        if k in summary and summary[k] not in (None, ""):
+            item[k] = summary[k]
+    if "sleep" in summary and summary["sleep"]:
+        item["sleep"] = summary["sleep"]
+
+    table.put_item(Item=item)
+    logger.info("Pushed Fitbit data to health for %s on %s (foods=%d)",
+                user_id, log_date, len(fitbit_foods))
+
+
+def _new_uuid() -> str:
+    import uuid
+    return str(uuid.uuid4())
 
 
 def _user_today(access_token: str) -> str:

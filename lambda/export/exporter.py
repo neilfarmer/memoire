@@ -17,7 +17,6 @@ JOURNAL_TABLE      = os.environ["JOURNAL_TABLE"]
 NOTES_TABLE        = os.environ["NOTES_TABLE"]
 FOLDERS_TABLE      = os.environ["FOLDERS_TABLE"]
 HEALTH_TABLE       = os.environ["HEALTH_TABLE"]
-NUTRITION_TABLE    = os.environ["NUTRITION_TABLE"]
 GOALS_TABLE        = os.environ["GOALS_TABLE"]
 HABITS_TABLE       = os.environ["HABITS_TABLE"]
 HABIT_LOGS_TABLE   = os.environ["HABIT_LOGS_TABLE"]
@@ -354,7 +353,6 @@ def build_export(user_id: str) -> dict:
     notes        = db.query_by_user(db.get_table(NOTES_TABLE),        user_id)
     folders      = db.query_by_user(db.get_table(FOLDERS_TABLE),      user_id)
     health       = db.query_by_user(db.get_table(HEALTH_TABLE),       user_id)
-    nutrition    = db.query_by_user(db.get_table(NUTRITION_TABLE),    user_id)
     goals        = db.query_by_user(db.get_table(GOALS_TABLE),        user_id)
     habits       = db.query_by_user(db.get_table(HABITS_TABLE),       user_id)
 
@@ -420,11 +418,6 @@ def build_export(user_id: str) -> dict:
             for log in sorted(health, key=lambda x: x.get("log_date", "")):
                 filename, content = _health_file(log)
                 zf.writestr(f"{root}/health/{filename}", content)
-
-            # ── nutrition/YYYY-MM-DD.md ───────────────────────────────────────
-            for log in sorted(nutrition, key=lambda x: x.get("log_date", "")):
-                filename, content = _nutrition_file(log)
-                zf.writestr(f"{root}/nutrition/{filename}", content)
 
             # ── goals/goals.md ────────────────────────────────────────────────
             zf.writestr(f"{root}/goals/goals.md", _goals_markdown(goals))

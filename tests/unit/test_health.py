@@ -307,3 +307,122 @@ class TestRecentExercises:
         r = crud.recent_exercises(USER, {"days": 30})
         names = [x["name"] for x in json.loads(r["body"])]
         assert names == ["Recent"]
+
+
+# ── Foods / activity totals (unified health daily log) ───────────────────────
+
+class TestFoods:
+    def test_add_food_creates_row(self, tbl):
+        r = crud.add_food(USER, "2024-05-20", {"name": "Apple", "calories": 95})
+        assert r["statusCode"] == 200
+        body = json.loads(r["body"])
+        assert body["food"]["name"]   == "Apple"
+        assert body["food"]["source"] == "manual"
+        assert body["food"]["calories"] == 95
+        assert len(body["log"]["foods"]) == 1
+
+    def test_add_food_appends_to_existing(self, tbl):
+        crud.add_food(USER, "2024-05-20", {"name": "Apple", "calories": 95})
+        crud.add_food(USER, "2024-05-20", {"name": "Banana", "calories": 105})
+        r = crud.get_log(USER, "2024-05-20")
+        body = json.loads(r["body"])
+        names = [f["name"] for f in body["foods"]]
+        assert names == ["Apple", "Banana"]
+
+    def test_add_food_requires_name(self, tbl):
+        r = crud.add_food(USER, "2024-05-20", {"calories": 100})
+        assert r["statusCode"] == 400
+
+    def test_add_food_invalid_date(self, tbl):
+        r = crud.add_food(USER, "bad-date", {"name": "Apple"})
+        assert r["statusCode"] == 400
+
+    def test_delete_food_removes_entry(self, tbl):
+        crud.add_food(USER, "2024-05-20", {"id": "f1", "name": "Apple"})
+        crud.add_food(USER, "2024-05-20", {"id": "f2", "name": "Banana"})
+        r = crud.delete_food(USER, "2024-05-20", "f1")
+        assert r["statusCode"] == 204
+        body = json.loads(crud.get_log(USER, "2024-05-20")["body"])
+        assert [f["id"] for f in body["foods"]] == ["f2"]
+
+    def test_delete_food_missing_returns_404(self, tbl):
+        crud.add_food(USER, "2024-05-20", {"id": "f1", "name": "Apple"})
+        r = crud.delete_food(USER, "2024-05-20", "missing-id")
+        assert r["statusCode"] == 404
+
+    def test_delete_food_no_log(self, tbl):
+        r = crud.delete_food(USER, "2024-05-20", "f1")
+        assert r["statusCode"] == 404
+
+
+class TestActivityTotals:
+    def test_set_steps_and_sleep(self, tbl):
+        r = crud.set_activity_totals(USER, "2024-05-20", {
+            "steps":          8000,
+            "calories_out":   2500,
+            "active_minutes": 45,
+            "weight":         180.5,
+            "weight_unit":    "lb",
+            "weight_date":    "2024-05-19",
+            "sleep": {"minutes_asleep": 480, "efficiency": 92},
+        })
+        assert r["statusCode"] == 200
+        body = json.loads(crud.get_log(USER, "2024-05-20")["body"])
+        assert int(body["steps"]) == 8000
+        assert body["weight_unit"] == "lb"
+        assert int(body["sleep"]["minutes_asleep"]) == 480
+        assert int(body["sleep"]["efficiency"])     == 92
+
+    def test_set_does_not_clobber_foods(self, tbl):
+        crud.add_food(USER, "2024-05-20", {"name": "Apple"})
+        crud.set_activity_totals(USER, "2024-05-20", {"steps": 1000})
+        body = json.loads(crud.get_log(USER, "2024-05-20")["body"])
+        assert int(body["steps"]) == 1000
+        assert len(body["foods"]) == 1
+        assert body["foods"][0]["name"] == "Apple"
+
+    def test_invalid_date(self, tbl):
+        r = crud.set_activity_totals(USER, "bad", {"steps": 100})
+        assert r["statusCode"] == 400
+
+
+class TestMergeSourceFoods:
+    def test_replaces_only_matching_source(self, tbl):
+        crud.add_food(USER, "2024-05-20", {"name": "Manual Apple", "source": "manual"})
+        crud.add_food(USER, "2024-05-20", {"name": "Old Fitbit",   "source": "fitbit"})
+        r = crud.merge_source_foods(USER, "2024-05-20", "fitbit", [
+            {"name": "New Fitbit Food", "calories": 200, "fitbit_log_id": "abc"},
+        ])
+        assert r["statusCode"] == 200
+        body = json.loads(crud.get_log(USER, "2024-05-20")["body"])
+        names = sorted(f["name"] for f in body["foods"])
+        assert names == ["Manual Apple", "New Fitbit Food"]
+        for f in body["foods"]:
+            if f["name"] == "New Fitbit Food":
+                assert f["source"] == "fitbit"
+                assert f["fitbit_log_id"] == "abc"
+
+    def test_invalid_source_rejected(self, tbl):
+        r = crud.merge_source_foods(USER, "2024-05-20", "BAD SOURCE", [])
+        assert r["statusCode"] == 400
+
+    def test_empty_list_clears_source(self, tbl):
+        crud.add_food(USER, "2024-05-20", {"name": "Old Fitbit",  "source": "fitbit"})
+        crud.add_food(USER, "2024-05-20", {"name": "Manual",      "source": "manual"})
+        crud.merge_source_foods(USER, "2024-05-20", "fitbit", [])
+        body = json.loads(crud.get_log(USER, "2024-05-20")["body"])
+        assert [f["name"] for f in body["foods"]] == ["Manual"]
+
+
+class TestNormalizeFood:
+    def test_unknown_source_falls_back_to_manual(self):
+        out = crud._normalize_food({"name": "Apple", "source": "MIXED CASE INVALID"})
+        assert out["source"] == "manual"
+
+    def test_carries_meal_type_id(self):
+        out = crud._normalize_food({"name": "Eggs", "meal_type_id": 1})
+        assert out["meal_type_id"] == 1
+
+    def test_drops_invalid_meal_type(self):
+        out = crud._normalize_food({"name": "Eggs", "meal_type_id": 99})
+        assert "meal_type_id" not in out

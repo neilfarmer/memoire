@@ -1,6 +1,20 @@
-"""Health/exercise log CRUD operations against DynamoDB."""
+"""Health log CRUD: combined exercise + nutrition + activity totals.
+
+Daily-log shape:
+  {
+    user_id, log_date,
+    exercises: [...],
+    foods:     [{id, source, name, brand, calories, amount, unit,
+                 meal_type_id, fitbit_log_id, logged_at, ...}],
+    steps, distance_mi, active_minutes, calories_out,
+    weight, weight_unit, weight_date,
+    sleep: {minutes_asleep, efficiency, ...},
+    notes, created_at, updated_at,
+  }
+"""
 
 import os
+import re
 import uuid
 from datetime import date as _date, timedelta
 from decimal import Decimal, InvalidOperation
@@ -12,6 +26,29 @@ from utils import now_iso, validate_date
 TABLE_NAME = os.environ["TABLE_NAME"]
 
 EXERCISE_TYPES = {"strength", "cardio", "mobility"}
+
+# Source attribution. Health is a vendor-agnostic interface; any plugin
+# (fitbit, apple_health, google_fit, ...) can feed entries by tagging their
+# records with `source: "<plugin>"`. Manual UI entries default to "manual";
+# the AI assistant uses "assistant". The set is open — new vendors plug in
+# without code changes.
+SOURCE_RE = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
+DEFAULT_SOURCE = "manual"
+
+MEAL_TYPE_IDS  = {1, 2, 3, 4, 5, 7}
+NUMERIC_FOOD_FIELDS = (
+    "calories",
+    "protein",   "protein_g",
+    "carbs",     "carbs_g",
+    "fat",       "fat_g",
+    "fiber",     "fiber_g",
+    "sugar",     "sugar_g",
+    "sodium",    "sodium_mg",
+)
+ACTIVITY_NUMERIC_FIELDS = (
+    "steps", "active_minutes", "calories_out",
+    "distance_mi", "weight",
+)
 
 
 def _table():
@@ -56,18 +93,105 @@ def _exercise_totals(exercises: list) -> dict:
 
 def _summary(item: dict) -> dict:
     exercises = item.get("exercises", [])
-    totals = _exercise_totals(exercises)
+    foods     = item.get("foods", [])
+    totals    = _exercise_totals(exercises)
+    food_cal  = sum(int((f.get("calories") or 0)) for f in foods)
     return {
         "user_id":        item["user_id"],
         "log_date":       item["log_date"],
         "exercise_count": len(exercises),
+        "food_count":     len(foods),
         "total_volume":   totals["total_volume"],
         "total_duration": totals["total_duration"],
         "total_distance": totals["total_distance"],
+        "calories_in":    food_cal,
+        "calories_out":   int(item.get("calories_out") or 0),
+        "steps":          int(item.get("steps") or 0),
+        "weight":         item.get("weight"),
+        "sleep_minutes":  int((item.get("sleep") or {}).get("minutes_asleep") or 0),
         "notes":          item.get("notes", ""),
         "created_at":     item.get("created_at", ""),
         "updated_at":     item.get("updated_at", ""),
     }
+
+
+def _normalize_food(f: dict) -> dict | None:
+    """Validate a food entry. Returns sanitized dict or None if invalid."""
+    name = (f.get("name") or "").strip()
+    if not name:
+        return None
+
+    out: dict = {
+        "id":   f.get("id") or str(uuid.uuid4()),
+        "name": name,
+    }
+
+    source = (f.get("source") or DEFAULT_SOURCE).strip().lower()
+    out["source"] = source if SOURCE_RE.match(source) else DEFAULT_SOURCE
+
+    brand = (f.get("brand") or "").strip()
+    if brand:
+        out["brand"] = brand
+
+    for field in NUMERIC_FOOD_FIELDS:
+        if field in f:
+            val = _to_decimal(f[field])
+            if val is not None and val >= 0:
+                out[field] = val
+
+    amount = _to_decimal(f.get("amount"))
+    if amount is not None and amount > 0:
+        out["amount"] = amount
+
+    unit = (f.get("unit") or "").strip()
+    if unit:
+        out["unit"] = unit
+
+    try:
+        meal_type_id = int(f.get("meal_type_id") or 0)
+        if meal_type_id in MEAL_TYPE_IDS:
+            out["meal_type_id"] = meal_type_id
+    except (TypeError, ValueError):
+        pass
+
+    for k in ("fitbit_log_id", "logged_at"):
+        v = f.get(k)
+        if v not in (None, ""):
+            out[k] = str(v)
+
+    return out
+
+
+def _normalize_activity_totals(body: dict) -> dict:
+    """Pick + coerce just the activity scalar fields the caller wants to set."""
+    out: dict = {}
+    for field in ACTIVITY_NUMERIC_FIELDS:
+        if field in body and body[field] not in (None, ""):
+            val = _to_decimal(body[field])
+            if val is not None and val >= 0:
+                out[field] = val
+    if "weight_unit" in body:
+        wu = (body.get("weight_unit") or "").strip().lower()
+        if wu in ("lb", "kg"):
+            out["weight_unit"] = wu
+    if "weight_date" in body:
+        wd = (body.get("weight_date") or "").strip()
+        if wd:
+            out["weight_date"] = wd
+    sleep = body.get("sleep")
+    if isinstance(sleep, dict):
+        clean = {}
+        for k in ("duration_min", "minutes_asleep", "minutes_awake", "efficiency"):
+            if k in sleep:
+                v = _to_decimal(sleep[k])
+                if v is not None and v >= 0:
+                    clean[k] = v
+        for k in ("start_time", "end_time", "date"):
+            if sleep.get(k):
+                clean[k] = str(sleep[k])
+        if clean:
+            out["sleep"] = clean
+    return out
 
 
 def _normalize_exercise(ex: dict) -> dict | None:
@@ -140,24 +264,142 @@ def upsert_log(user_id: str, log_date: str, body: dict) -> dict:
         return error(err)
 
     table    = _table()
-    existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
+    existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item") or {}
 
-    exercises = []
-    for raw in body.get("exercises", []):
-        clean = _normalize_exercise(raw)
-        if clean is not None:
-            exercises.append(clean)
+    exercises = [c for c in (_normalize_exercise(e) for e in (body.get("exercises") or [])) if c]
+    foods     = [c for c in (_normalize_food(f)     for f in (body.get("foods")     or [])) if c]
 
     item = {
+        **existing,
         "user_id":    user_id,
         "log_date":   log_date,
         "exercises":  exercises,
-        "notes":      body.get("notes", ""),
-        "created_at": (existing or {}).get("created_at") or now_iso(),
+        "foods":      foods,
+        "notes":      body.get("notes", existing.get("notes", "")),
+        "created_at": existing.get("created_at") or now_iso(),
+        "updated_at": now_iso(),
+    }
+    item.update(_normalize_activity_totals(body))
+    table.put_item(Item=item)
+    return ok(item)
+
+
+def add_food(user_id: str, log_date: str, body: dict) -> dict:
+    """Append a single food entry to the day's log. Creates the row if needed."""
+    err = validate_date(log_date)
+    if err:
+        return error(err)
+
+    food = _normalize_food(body or {})
+    if food is None:
+        return error("name is required")
+
+    table    = _table()
+    existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item") or {}
+    foods    = list(existing.get("foods") or [])
+    foods.append(food)
+
+    item = {
+        **existing,
+        "user_id":    user_id,
+        "log_date":   log_date,
+        "foods":      foods,
+        "exercises":  list(existing.get("exercises") or []),
+        "created_at": existing.get("created_at") or now_iso(),
+        "updated_at": now_iso(),
+    }
+    table.put_item(Item=item)
+    return ok({"food": food, "log": item})
+
+
+def delete_food(user_id: str, log_date: str, food_id: str) -> dict:
+    err = validate_date(log_date)
+    if err:
+        return error(err)
+    if not food_id:
+        return error("food_id required")
+
+    table    = _table()
+    existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
+    if not existing:
+        return not_found("Log")
+    foods = list(existing.get("foods") or [])
+    new_foods = [f for f in foods if f.get("id") != food_id]
+    if len(new_foods) == len(foods):
+        return not_found("Food")
+    existing["foods"]      = new_foods
+    existing["updated_at"] = now_iso()
+    table.put_item(Item=existing)
+    return no_content()
+
+
+def set_activity_totals(user_id: str, log_date: str, body: dict) -> dict:
+    """Upsert just the activity scalar fields (steps/sleep/weight/etc).
+
+    Used by the Fitbit nightly push and any user-driven manual edit. Does not
+    touch foods or exercises arrays.
+    """
+    err = validate_date(log_date)
+    if err:
+        return error(err)
+    table    = _table()
+    existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item") or {}
+    item = {
+        **existing,
+        "user_id":    user_id,
+        "log_date":   log_date,
+        "exercises":  list(existing.get("exercises") or []),
+        "foods":      list(existing.get("foods") or []),
+        "created_at": existing.get("created_at") or now_iso(),
+        "updated_at": now_iso(),
+    }
+    item.update(_normalize_activity_totals(body))
+    table.put_item(Item=item)
+    return ok(item)
+
+
+def merge_source_foods(user_id: str, log_date: str, source: str, foods: list) -> dict:
+    """Replace foods tagged with the given source. Other sources untouched.
+
+    Vendor-agnostic: any plugin (fitbit, apple_health, google_fit, ...) calls
+    this with its own source identifier. Manual + other-vendor entries are
+    preserved verbatim.
+    """
+    err = validate_date(log_date)
+    if err:
+        return error(err)
+    src = (source or "").strip().lower()
+    if not SOURCE_RE.match(src):
+        return error("source must match [a-z][a-z0-9_]{0,31}")
+
+    table    = _table()
+    existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item") or {}
+    keep     = [f for f in (existing.get("foods") or []) if f.get("source") != src]
+    new_src  = []
+    for raw in foods or []:
+        food = dict(raw)
+        food["source"] = src
+        clean = _normalize_food(food)
+        if clean is not None:
+            new_src.append(clean)
+
+    item = {
+        **existing,
+        "user_id":    user_id,
+        "log_date":   log_date,
+        "foods":      keep + new_src,
+        "exercises":  list(existing.get("exercises") or []),
+        "created_at": existing.get("created_at") or now_iso(),
         "updated_at": now_iso(),
     }
     table.put_item(Item=item)
     return ok(item)
+
+
+# Backwards compatibility wrapper for callers using the old name. Removable
+# once nothing references it.
+def merge_fitbit_foods(user_id: str, log_date: str, fitbit_foods: list) -> dict:
+    return merge_source_foods(user_id, log_date, "fitbit", fitbit_foods)
 
 
 def delete_log(user_id: str, log_date: str) -> dict:

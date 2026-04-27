@@ -244,32 +244,6 @@ resource "aws_dynamodb_table" "health" {
   }
 }
 
-# ── Nutrition table ───────────────────────────────────────────────────────────
-#
-# PK: user_id   (String) — Cognito sub claim
-# SK: log_date  (String) — YYYY-MM-DD, one log per user per day
-
-resource "aws_dynamodb_table" "nutrition" {
-  name         = "${local.name_prefix}-nutrition"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "user_id"
-  range_key    = "log_date"
-
-  attribute {
-    name = "user_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "log_date"
-    type = "S"
-  }
-
-  point_in_time_recovery {
-    enabled = true
-  }
-}
-
 # ── Goals table ───────────────────────────────────────────────────────────────
 #
 # PK: user_id  (String) — Cognito sub claim

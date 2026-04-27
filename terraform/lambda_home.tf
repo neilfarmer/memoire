@@ -33,7 +33,6 @@ resource "aws_lambda_function" "home" {
       FOLDERS_TABLE           = aws_dynamodb_table.note_folders.name
       HABITS_TABLE            = aws_dynamodb_table.habits.name
       HEALTH_TABLE            = aws_dynamodb_table.health.name
-      NUTRITION_TABLE         = aws_dynamodb_table.nutrition.name
       SETTINGS_TABLE          = aws_dynamodb_table.settings.name
       EVENTS_TABLE            = aws_dynamodb_table.assistant_events.name
       ADMIN_USER_IDS          = var.admin_user_ids
@@ -83,7 +82,6 @@ resource "aws_iam_role_policy" "home_admin_stats" {
           aws_dynamodb_table.note_folders.arn,
           aws_dynamodb_table.habits.arn,
           aws_dynamodb_table.health.arn,
-          aws_dynamodb_table.nutrition.arn,
           aws_dynamodb_table.settings.arn,
         ]
       },
