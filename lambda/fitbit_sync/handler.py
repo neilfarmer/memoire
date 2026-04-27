@@ -93,15 +93,35 @@ def _sync_user(user_id: str) -> bool:
         return False
 
     log_date = _user_today(access_token)
-    summary  = _fetch_summary(access_token, log_date)
-    summary  = _to_dynamo_safe(summary)
+    _write_day(user_id, access_token, log_date, finalized=False)
+
+    # End-of-day finalize: if yesterday's row exists and isn't finalized,
+    # do one last pull and freeze it. This runs at most once per day, on
+    # the first sync after midnight in the user's local timezone.
+    try:
+        yesterday = (datetime.fromisoformat(log_date).date() - timedelta(days=1)).isoformat()
+    except ValueError:
+        yesterday = None
+    if yesterday:
+        existing = _dynamodb.Table(DATA_TABLE).get_item(
+            Key={"user_id": user_id, "log_date": yesterday}
+        ).get("Item")
+        if existing and not existing.get("finalized"):
+            _write_day(user_id, access_token, yesterday, finalized=True)
+            logger.info("Finalized end-of-day row for %s on %s", user_id, yesterday)
+    return True
+
+
+def _write_day(user_id: str, access_token: str, log_date: str, finalized: bool) -> None:
+    summary = _fetch_summary(access_token, log_date)
+    summary = _to_dynamo_safe(summary)
     summary.update({
         "user_id":   user_id,
         "log_date":  log_date,
         "synced_at": int(time.time()),
+        "finalized": bool(finalized),
     })
     _dynamodb.Table(DATA_TABLE).put_item(Item=summary)
-    return True
 
 
 def _user_today(access_token: str) -> str:

@@ -307,6 +307,45 @@ class TestLogFood:
         assert b"foodName=" not in captured["data"]
 
 
+class TestHistory:
+    def test_empty(self, tables):
+        r = crud.get_history(USER, {})
+        assert r["statusCode"] == 200
+        body = json.loads(r["body"])
+        assert body["rows"] == []
+
+    def test_returns_recent_rows_excluding_today(self, tables):
+        with freeze_time("2026-04-27"):
+            for date_str, steps in [
+                ("2026-04-25", 5000),
+                ("2026-04-26", 7000),
+                ("2026-04-27", 3000),  # today — excluded by default
+            ]:
+                tables.Table(DATA_TABLE_NAME).put_item(Item={
+                    "user_id":  USER,
+                    "log_date": date_str,
+                    "steps":    steps,
+                    "finalized": True,
+                })
+            r = crud.get_history(USER, {"days": 30})
+        body = json.loads(r["body"])
+        dates = [row["log_date"] for row in body["rows"]]
+        assert dates == ["2026-04-25", "2026-04-26"]
+        assert body["rows"][0]["steps"] == 5000
+
+    def test_include_today_flag(self, tables):
+        with freeze_time("2026-04-27"):
+            tables.Table(DATA_TABLE_NAME).put_item(Item={
+                "user_id":  USER,
+                "log_date": "2026-04-27",
+                "steps":    100,
+            })
+            r = crud.get_history(USER, {"days": 7, "include_today": "1"})
+        body = json.loads(r["body"])
+        assert len(body["rows"]) == 1
+        assert body["rows"][0]["log_date"] == "2026-04-27"
+
+
 class TestSearchFoods:
     def _connect(self, tables):
         tables.Table(TOKENS_TABLE_NAME).put_item(Item={
@@ -420,7 +459,7 @@ class TestSync:
             },
         }
         with patch.object(sync_handler, "_fetch_summary", return_value=fake_summary):
-            with freeze_time("2026-04-26"):
+            with patch.object(sync_handler, "_user_today", return_value="2026-04-26"):
                 ok = sync_handler._sync_user(USER)
         assert ok is True
 
@@ -429,6 +468,43 @@ class TestSync:
         ).get("Item")
         assert item["steps"] == 7500
         assert item["sleep"]["minutes_asleep"] == 450
+        assert item["finalized"] is False
+
+    def test_sync_finalizes_yesterday(self, tables):
+        self._seed_tokens(tables)
+        tables.Table(DATA_TABLE_NAME).put_item(Item={
+            "user_id":   USER,
+            "log_date":  "2026-04-25",
+            "steps":     1000,
+            "synced_at": 100,
+            "finalized": False,
+        })
+        with patch.object(sync_handler, "_fetch_summary", return_value={"steps": 9000}):
+            with patch.object(sync_handler, "_user_today", return_value="2026-04-26"):
+                sync_handler._sync_user(USER)
+        finalized_row = tables.Table(DATA_TABLE_NAME).get_item(
+            Key={"user_id": USER, "log_date": "2026-04-25"}
+        )["Item"]
+        assert finalized_row["steps"] == 9000
+        assert finalized_row["finalized"] is True
+
+    def test_sync_skips_already_finalized_yesterday(self, tables):
+        self._seed_tokens(tables)
+        tables.Table(DATA_TABLE_NAME).put_item(Item={
+            "user_id":   USER,
+            "log_date":  "2026-04-25",
+            "steps":     5000,
+            "synced_at": 100,
+            "finalized": True,
+        })
+        with patch.object(sync_handler, "_fetch_summary", return_value={"steps": 1}) as m:
+            with patch.object(sync_handler, "_user_today", return_value="2026-04-26"):
+                sync_handler._sync_user(USER)
+        assert m.call_count == 1  # only today, not yesterday
+        unchanged = tables.Table(DATA_TABLE_NAME).get_item(
+            Key={"user_id": USER, "log_date": "2026-04-25"}
+        )["Item"]
+        assert unchanged["steps"] == 5000
 
     def test_sync_user_without_tokens(self, tables):
         assert sync_handler._sync_user(USER) is False
@@ -467,7 +543,7 @@ class TestSync:
         self._seed_tokens(tables)
         # Disable settings scan path by giving a direct user_ids payload.
         with patch.object(sync_handler, "_fetch_summary", return_value={"steps": 100}):
-            with freeze_time("2026-04-26"):
+            with patch.object(sync_handler, "_user_today", return_value="2026-04-26"):
                 result = sync_handler.lambda_handler({"user_ids": [USER]}, None)
         assert result == {"synced": 1, "total": 1}
 

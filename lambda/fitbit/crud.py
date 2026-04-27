@@ -6,7 +6,7 @@ import os
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import date as _date
+from datetime import date as _date, timedelta
 
 import boto3
 from boto3.dynamodb.conditions import Key
@@ -182,6 +182,49 @@ def log_food(user_id: str, body: dict) -> dict:
         "logged": True,
         "food":   data.get("foodLog") or data,
     })
+
+
+def get_history(user_id: str, query_params: dict) -> dict:
+    """Return per-day Fitbit data for the trailing N days (default 30, max 365).
+
+    Excludes today by default unless include_today=1, since today is still
+    mutable. Used by the dashboard's history charts.
+    """
+    qp = query_params or {}
+    try:
+        days = int(qp.get("days") or 30)
+    except (TypeError, ValueError):
+        days = 30
+    days = max(1, min(days, 365))
+    include_today = (qp.get("include_today") or "").lower() in ("1", "true", "yes")
+
+    today = _date.today()
+    cutoff = (today - timedelta(days=days)).isoformat()
+
+    resp = db.get_table(DATA_TABLE).query(
+        KeyConditionExpression=(
+            Key("user_id").eq(user_id) & Key("log_date").gte(cutoff)
+        ),
+        ScanIndexForward=True,
+    )
+    rows = []
+    for item in resp.get("Items") or []:
+        if not include_today and item.get("log_date") == today.isoformat():
+            continue
+        item.pop("user_id", None)
+        rows.append({
+            "log_date":       item.get("log_date"),
+            "steps":          int(item.get("steps", 0) or 0),
+            "calories_in":    int(item.get("calories_in", 0) or 0),
+            "calories_out":   int(item.get("calories_out", 0) or 0),
+            "distance_mi":    float(item.get("distance_mi", 0) or 0),
+            "active_minutes": int(item.get("active_minutes", 0) or 0),
+            "weight":         float(item.get("weight")) if item.get("weight") not in (None, "") else None,
+            "sleep_minutes":  int(((item.get("sleep") or {}).get("minutes_asleep")) or 0),
+            "sleep_efficiency": int(((item.get("sleep") or {}).get("efficiency")) or 0),
+            "finalized":      bool(item.get("finalized", False)),
+        })
+    return ok({"days": days, "rows": rows})
 
 
 def search_foods(user_id: str, query_params: dict) -> dict:
