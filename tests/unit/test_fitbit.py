@@ -135,23 +135,43 @@ class TestCrud:
 
     def test_get_today_returns_latest_entry(self, tables):
         tables.Table(DATA_TABLE_NAME).put_item(Item={
-            "user_id":  USER,
-            "log_date": "2026-04-25",
-            "steps":    1000,
+            "user_id":   USER,
+            "log_date":  "2026-04-25",
+            "steps":     1000,
+            "synced_at": 100,
         })
         tables.Table(DATA_TABLE_NAME).put_item(Item={
-            "user_id":  USER,
-            "log_date": "2026-04-26",
-            "steps":    5000,
+            "user_id":   USER,
+            "log_date":  "2026-04-26",
+            "steps":     5000,
+            "synced_at": 200,
         })
-        # Query the entry under the user's most recent log_date even if UTC
-        # "today" is later than the stored date.
         with freeze_time("2026-04-27"):
             r = crud.get_today(USER)
         body = json.loads(r["body"])
         assert body["log_date"] == "2026-04-26"
         assert body["steps"] == 5000
         assert "user_id" not in body
+
+    def test_get_today_picks_most_recent_synced_at(self, tables):
+        # A stale row with a higher log_date but older synced_at should not
+        # win over the freshly-synced row from the prior day.
+        tables.Table(DATA_TABLE_NAME).put_item(Item={
+            "user_id":   USER,
+            "log_date":  "2026-04-27",
+            "steps":     0,
+            "synced_at": 100,
+        })
+        tables.Table(DATA_TABLE_NAME).put_item(Item={
+            "user_id":   USER,
+            "log_date":  "2026-04-26",
+            "steps":     8868,
+            "synced_at": 500,
+        })
+        r = crud.get_today(USER)
+        body = json.loads(r["body"])
+        assert body["log_date"] == "2026-04-26"
+        assert body["steps"] == 8868
 
     def test_get_status_disconnected(self, tables):
         r = crud.get_status(USER)

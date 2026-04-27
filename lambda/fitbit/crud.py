@@ -25,18 +25,21 @@ def get_today(user_id: str) -> dict:
     """Return the most recent Fitbit data entry for the user.
 
     The sync Lambda stores entries keyed by the user's local date (derived
-    from their Fitbit profile timezone), not UTC, so we query the latest
-    log_date and return that. The frontend treats it as "today's data."
+    from their Fitbit profile timezone), not UTC. The latest log_date is
+    usually correct, but a stale row from a different day can outrank
+    the freshest one lexicographically (e.g. 2026-04-27 zeros vs
+    2026-04-26 today data when the user's TZ is behind UTC), so we pull
+    the last few entries and pick the one with the highest synced_at.
     """
     resp = db.get_table(DATA_TABLE).query(
         KeyConditionExpression=Key("user_id").eq(user_id),
         ScanIndexForward=False,
-        Limit=1,
+        Limit=7,
     )
     items = resp.get("Items") or []
     if not items:
         return ok({"log_date": _today_iso(), "synced": False})
-    item = items[0]
+    item = max(items, key=lambda i: int(i.get("synced_at", 0) or 0))
     item.pop("user_id", None)
     return ok(item)
 
