@@ -760,3 +760,172 @@ class TestPushToHealth:
             Key={"user_id": USER, "log_date": "2026-04-26"}
         ).get("Item")
         assert row is None
+
+
+# ── Router dispatch + log_food error branches + refresh_if_needed ────────────
+
+class TestRouterDispatch:
+    """Exercise every route branch so the dispatcher itself is exercised."""
+
+    def test_unknown_route_returns_404(self):
+        r = router.route("GET /fitbit/missing", USER, {}, {}, {})
+        assert r["statusCode"] == 404
+
+    def test_status_route(self, tables):
+        r = router.route("GET /fitbit/status", USER, {}, {}, {})
+        assert r["statusCode"] == 200
+
+    def test_disconnect_route_when_not_connected(self, tables):
+        r = router.route("POST /fitbit/disconnect", USER, {}, {}, {})
+        assert r["statusCode"] == 404
+
+    def test_sync_route_requires_connection(self, tables):
+        r = router.route("POST /fitbit/sync", USER, {}, {}, {})
+        assert r["statusCode"] == 400
+
+    def test_auth_start_route(self):
+        r = router.route("GET /fitbit/auth/start", USER, {},
+                         {}, {"redirect_uri": "https://example.com/cb"})
+        assert r["statusCode"] == 200
+
+    def test_auth_callback_route_missing_fields(self, tables):
+        r = router.route("POST /fitbit/auth/callback", USER, {}, {}, {})
+        assert r["statusCode"] == 400
+
+    def test_food_route_dispatches(self, tables):
+        # No tokens → expected 400 with "Fitbit not connected"
+        r = router.route("POST /fitbit/food", USER, {"name": "Apple", "calories": 95}, {}, {})
+        assert r["statusCode"] == 400
+
+    def test_food_search_route_short_query(self, tables):
+        r = router.route("GET /fitbit/food/search", USER, {}, {}, {"q": "a"})
+        assert r["statusCode"] == 200
+
+    def test_history_route(self, tables):
+        r = router.route("GET /fitbit/history", USER, {}, {}, {"days": "7"})
+        assert r["statusCode"] == 200
+
+
+class TestLogFoodValidation:
+    def _connect(self, tables):
+        tables.Table(TOKENS_TABLE_NAME).put_item(Item={
+            "user_id":       USER,
+            "access_token":  "AT",
+            "refresh_token": "RT",
+            "expires_at":    int(time.time()) + 3600,
+        })
+
+    def test_invalid_meal_type_string(self, tables):
+        self._connect(tables)
+        r = crud.log_food(USER, {"name": "Apple", "calories": 50, "meal_type_id": "lunch"})
+        assert r["statusCode"] == 400
+
+    def test_food_id_invalid_unit_id(self, tables):
+        self._connect(tables)
+        r = crud.log_food(USER, {"food_id": "1", "unit_id": "bad"})
+        assert r["statusCode"] == 400
+
+    def test_food_id_invalid_amount(self, tables):
+        self._connect(tables)
+        r = crud.log_food(USER, {"food_id": "1", "amount": "huge"})
+        assert r["statusCode"] == 400
+
+    def test_food_id_negative_amount(self, tables):
+        self._connect(tables)
+        r = crud.log_food(USER, {"food_id": "1", "amount": -2})
+        assert r["statusCode"] == 400
+
+    def test_calories_non_integer(self, tables):
+        self._connect(tables)
+        r = crud.log_food(USER, {"name": "Apple", "calories": "lots"})
+        assert r["statusCode"] == 400
+
+    def test_calories_too_high(self, tables):
+        self._connect(tables)
+        r = crud.log_food(USER, {"name": "Apple", "calories": 99999})
+        assert r["statusCode"] == 400
+
+    def test_log_food_http_error_returns_502(self, tables):
+        import urllib.error as ue
+        self._connect(tables)
+        err = ue.HTTPError("u", 400, "Bad Request", {}, None)
+        err.read = lambda: b"err"
+        with patch.object(crud.urllib.request, "urlopen", side_effect=err):
+            r = crud.log_food(USER, {"name": "Apple", "calories": 50})
+        assert r["statusCode"] == 502
+
+    def test_log_food_network_error_returns_502(self, tables):
+        self._connect(tables)
+        with patch.object(crud.urllib.request, "urlopen", side_effect=ConnectionError("x")):
+            r = crud.log_food(USER, {"name": "Apple", "calories": 50})
+        assert r["statusCode"] == 502
+
+
+class TestOAuthRefreshIfNeeded:
+    def test_returns_existing_when_far_from_expiry(self):
+        item = {"access_token": "AT", "expires_at": int(time.time()) + 3600}
+        assert oauth.refresh_if_needed(USER, item) == "AT"
+
+    def test_returns_none_when_no_refresh_token(self):
+        item = {"access_token": "AT", "expires_at": int(time.time()) - 100, "refresh_token": ""}
+        assert oauth.refresh_if_needed(USER, item) is None
+
+    def test_returns_none_when_refresh_request_fails(self, tables):
+        item = {
+            "user_id":       USER,
+            "access_token":  "AT",
+            "refresh_token": "RT",
+            "expires_at":    int(time.time()) - 100,
+        }
+        with patch.object(oauth, "_token_request", return_value=None):
+            assert oauth.refresh_if_needed(USER, item) is None
+
+    def test_store_tokens_preserves_fitbit_user_id(self, tables):
+        # Seed an existing connection with a fitbit_user_id and connected_at
+        tables.Table(TOKENS_TABLE_NAME).put_item(Item={
+            "user_id":        USER,
+            "access_token":   "OLD_AT",
+            "refresh_token":  "OLD_RT",
+            "expires_at":     int(time.time()) + 1000,
+            "fitbit_user_id": "FB-USER-XYZ",
+            "connected_at":   "2026-04-01T00:00:00+00:00",
+            "scope":          "activity sleep",
+        })
+        # Refresh response from Fitbit typically lacks user_id and may not
+        # rotate refresh_token.
+        refreshed = oauth._store_tokens(USER, {
+            "access_token": "NEW_AT",
+            "expires_in":   3600,
+        })
+        assert refreshed["fitbit_user_id"] == "FB-USER-XYZ"
+        assert refreshed["connected_at"]   == "2026-04-01T00:00:00+00:00"
+        assert refreshed["refresh_token"]  == "OLD_RT"   # preserved
+        assert refreshed["scope"]          == "activity sleep"
+        assert refreshed["access_token"]   == "NEW_AT"
+
+
+class TestSearchFoodsErrorPaths:
+    def _connect(self, tables):
+        tables.Table(TOKENS_TABLE_NAME).put_item(Item={
+            "user_id":       USER,
+            "access_token":  "AT",
+            "refresh_token": "RT",
+            "expires_at":    int(time.time()) + 3600,
+        })
+
+    def test_http_error_returns_502(self, tables):
+        import urllib.error as ue
+        self._connect(tables)
+        err = ue.HTTPError("u", 400, "Bad Request", {}, None)
+        err.read = lambda: b"err"
+        with patch.object(crud.urllib.request, "urlopen", side_effect=err):
+            r = crud.search_foods(USER, {"q": "apple"})
+        assert r["statusCode"] == 502
+
+    def test_network_error_returns_502(self, tables):
+        self._connect(tables)
+        with patch.object(crud.urllib.request, "urlopen", side_effect=ConnectionError("x")):
+            r = crud.search_foods(USER, {"q": "apple"})
+        assert r["statusCode"] == 502
+
+
