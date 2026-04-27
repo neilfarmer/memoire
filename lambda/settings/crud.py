@@ -25,6 +25,10 @@ CALENDAR_DEFAULTS = {
     "default_duration_minutes": 60,
 }
 
+FITBIT_DEFAULTS = {
+    "enabled": False,
+}
+
 DEFAULTS = {
     "dark_mode":                    False,
     "ntfy_url":                     "",
@@ -38,6 +42,7 @@ DEFAULTS = {
     "supervisor_enabled":           True,
     "browser_notifications_enabled": False,
     "calendar":                     CALENDAR_DEFAULTS,
+    "fitbit":                       FITBIT_DEFAULTS,
 }
 
 ALLOWED_KEYS = set(DEFAULTS.keys())
@@ -129,7 +134,21 @@ def _merge_calendar(item: dict) -> dict:
     if not isinstance(cal, dict):
         cal = {}
     item["calendar"] = {**CALENDAR_DEFAULTS, **cal}
+
+    fitbit = item.get("fitbit") or {}
+    if not isinstance(fitbit, dict):
+        fitbit = {}
+    item["fitbit"] = {**FITBIT_DEFAULTS, **fitbit}
     return item
+
+
+def _validate_fitbit(val: dict) -> tuple[str | None, dict | None]:
+    if not isinstance(val, dict):
+        return "fitbit must be an object", None
+    out = dict(FITBIT_DEFAULTS)
+    if "enabled" in val:
+        out["enabled"] = bool(val["enabled"])
+    return None, out
 
 
 def get_settings(user_id: str) -> dict:
@@ -165,6 +184,12 @@ def update_settings(user_id: str, body: dict) -> dict:
         if err:
             return error(err)
         fields["calendar"] = normalized
+
+    if "fitbit" in fields:
+        err, normalized = _validate_fitbit(fields["fitbit"])
+        if err:
+            return error(err)
+        fields["fitbit"] = normalized
 
     update_expr, names, values = build_update_expression(fields)
 

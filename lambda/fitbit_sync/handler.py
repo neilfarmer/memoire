@@ -1,0 +1,247 @@
+"""Fitbit sync Lambda.
+
+Triggered every 30 min by EventBridge, or on-demand via direct invoke.
+For each connected user, refreshes tokens if needed, fetches today's
+activity / nutrition / weight / sleep summary, and writes the result to
+the fitbit_data table.
+
+Direct-invoke payload:
+  {"user_ids": ["<uid>", ...]}  — sync only these users (skips Fitbit toggle check).
+"""
+
+import base64
+import json
+import logging
+import os
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from datetime import date as _date
+from decimal import Decimal
+
+import boto3
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+CLIENT_ID         = os.environ.get("FITBIT_CLIENT_ID", "")
+CLIENT_SECRET     = os.environ.get("FITBIT_CLIENT_SECRET", "")
+TOKENS_TABLE      = os.environ["FITBIT_TOKENS_TABLE"]
+DATA_TABLE        = os.environ["FITBIT_DATA_TABLE"]
+SETTINGS_TABLE    = os.environ["SETTINGS_TABLE"]
+
+_dynamodb = boto3.resource("dynamodb")
+
+API_BASE  = "https://api.fitbit.com"
+TOKEN_URL = f"{API_BASE}/oauth2/token"
+
+# Refresh access token if it expires within this many seconds.
+REFRESH_LEEWAY_SECONDS = 300
+
+
+def lambda_handler(event, context):
+    payload  = event if isinstance(event, dict) else {}
+    user_ids = payload.get("user_ids")
+
+    if user_ids:
+        targets = [uid for uid in user_ids if isinstance(uid, str) and uid]
+        logger.info("Direct sync for %d user(s)", len(targets))
+    else:
+        targets = _users_with_fitbit_enabled()
+        logger.info("Scheduled sync — %d enabled user(s)", len(targets))
+
+    synced = 0
+    for user_id in targets:
+        try:
+            if _sync_user(user_id):
+                synced += 1
+        except Exception as exc:
+            logger.exception("Sync failed for user %s: %s", user_id, exc)
+
+    return {"synced": synced, "total": len(targets)}
+
+
+def _users_with_fitbit_enabled() -> list[str]:
+    """Scan settings table for users whose fitbit.enabled flag is True."""
+    table = _dynamodb.Table(SETTINGS_TABLE)
+    users: list[str] = []
+    resp = table.scan()
+    while True:
+        for item in resp.get("Items", []):
+            fitbit = item.get("fitbit") or {}
+            if isinstance(fitbit, dict) and fitbit.get("enabled"):
+                uid = item.get("user_id")
+                if uid:
+                    users.append(uid)
+        if "LastEvaluatedKey" not in resp:
+            break
+        resp = table.scan(ExclusiveStartKey=resp["LastEvaluatedKey"])
+    return users
+
+
+def _sync_user(user_id: str) -> bool:
+    tokens_table = _dynamodb.Table(TOKENS_TABLE)
+    item = tokens_table.get_item(Key={"user_id": user_id}).get("Item")
+    if not item:
+        logger.info("No Fitbit tokens for user %s — skipping", user_id)
+        return False
+
+    access_token = _ensure_fresh_access_token(item)
+    if not access_token:
+        return False
+
+    log_date = _date.today().isoformat()
+    summary  = _fetch_summary(access_token, log_date)
+    summary  = _to_dynamo_safe(summary)
+    summary.update({
+        "user_id":   user_id,
+        "log_date":  log_date,
+        "synced_at": int(time.time()),
+    })
+    _dynamodb.Table(DATA_TABLE).put_item(Item=summary)
+    return True
+
+
+def _to_dynamo_safe(value):
+    """Recursively convert floats to Decimal so put_item accepts the payload."""
+    if isinstance(value, float):
+        return Decimal(str(value))
+    if isinstance(value, dict):
+        return {k: _to_dynamo_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_to_dynamo_safe(v) for v in value]
+    return value
+
+
+def _ensure_fresh_access_token(item: dict) -> str | None:
+    """Return a usable access token, refreshing it if it is close to expiry."""
+    expires_at = int(item.get("expires_at", 0))
+    if expires_at - int(time.time()) > REFRESH_LEEWAY_SECONDS:
+        return item.get("access_token", "")
+
+    refresh_token = item.get("refresh_token", "")
+    user_id       = item.get("user_id", "")
+    if not refresh_token:
+        return None
+
+    refreshed = _token_request({
+        "client_id":     CLIENT_ID,
+        "grant_type":    "refresh_token",
+        "refresh_token": refresh_token,
+    })
+    if refreshed is None:
+        logger.warning("Token refresh failed for user %s", user_id)
+        return None
+
+    new_item = {
+        **item,
+        "access_token":  refreshed.get("access_token", ""),
+        "refresh_token": refreshed.get("refresh_token", refresh_token),
+        "expires_at":    int(time.time()) + int(refreshed.get("expires_in", 28800)),
+        "scope":         refreshed.get("scope", item.get("scope", "")),
+        "updated_at":    _now_iso(),
+    }
+    _dynamodb.Table(TOKENS_TABLE).put_item(Item=new_item)
+    return new_item["access_token"]
+
+
+def _fetch_summary(access_token: str, log_date: str) -> dict:
+    """Aggregate the four data points the Fitbit page shows. Each call is best-effort."""
+    out: dict = {}
+
+    activity = _fitbit_get(access_token, f"/1/user/-/activities/date/{log_date}.json")
+    if activity:
+        summary = activity.get("summary") or {}
+        out["steps"]        = int(summary.get("steps", 0) or 0)
+        out["calories_out"] = int(summary.get("caloriesOut", 0) or 0)
+        out["distance_km"]  = _activity_distance_km(summary.get("distances") or [])
+        out["active_minutes"] = int(
+            (summary.get("veryActiveMinutes") or 0)
+            + (summary.get("fairlyActiveMinutes") or 0)
+        )
+
+    food = _fitbit_get(access_token, f"/1/user/-/foods/log/date/{log_date}.json")
+    if food:
+        food_summary = food.get("summary") or {}
+        out["calories_in"] = int(food_summary.get("calories", 0) or 0)
+        out["food_water_ml"] = int(food_summary.get("water", 0) or 0)
+
+    weight = _fitbit_get(access_token, f"/1/user/-/body/log/weight/date/{log_date}.json")
+    if weight:
+        entries = weight.get("weight") or []
+        if entries:
+            latest = entries[-1]
+            out["weight"] = float(latest.get("weight", 0) or 0)
+            out["weight_unit"] = "kg"
+
+    sleep = _fitbit_get(access_token, f"/1.2/user/-/sleep/date/{log_date}.json")
+    if sleep:
+        sleeps = sleep.get("sleep") or []
+        main   = next((s for s in sleeps if s.get("isMainSleep")), sleeps[0] if sleeps else None)
+        if main:
+            out["sleep"] = {
+                "duration_min":     int((main.get("duration", 0) or 0) // 60000),
+                "efficiency":       int(main.get("efficiency", 0) or 0),
+                "minutes_asleep":   int(main.get("minutesAsleep", 0) or 0),
+                "minutes_awake":    int(main.get("minutesAwake", 0) or 0),
+                "start_time":       main.get("startTime", ""),
+                "end_time":         main.get("endTime", ""),
+            }
+
+    return out
+
+
+def _activity_distance_km(distances: list) -> float:
+    for d in distances:
+        if d.get("activity") == "total":
+            try:
+                return float(d.get("distance", 0) or 0)
+            except (TypeError, ValueError):
+                return 0.0
+    return 0.0
+
+
+def _fitbit_get(access_token: str, path: str) -> dict | None:
+    req = urllib.request.Request(
+        f"{API_BASE}{path}",
+        headers={"Authorization": f"Bearer {access_token}"},
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310 — fixed Fitbit HTTPS endpoint
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        logger.warning("Fitbit GET %s failed: %s %s", path, exc.code, exc.reason)
+        return None
+    except Exception as exc:
+        logger.error("Fitbit GET %s error: %s", path, exc)
+        return None
+
+
+def _token_request(params: dict) -> dict | None:
+    payload = urllib.parse.urlencode(params).encode()
+    basic   = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
+    req = urllib.request.Request(
+        TOKEN_URL,
+        data=payload,
+        headers={
+            "Authorization": f"Basic {basic}",
+            "Content-Type":  "application/x-www-form-urlencoded",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310 — fixed Fitbit HTTPS endpoint
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        logger.warning("Fitbit token refresh failed: %s %s", exc.code, exc.reason)
+        return None
+    except Exception as exc:
+        logger.error("Fitbit token refresh error: %s", exc)
+        return None
+
+
+def _now_iso() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()

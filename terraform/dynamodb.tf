@@ -665,6 +665,55 @@ resource "aws_dynamodb_table" "bookmarks" {
   }
 }
 
+# ── Fitbit tokens table ───────────────────────────────────────────────────────
+#
+# PK: user_id  (String) — one row per user; stores OAuth access/refresh tokens.
+# Attributes: access_token, refresh_token, expires_at (epoch sec),
+#             scope, fitbit_user_id, connected_at, updated_at
+
+resource "aws_dynamodb_table" "fitbit_tokens" {
+  name         = "${local.name_prefix}-fitbit-tokens"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
+# ── Fitbit data table ─────────────────────────────────────────────────────────
+#
+# PK: user_id   (String)
+# SK: log_date  (String) — YYYY-MM-DD
+# Attributes: steps, calories_in, calories_out, weight, sleep (object),
+#             synced_at
+
+resource "aws_dynamodb_table" "fitbit_data" {
+  name         = "${local.name_prefix}-fitbit-data"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "log_date"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "log_date"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
 # ── Links table ───────────────────────────────────────────────────────────────
 #
 # Wiki-style `[[type:id]]` links parsed out of notes, journal entries, and

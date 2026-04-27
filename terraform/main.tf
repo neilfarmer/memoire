@@ -189,3 +189,15 @@ data "archive_file" "lambda_links" {
   source_dir  = "${path.module}/../lambda/links"
   output_path = "${path.module}/../build/links.zip"
 }
+
+data "archive_file" "lambda_fitbit" {
+  type        = "zip"
+  source_dir  = "${path.module}/../lambda/fitbit"
+  output_path = "${path.module}/../build/fitbit.zip"
+}
+
+data "archive_file" "lambda_fitbit_sync" {
+  type        = "zip"
+  source_dir  = "${path.module}/../lambda/fitbit_sync"
+  output_path = "${path.module}/../build/fitbit_sync.zip"
+}

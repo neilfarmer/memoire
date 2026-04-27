@@ -126,6 +126,19 @@ class TestUpdateSettings:
         body = json.loads(crud.get_settings(USER)["body"])
         assert "user_id" not in body
 
+    def test_fitbit_default_disabled(self, tbl):
+        body = json.loads(crud.get_settings(USER)["body"])
+        assert body["fitbit"] == {"enabled": False}
+
+    def test_fitbit_enable_persists(self, tbl):
+        crud.update_settings(USER, {"fitbit": {"enabled": True}})
+        body = json.loads(crud.get_settings(USER)["body"])
+        assert body["fitbit"]["enabled"] is True
+
+    def test_fitbit_invalid_type_rejected(self, tbl):
+        r = crud.update_settings(USER, {"fitbit": "yes"})
+        assert r["statusCode"] == 400
+
 
 # ── calendar settings ─────────────────────────────────────────────────────────
 

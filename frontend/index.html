@@ -5616,6 +5616,22 @@
                                 </button>
                             </div>
                         </div>
+                        <div class="sb-group-label hidden" id="sb-group-custom">Custom</div>
+                        <div class="sb-section hidden" id="sb-fitbit">
+                            <div class="sb-section-hdr" onclick="sidebar.navigate('fitbit')">
+                                <span class="sb-icon">
+                                    <svg viewBox="0 0 24 24"
+                                         fill="none"
+                                         stroke="currentColor"
+                                         stroke-width="2"
+                                         stroke-linecap="round"
+                                         stroke-linejoin="round">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                                    </svg>
+                                </span>
+                                <span class="sb-hdr-label">Fitbit</span>
+                            </div>
+                        </div>
                         <div class="sb-spacer"></div>
                         <div class="sb-pal" id="sb-pal">
                             <button type="button"
@@ -6320,6 +6336,33 @@
                             <div id="pat-list" style="padding:0 18px 14px;"></div>
                         </div>
                         <div class="settings-section">
+                            <div class="settings-section-title">Integrations</div>
+                            <div class="settings-row">
+                                <div>
+                                    <div class="settings-label">Fitbit</div>
+                                    <div class="settings-desc">
+                                        Show today's steps, food, weight, and sleep on a dedicated Fitbit page. Data syncs every 30 minutes.
+                                    </div>
+                                    <div id="fitbit-status-line" class="settings-desc" style="margin-top:4px;"></div>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="fitbit-toggle" />
+                                    <span class="toggle-track"></span>
+                                </label>
+                            </div>
+                            <div class="settings-row" id="fitbit-actions-row" style="margin-top:10px; display:none;">
+                                <div>
+                                    <div class="settings-label">Connection</div>
+                                    <div class="settings-desc">Authorize Memoire to read your Fitbit data.</div>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="btn btn-secondary" id="fitbit-connect-btn">Connect Fitbit</button>
+                                    <button class="btn btn-secondary" id="fitbit-disconnect-btn" style="display:none;">Disconnect</button>
+                                </div>
+                            </div>
+                            <div id="fitbit-msg" class="hidden" style="font-size:13px; margin-top:6px;"></div>
+                        </div>
+                        <div class="settings-section">
                             <div class="settings-section-title">Editor</div>
                             <div class="settings-row">
                                 <div>
@@ -6388,6 +6431,53 @@
                             <p class="u-text-sm u-muted">Heart articles on the RSS Feeds page to save them here.</p>
                         </div>
                         <div id="favorites-grid" class="feeds-grid"></div>
+                    </main>
+                    <!-- Fitbit page -->
+                    <main id="page-fitbit" class="hidden">
+                        <div class="toolbar">
+                            <h2>Fitbit</h2>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <span id="fitbit-last-sync" class="u-text-sm u-muted"></span>
+                                <button class="btn btn-secondary" id="fitbit-sync-btn">Sync now</button>
+                            </div>
+                        </div>
+                        <div id="fitbit-loader" class="page-loader hidden">
+                            <div class="spinner"></div>
+                        </div>
+                        <div id="fitbit-empty" class="empty-state hidden">
+                            <p>No Fitbit data yet.</p>
+                            <p class="u-text-sm u-muted">If you just connected, the next scheduled sync will populate this page. You can also use the "Sync now" button.</p>
+                        </div>
+                        <div id="fitbit-disconnected" class="empty-state hidden">
+                            <p>Fitbit is not connected.</p>
+                            <p class="u-text-sm u-muted">Connect Fitbit in Settings to start syncing.</p>
+                        </div>
+                        <div id="fitbit-cards" class="hidden"
+                             style="display:grid;
+                                    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                                    gap:16px;
+                                    margin-top:16px;">
+                            <div class="settings-section">
+                                <div class="settings-section-title">Steps</div>
+                                <div id="fitbit-steps" style="font-size:32px; font-weight:600;">—</div>
+                                <div id="fitbit-steps-sub" class="u-text-sm u-muted"></div>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Food</div>
+                                <div id="fitbit-calories-in" style="font-size:32px; font-weight:600;">—</div>
+                                <div id="fitbit-calories-sub" class="u-text-sm u-muted"></div>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Weight</div>
+                                <div id="fitbit-weight" style="font-size:32px; font-weight:600;">—</div>
+                                <div id="fitbit-weight-sub" class="u-text-sm u-muted"></div>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Sleep</div>
+                                <div id="fitbit-sleep" style="font-size:32px; font-weight:600;">—</div>
+                                <div id="fitbit-sleep-sub" class="u-text-sm u-muted"></div>
+                            </div>
+                        </div>
                     </main>
                     <!-- Bookmarks page -->
                     <main id="page-bookmarks" class="hidden">
@@ -7358,6 +7448,13 @@
     updateSettings(body)       { return api.call("PUT",  "/settings", body); },
     testNotification(url)      { return api.call("POST", "/settings/test-notification", { ntfy_url: url }); },
 
+    fitbitToday()              { return api.call("GET",  "/fitbit/today"); },
+    fitbitStatus()             { return api.call("GET",  "/fitbit/status"); },
+    fitbitAuthStart(redirect)  { return api.call("GET",  `/fitbit/auth/start?redirect_uri=${encodeURIComponent(redirect)}`); },
+    fitbitAuthCallback(body)   { return api.call("POST", "/fitbit/auth/callback", body); },
+    fitbitDisconnect()         { return api.call("POST", "/fitbit/disconnect"); },
+    fitbitSync()               { return api.call("POST", "/fitbit/sync"); },
+
     listDiagrams()              { return api.call("GET",    "/diagrams"); },
     getDiagram(id)              { return api.call("GET",    `/diagrams/${id}`); },
     createDiagram(body)         { return api.call("POST",   "/diagrams", body); },
@@ -7877,6 +7974,10 @@
       favs.load();       // preload so heart buttons show correct state on feeds page
       if (state.settings?.home_finances_widget) finances.load(); // preload for home widget if enabled
       if (state.settings?.browser_notifications_enabled) browserNotifier.start();
+      const handledFitbit = await fitbit.handleOAuthCallback();
+      if (handledFitbit) {
+        await app.loadSettings();
+      }
       pages.show(pages.fromHash() || "home");
       window.addEventListener("hashchange", () => {
         const next = pages.fromHash();
@@ -7909,6 +8010,7 @@
           const supToggle = $("supervisor-enabled-toggle");
           if (supToggle) supToggle.checked = settings.supervisor_enabled !== false;
           calendarSettings.populate(settings.calendar);
+          fitbit.applyNavVisibility();
           refreshAvatarInitials();
         }
       } catch (e) {
@@ -8737,6 +8839,204 @@
     } finally {
       this.disabled = false;
     }
+  });
+
+  // ── Fitbit integration ───────────────────────────────────────────────────────
+
+  const fitbit = {
+    redirectUri() {
+      // Fitbit rejects URL fragments in redirect URIs, so we use the app
+      // origin and pick the OAuth response off the query string on load.
+      return `${location.origin}${location.pathname}`;
+    },
+
+    isEnabled() {
+      return !!(state.settings?.fitbit && state.settings.fitbit.enabled);
+    },
+
+    applyNavVisibility() {
+      const show = fitbit.isEnabled();
+      const sect = $("sb-fitbit");
+      const lbl  = $("sb-group-custom");
+      if (sect) sect.classList.toggle("hidden", !show);
+      if (lbl)  lbl.classList.toggle("hidden", !show);
+    },
+
+    setSettingsMsg(text, kind = "info") {
+      const el = $("fitbit-msg");
+      if (!el) return;
+      el.textContent = text || "";
+      el.classList.toggle("hidden", !text);
+      el.style.color = kind === "error" ? "var(--color-error, #c0392b)" : "var(--color-text-muted)";
+    },
+
+    async refreshStatus() {
+      const enabled = fitbit.isEnabled();
+      $("fitbit-toggle").checked = enabled;
+      $("fitbit-actions-row").style.display = enabled ? "flex" : "none";
+      if (!enabled) {
+        $("fitbit-status-line").textContent = "";
+        return;
+      }
+      try {
+        const status = await api.fitbitStatus();
+        const connected = !!status?.connected;
+        $("fitbit-connect-btn").style.display    = connected ? "none"  : "inline-block";
+        $("fitbit-disconnect-btn").style.display = connected ? "inline-block" : "none";
+        $("fitbit-status-line").textContent = connected
+          ? `Connected${status.connected_at ? ` since ${new Date(status.connected_at).toLocaleDateString()}` : ""}.`
+          : "Not connected.";
+      } catch (e) {
+        $("fitbit-status-line").textContent = "Could not check connection status.";
+      }
+    },
+
+    async toggle(checked) {
+      try {
+        const updated = await api.updateSettings({ fitbit: { enabled: checked } });
+        state.settings = { ...state.settings, ...updated };
+        fitbit.applyNavVisibility();
+        await fitbit.refreshStatus();
+      } catch (e) {
+        $("fitbit-toggle").checked = !checked;
+        fitbit.setSettingsMsg(e.message || "Failed to update setting", "error");
+      }
+    },
+
+    async connect() {
+      fitbit.setSettingsMsg("Redirecting to Fitbit...");
+      try {
+        const data = await api.fitbitAuthStart(fitbit.redirectUri());
+        if (!data?.authorize_url || !data?.code_verifier) {
+          fitbit.setSettingsMsg("Fitbit integration is not configured on the server.", "error");
+          return;
+        }
+        sessionStorage.setItem("fitbit_code_verifier", data.code_verifier);
+        sessionStorage.setItem("fitbit_state",         data.state || "");
+        location.href = data.authorize_url;
+      } catch (e) {
+        fitbit.setSettingsMsg(e.message || "Could not start Fitbit auth", "error");
+      }
+    },
+
+    async disconnect() {
+      if (!confirm("Disconnect Fitbit? Cached data will be removed on the next sync.")) return;
+      try {
+        await api.fitbitDisconnect();
+        fitbit.setSettingsMsg("Disconnected.");
+        await fitbit.refreshStatus();
+      } catch (e) {
+        fitbit.setSettingsMsg(e.message || "Disconnect failed", "error");
+      }
+    },
+
+    async handleOAuthCallback() {
+      const params = new URLSearchParams(location.search || "");
+      const code  = params.get("code");
+      const state = params.get("state");
+      const verifier = sessionStorage.getItem("fitbit_code_verifier") || "";
+      if (!code || !verifier) return false;
+      const expected = sessionStorage.getItem("fitbit_state") || "";
+      sessionStorage.removeItem("fitbit_code_verifier");
+      sessionStorage.removeItem("fitbit_state");
+      if (expected && state && expected !== state) {
+        history.replaceState(null, "", `${location.pathname}#settings`);
+        alert("Fitbit connection failed: state mismatch.");
+        return true;
+      }
+      try {
+        await api.fitbitAuthCallback({
+          code,
+          redirect_uri:  fitbit.redirectUri(),
+          code_verifier: verifier,
+        });
+        await api.fitbitSync().catch(() => {});
+        history.replaceState(null, "", `${location.pathname}#fitbit`);
+        return true;
+      } catch (e) {
+        alert(`Fitbit connection failed: ${e.message || "unknown error"}`);
+        history.replaceState(null, "", `${location.pathname}#settings`);
+        return true;
+      }
+    },
+
+    fmt: {
+      num(n) { return (n == null) ? "—" : Number(n).toLocaleString(); },
+      sleep(min) {
+        if (!min) return "—";
+        const h = Math.floor(min / 60);
+        const m = min % 60;
+        return `${h}h ${m}m`;
+      },
+    },
+
+    async load() {
+      const cards   = $("fitbit-cards");
+      const loader  = $("fitbit-loader");
+      const empty   = $("fitbit-empty");
+      const disconn = $("fitbit-disconnected");
+      cards.classList.add("hidden");
+      empty.classList.add("hidden");
+      disconn.classList.add("hidden");
+      loader.classList.remove("hidden");
+      try {
+        const status = await api.fitbitStatus();
+        if (!status?.connected) {
+          loader.classList.add("hidden");
+          disconn.classList.remove("hidden");
+          return;
+        }
+        const data = await api.fitbitToday();
+        loader.classList.add("hidden");
+        if (!data || data.synced === false) {
+          empty.classList.remove("hidden");
+          return;
+        }
+        cards.classList.remove("hidden");
+        $("fitbit-steps").textContent     = fitbit.fmt.num(data.steps);
+        $("fitbit-steps-sub").textContent = data.distance_km
+          ? `${Number(data.distance_km).toFixed(2)} km · ${data.active_minutes || 0} active min`
+          : "";
+        $("fitbit-calories-in").textContent  = data.calories_in != null ? `${fitbit.fmt.num(data.calories_in)} kcal` : "—";
+        $("fitbit-calories-sub").textContent = data.calories_out
+          ? `Burned: ${fitbit.fmt.num(data.calories_out)} kcal`
+          : "";
+        $("fitbit-weight").textContent     = data.weight ? `${Number(data.weight).toFixed(1)} kg` : "—";
+        $("fitbit-weight-sub").textContent = "";
+        $("fitbit-sleep").textContent      = fitbit.fmt.sleep(data.sleep?.minutes_asleep);
+        $("fitbit-sleep-sub").textContent  = data.sleep?.efficiency
+          ? `Efficiency ${data.sleep.efficiency}%`
+          : "";
+        if (data.synced_at) {
+          $("fitbit-last-sync").textContent = `Synced ${new Date(data.synced_at * 1000).toLocaleTimeString()}`;
+        }
+      } catch (e) {
+        loader.classList.add("hidden");
+        empty.classList.remove("hidden");
+        console.error("Fitbit load failed:", e);
+      }
+    },
+
+    async syncNow() {
+      const btn = $("fitbit-sync-btn");
+      btn.disabled = true;
+      try {
+        await api.fitbitSync();
+        setTimeout(() => fitbit.load(), 4000);
+      } catch (e) {
+        alert(e.message || "Sync failed");
+      } finally {
+        btn.disabled = false;
+      }
+    },
+  };
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const tg = $("fitbit-toggle");
+    if (tg) tg.addEventListener("change", function() { fitbit.toggle(this.checked); });
+    $("fitbit-connect-btn")?.addEventListener("click", () => fitbit.connect());
+    $("fitbit-disconnect-btn")?.addEventListener("click", () => fitbit.disconnect());
+    $("fitbit-sync-btn")?.addEventListener("click", () => fitbit.syncNow());
   });
 
   // ── Color themes ─────────────────────────────────────────────────────────────
@@ -12540,6 +12840,7 @@
     $("home-finances-toggle").checked = !!(state.settings?.home_finances_widget);
     $("browser-notify-toggle").checked = !!(state.settings?.browser_notifications_enabled);
     browserNotifier.renderStatus();
+    fitbit.refreshStatus();
     loadPatList();
   }
 
@@ -13256,7 +13557,7 @@
     },
 
     expand(name) {
-      const sections = ["home", "tasks", "notes", "journal", "habits", "goals", "health", "nutrition", "finances", "feeds", "bookmarks", "diagrams", "settings", "admin", "profile"];
+      const sections = ["home", "tasks", "notes", "journal", "habits", "goals", "health", "nutrition", "finances", "feeds", "bookmarks", "diagrams", "fitbit", "settings", "admin", "profile"];
       sections.forEach(s => {
         const sect = $(`sb-${s}`);
         const body = $(`sb-${s}-body`);
@@ -13284,7 +13585,7 @@
 
   const pages = {
     current: "home",
-    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "bookmarks", "diagrams", "finances", "settings", "admin", "profile", "pal-chats"],
+    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "bookmarks", "diagrams", "finances", "fitbit", "settings", "admin", "profile", "pal-chats"],
 
     fromHash() {
       const raw = (location.hash || "").replace(/^#\/?/, "");
@@ -13355,6 +13656,7 @@
       if (name === "bookmarks") { bookmarks.load(); }
       if (name === "diagrams")  { if (!diagrams.loaded) diagrams.load(); else diagrams.render(); }
       if (name === "finances")  { finances.load(); }
+      if (name === "fitbit")    { fitbit.load(); }
       if (name === "profile")   { profilePage.load(); }
       if (name === "pal-chats") { palChats.loadPage(); }
     },
