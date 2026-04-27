@@ -17,8 +17,9 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import date as _date
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import boto3
 
@@ -91,7 +92,7 @@ def _sync_user(user_id: str) -> bool:
     if not access_token:
         return False
 
-    log_date = _date.today().isoformat()
+    log_date = _user_today(access_token)
     summary  = _fetch_summary(access_token, log_date)
     summary  = _to_dynamo_safe(summary)
     summary.update({
@@ -101,6 +102,18 @@ def _sync_user(user_id: str) -> bool:
     })
     _dynamodb.Table(DATA_TABLE).put_item(Item=summary)
     return True
+
+
+def _user_today(access_token: str) -> str:
+    """Return today's date in the user's Fitbit profile timezone (YYYY-MM-DD)."""
+    profile = _fitbit_get(access_token, "/1/user/-/profile.json")
+    tz_name = (((profile or {}).get("user") or {}).get("timezone")) or ""
+    if tz_name:
+        try:
+            return datetime.now(ZoneInfo(tz_name)).date().isoformat()
+        except ZoneInfoNotFoundError:
+            pass
+    return datetime.now(timezone.utc).date().isoformat()
 
 
 def _to_dynamo_safe(value):
@@ -150,7 +163,8 @@ def _fetch_summary(access_token: str, log_date: str) -> dict:
     """Aggregate the four data points the Fitbit page shows. Each call is best-effort."""
     out: dict = {}
 
-    activity = _fitbit_get(access_token, f"/1/user/-/activities/date/{log_date}.json")
+    # Activities + food: Fitbit resolves "today" to the user's profile timezone.
+    activity = _fitbit_get(access_token, "/1/user/-/activities/date/today.json")
     if activity:
         summary = activity.get("summary") or {}
         out["steps"]        = int(summary.get("steps", 0) or 0)
@@ -160,36 +174,67 @@ def _fetch_summary(access_token: str, log_date: str) -> dict:
             (summary.get("veryActiveMinutes") or 0)
             + (summary.get("fairlyActiveMinutes") or 0)
         )
+        logger.info(
+            "Fitbit activity: steps=%s, calories_out=%s, distance_km=%s",
+            out.get("steps"), out.get("calories_out"), out.get("distance_km"),
+        )
+    else:
+        logger.warning("Fitbit activity endpoint returned no data")
 
-    food = _fitbit_get(access_token, f"/1/user/-/foods/log/date/{log_date}.json")
+    food = _fitbit_get(access_token, "/1/user/-/foods/log/date/today.json")
     if food:
         food_summary = food.get("summary") or {}
-        out["calories_in"] = int(food_summary.get("calories", 0) or 0)
-        out["food_water_ml"] = int(food_summary.get("water", 0) or 0)
+        out["calories_in"]    = int(food_summary.get("calories", 0) or 0)
+        out["food_water_ml"]  = int(food_summary.get("water", 0) or 0)
 
-    weight = _fitbit_get(access_token, f"/1/user/-/body/log/weight/date/{log_date}.json")
+    # Weight: a single date often has no entry. Pull the last 30 days, take latest.
+    weight = _fitbit_get(access_token, "/1/user/-/body/log/weight/date/today/30d.json")
     if weight:
         entries = weight.get("weight") or []
         if entries:
-            latest = entries[-1]
-            out["weight"] = float(latest.get("weight", 0) or 0)
-            out["weight_unit"] = "kg"
+            latest = max(entries, key=lambda e: (e.get("date", ""), e.get("time", "")))
+            try:
+                out["weight"] = float(latest.get("weight", 0) or 0)
+                out["weight_unit"]  = "kg"
+                out["weight_date"]  = latest.get("date", "")
+            except (TypeError, ValueError):
+                pass
 
-    sleep = _fitbit_get(access_token, f"/1.2/user/-/sleep/date/{log_date}.json")
-    if sleep:
-        sleeps = sleep.get("sleep") or []
-        main   = next((s for s in sleeps if s.get("isMainSleep")), sleeps[0] if sleeps else None)
-        if main:
-            out["sleep"] = {
-                "duration_min":     int((main.get("duration", 0) or 0) // 60000),
-                "efficiency":       int(main.get("efficiency", 0) or 0),
-                "minutes_asleep":   int(main.get("minutesAsleep", 0) or 0),
-                "minutes_awake":    int(main.get("minutesAwake", 0) or 0),
-                "start_time":       main.get("startTime", ""),
-                "end_time":         main.get("endTime", ""),
-            }
+    # Sleep: a session that ended this morning is often filed under today, but
+    # if the API hasn't rolled over yet, fall back to yesterday.
+    sleep_entry = _fetch_main_sleep(access_token, log_date)
+    if sleep_entry:
+        out["sleep"] = sleep_entry
 
     return out
+
+
+def _fetch_main_sleep(access_token: str, log_date: str) -> dict | None:
+    candidates = [log_date]
+    try:
+        prev = (datetime.fromisoformat(log_date).date() - timedelta(days=1)).isoformat()
+        candidates.append(prev)
+    except ValueError:
+        pass
+
+    for date_str in candidates:
+        sleep = _fitbit_get(access_token, f"/1.2/user/-/sleep/date/{date_str}.json")
+        if not sleep:
+            continue
+        sleeps = sleep.get("sleep") or []
+        main   = next((s for s in sleeps if s.get("isMainSleep")), sleeps[0] if sleeps else None)
+        if not main:
+            continue
+        return {
+            "duration_min":     int((main.get("duration", 0) or 0) // 60000),
+            "efficiency":       int(main.get("efficiency", 0) or 0),
+            "minutes_asleep":   int(main.get("minutesAsleep", 0) or 0),
+            "minutes_awake":    int(main.get("minutesAwake", 0) or 0),
+            "start_time":       main.get("startTime", ""),
+            "end_time":         main.get("endTime", ""),
+            "date":             main.get("dateOfSleep", date_str),
+        }
+    return None
 
 
 def _activity_distance_km(distances: list) -> float:
@@ -212,7 +257,12 @@ def _fitbit_get(access_token: str, path: str) -> dict | None:
         with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310 — fixed Fitbit HTTPS endpoint
             return json.loads(resp.read())
     except urllib.error.HTTPError as exc:
-        logger.warning("Fitbit GET %s failed: %s %s", path, exc.code, exc.reason)
+        body = ""
+        try:
+            body = exc.read().decode()[:300]
+        except Exception:
+            pass
+        logger.warning("Fitbit GET %s failed: %s %s — %s", path, exc.code, exc.reason, body)
         return None
     except Exception as exc:
         logger.error("Fitbit GET %s error: %s", path, exc)
