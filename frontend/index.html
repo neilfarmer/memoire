@@ -9120,8 +9120,9 @@
         await api.fitbitLogFood({ name, calories, meal_type_id: meal });
         $("fitbit-food-name").value = "";
         $("fitbit-food-calories").value = "";
-        fitbit.setFoodMsg("Logged. Refreshing...");
-        setTimeout(() => fitbit.load(), 3000);
+        fitbit.setFoodMsg("Logged.");
+        await fitbit.load();
+        fitbit.setFoodMsg("");
       } catch (e) {
         fitbit.setFoodMsg(e.message || "Failed to log food", "error");
       } finally {

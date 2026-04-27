@@ -137,7 +137,18 @@ def log_food(user_id: str, body: dict) -> dict:
         logger.error("Fitbit food log error: %s", exc)
         return error("Could not reach Fitbit", status=502)
 
-    sync_now(user_id)
+    # Run the sync synchronously so the next GET /fitbit/today reflects the
+    # new entry. Fire-and-forget would beat the page's reload timer.
+    if SYNC_FUNCTION:
+        try:
+            _lambda.invoke(
+                FunctionName=SYNC_FUNCTION,
+                InvocationType="RequestResponse",
+                Payload=json.dumps({"user_ids": [user_id]}).encode(),
+            )
+        except Exception as exc:
+            logger.warning("Synchronous sync invoke failed: %s", exc)
+
     return ok({
         "logged": True,
         "food":   data.get("foodLog") or data,

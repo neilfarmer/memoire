@@ -15,14 +15,16 @@ resource "aws_iam_role_policy_attachment" "fitbit_basic" {
 }
 
 resource "aws_lambda_function" "fitbit" {
-  function_name                  = "${local.name_prefix}-fitbit"
-  runtime                        = var.lambda_runtime
-  handler                        = "handler.lambda_handler"
-  role                           = aws_iam_role.fitbit.arn
-  filename                       = data.archive_file.lambda_fitbit.output_path
-  source_code_hash               = data.archive_file.lambda_fitbit.output_base64sha256
-  layers                         = [aws_lambda_layer_version.shared.arn]
-  timeout                        = var.lambda_timeout
+  function_name    = "${local.name_prefix}-fitbit"
+  runtime          = var.lambda_runtime
+  handler          = "handler.lambda_handler"
+  role             = aws_iam_role.fitbit.arn
+  filename         = data.archive_file.lambda_fitbit.output_path
+  source_code_hash = data.archive_file.lambda_fitbit.output_base64sha256
+  layers           = [aws_lambda_layer_version.shared.arn]
+  # 30s — log_food synchronously invokes the sync Lambda, which itself
+  # makes 5+ outbound Fitbit API calls. Default 10s is too tight.
+  timeout                        = 30
   memory_size                    = var.lambda_memory_mb
   reserved_concurrent_executions = var.lambda_max_concurrency
 
