@@ -7877,7 +7877,11 @@
       favs.load();       // preload so heart buttons show correct state on feeds page
       if (state.settings?.home_finances_widget) finances.load(); // preload for home widget if enabled
       if (state.settings?.browser_notifications_enabled) browserNotifier.start();
-      pages.show("home");
+      pages.show(pages.fromHash() || "home");
+      window.addEventListener("hashchange", () => {
+        const next = pages.fromHash();
+        if (next && next !== pages.current) pages.show(next);
+      });
     },
 
     async loadSettings() {
@@ -13282,6 +13286,20 @@
     current: "home",
     all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "bookmarks", "diagrams", "finances", "settings", "admin", "profile", "pal-chats"],
 
+    fromHash() {
+      const raw = (location.hash || "").replace(/^#\/?/, "");
+      const name = raw.split(/[/?]/)[0];
+      return pages.all.includes(name) ? name : null;
+    },
+
+    syncHash(name) {
+      const target = `#${name}`;
+      if (location.hash !== target) {
+        // replaceState avoids flooding history when called from hash listener
+        history.replaceState(null, "", target);
+      }
+    },
+
     show(name) {
       // Auto-close any open journal entry overlay so sidebar navigation works
       // while editing an entry. Save pending changes first so nothing is lost.
@@ -13293,6 +13311,7 @@
         journal.closeEntry();
       }
       pages.current = name;
+      pages.syncHash(name);
       // habits, goals, health, nutrition, finances are now top-level sections; favorites is a sub-section of feeds
       const sbSection = name === "favorites" ? "feeds" : name;
       sidebar.expand(sbSection);
