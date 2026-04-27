@@ -3474,12 +3474,64 @@
     }
 
     /* ── Health two-pane layout ── */
-    #page-health {
-      max-width: none;
-      padding: 0;
+    #page-health.hl-page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px 24px 48px;
+      display: block;
+      height: auto;
+      overflow: visible;
+    }
+    .hl-toolbar {
       display: flex;
-      height: 100%;
-      overflow: hidden;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .hl-toolbar h2 {
+      font-family: var(--font-display);
+      font-size: 36px;
+      font-weight: 600;
+      letter-spacing: -1px;
+      line-height: 1;
+      margin: 0;
+    }
+    .hl-eyebrow {
+      display: block;
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: var(--weight-medium);
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .hl-toolbar-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .hl-date-picker {
+      height: 34px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+    .hl-save-status {
+      display: block;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--muted);
+      margin: -8px 0 12px;
+      min-height: 16px;
     }
 
     #page-nutrition {
@@ -6993,113 +7045,83 @@
                         </div>
                     </main>
                     <!-- Health page -->
-                    <main id="page-health" class="hidden">
-                        <!-- Left: calendar + log list -->
-                        <div class="health-left">
-                            <div class="health-left-header">
+                    <main id="page-health" class="hidden hl-page">
+                        <div class="hl-toolbar">
+                            <div>
+                                <span class="hl-eyebrow" id="health-date-label">Today</span>
                                 <h2>Health</h2>
-                                <button class="btn btn-primary btn-sm" id="health-today-btn">Log today</button>
                             </div>
-                            <div class="health-list-scroll">
-                                <div id="health-loader" class="page-loader hidden">
-                                    <div class="spinner"></div>
-                                </div>
-                                <div id="health-log-list"></div>
-                            </div>
-                        </div>
-                        <!-- Right: workout editor -->
-                        <div class="health-right">
-                            <div class="health-empty-state" id="health-empty-state">
-                                <div class="empty-icon">&#127939;</div>
-                                <p>
-                                    Select a day from the calendar
-                                    <br>
-                                    to log your workout.
-                                </p>
-                            </div>
-                            <div id="health-editor" class="hidden u-stretch-col">
-                                <div class="health-editor-header">
-                                    <span class="health-date-label" id="health-date-label"></span>
-                                    <button class="btn btn-danger hidden" id="health-delete-btn">Delete</button>
-                                    <button class="btn btn-primary" id="health-save-btn">Save</button>
-                                </div>
-                                <div class="health-editor-body">
-                                    <div id="health-totals" class="nutrition-totals hidden"></div>
-
-                                    <div class="hl-section">
-                                        <div class="hl-section-title">Activity</div>
-                                        <div id="hl-activity-grid" class="hl-activity-grid">
-                                            <div class="hl-stat">
-                                                <span class="hl-stat-label">Steps</span>
-                                                <span class="hl-stat-value" id="hl-stat-steps">—</span>
-                                            </div>
-                                            <div class="hl-stat">
-                                                <span class="hl-stat-label">Distance</span>
-                                                <span class="hl-stat-value" id="hl-stat-distance">—</span>
-                                            </div>
-                                            <div class="hl-stat">
-                                                <span class="hl-stat-label">Active min</span>
-                                                <span class="hl-stat-value" id="hl-stat-active">—</span>
-                                            </div>
-                                            <div class="hl-stat">
-                                                <span class="hl-stat-label">Burned</span>
-                                                <span class="hl-stat-value" id="hl-stat-burned">—</span>
-                                            </div>
-                                            <div class="hl-stat">
-                                                <span class="hl-stat-label">Sleep</span>
-                                                <span class="hl-stat-value" id="hl-stat-sleep">—</span>
-                                            </div>
-                                            <div class="hl-stat">
-                                                <span class="hl-stat-label">Weight</span>
-                                                <span class="hl-stat-value" id="hl-stat-weight">—</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="hl-section">
-                                        <div class="hl-section-title">Nutrition</div>
-                                        <div class="hl-quickadd">
-                                            <input type="text" id="hl-food-name" class="hl-input" placeholder="Add food..." autocomplete="off" />
-                                            <input type="number" id="hl-food-cal" class="hl-input hl-input--cal" min="0" max="10000" placeholder="kcal" inputmode="numeric" />
-                                            <select id="hl-food-meal" class="hl-input">
-                                                <option value="1">Breakfast</option>
-                                                <option value="2">Morning Snack</option>
-                                                <option value="3">Lunch</option>
-                                                <option value="4">Afternoon Snack</option>
-                                                <option value="5">Dinner</option>
-                                                <option value="7" selected>Anytime</option>
-                                            </select>
-                                            <button class="btn btn-primary btn-sm" id="hl-food-add">+ Add</button>
-                                        </div>
-                                        <div class="hl-totals" id="hl-food-totals"></div>
-                                        <ul class="hl-food-list" id="hl-food-list"></ul>
-                                        <p class="hl-empty" id="hl-food-empty">No food logged yet.</p>
-                                    </div>
-
-                                    <div class="hl-section-title hl-section-title--inline">Exercise</div>
-
-                                    <div id="health-repeat-picker" class="repeat-picker hidden">
-                                        <input class="repeat-picker-search"
-                                               id="health-repeat-search"
-                                               type="search"
-                                               placeholder="Search previous workouts..." />
-                                        <div class="repeat-picker-results" id="health-repeat-results"></div>
-                                    </div>
-                                    <div id="health-exercises"></div>
-                                    <div class="editor-btn-row">
-                                        <button class="btn btn-secondary" id="health-add-exercise-btn">+ Add exercise</button>
-                                        <button class="btn btn-secondary" id="health-repeat-btn">+ Repeat previous</button>
-                                    </div>
-                                    <div class="field">
-                                        <label class="u-text-xs u-muted">Notes</label>
-                                        <textarea id="health-notes" placeholder="How did it go?..." rows="3"></textarea>
-                                    </div>
-                                </div>
-                                <div class="health-editor-footer">
-                                    <span id="health-save-status"></span>
-                                </div>
+                            <div class="hl-toolbar-actions">
+                                <input type="date" id="health-date-picker" class="hl-date-picker" />
+                                <button class="btn btn-secondary" id="health-today-btn">Today</button>
+                                <button class="btn btn-danger hidden" id="health-delete-btn">Delete</button>
+                                <button class="btn btn-primary" id="health-save-btn">Save</button>
                             </div>
                         </div>
+                        <div id="health-loader" class="page-loader hidden">
+                            <div class="spinner"></div>
+                        </div>
+                        <span id="health-save-status" class="hl-save-status"></span>
+
+                        <!-- Hidden shells the existing JS still references -->
+                        <div id="health-empty-state" class="hidden"></div>
+                        <div id="health-editor" class="hidden"></div>
+                        <div id="health-log-list" class="hidden"></div>
+
+                        <!-- Activity totals (top) -->
+                        <section class="hl-section">
+                            <div class="hl-section-title">Activity</div>
+                            <div id="hl-activity-grid" class="hl-activity-grid">
+                                <div class="hl-stat"><span class="hl-stat-label">Steps</span><span class="hl-stat-value" id="hl-stat-steps">—</span></div>
+                                <div class="hl-stat"><span class="hl-stat-label">Distance</span><span class="hl-stat-value" id="hl-stat-distance">—</span></div>
+                                <div class="hl-stat"><span class="hl-stat-label">Active min</span><span class="hl-stat-value" id="hl-stat-active">—</span></div>
+                                <div class="hl-stat"><span class="hl-stat-label">Burned</span><span class="hl-stat-value" id="hl-stat-burned">—</span></div>
+                                <div class="hl-stat"><span class="hl-stat-label">Sleep</span><span class="hl-stat-value" id="hl-stat-sleep">—</span></div>
+                                <div class="hl-stat"><span class="hl-stat-label">Weight</span><span class="hl-stat-value" id="hl-stat-weight">—</span></div>
+                            </div>
+                        </section>
+
+                        <!-- Nutrition (middle) -->
+                        <section class="hl-section">
+                            <div class="hl-section-title">Nutrition</div>
+                            <div class="hl-quickadd">
+                                <input type="text" id="hl-food-name" class="hl-input" placeholder="Add food..." autocomplete="off" />
+                                <input type="number" id="hl-food-cal" class="hl-input hl-input--cal" min="0" max="10000" placeholder="kcal" inputmode="numeric" />
+                                <select id="hl-food-meal" class="hl-input">
+                                    <option value="1">Breakfast</option>
+                                    <option value="2">Morning Snack</option>
+                                    <option value="3">Lunch</option>
+                                    <option value="4">Afternoon Snack</option>
+                                    <option value="5">Dinner</option>
+                                    <option value="7" selected>Anytime</option>
+                                </select>
+                                <button class="btn btn-primary btn-sm" id="hl-food-add">+ Add</button>
+                            </div>
+                            <div class="hl-totals" id="hl-food-totals"></div>
+                            <ul class="hl-food-list" id="hl-food-list"></ul>
+                            <p class="hl-empty" id="hl-food-empty">No food logged yet.</p>
+                        </section>
+
+                        <!-- Exercise (bottom) -->
+                        <section class="hl-section">
+                            <div class="hl-section-title">Exercise</div>
+                            <div id="health-repeat-picker" class="repeat-picker hidden">
+                                <input class="repeat-picker-search"
+                                       id="health-repeat-search"
+                                       type="search"
+                                       placeholder="Search previous workouts..." />
+                                <div class="repeat-picker-results" id="health-repeat-results"></div>
+                            </div>
+                            <div id="health-exercises"></div>
+                            <div class="editor-btn-row">
+                                <button class="btn btn-secondary" id="health-add-exercise-btn">+ Add exercise</button>
+                                <button class="btn btn-secondary" id="health-repeat-btn">+ Repeat previous</button>
+                            </div>
+                            <div class="field" style="margin-top:14px;">
+                                <label class="u-text-xs u-muted">Notes</label>
+                                <textarea id="health-notes" placeholder="How did it go?..." rows="3"></textarea>
+                            </div>
+                        </section>
                     </main>
                     <!-- Nutrition page -->
                     <main id="page-nutrition" class="hidden">
@@ -12509,18 +12531,20 @@
       health.exercises   = [];
       health.foods       = [];
       health.totals      = {};
-      $("health-date-label").textContent = new Date(dateStr + "T12:00:00").toLocaleDateString(undefined, { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+      const today = todayStr();
+      const dateLabel = (dateStr === today)
+        ? `Today · ${new Date(dateStr + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+        : new Date(dateStr + "T12:00:00").toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+      $("health-date-label").textContent = dateLabel;
+      const picker = $("health-date-picker");
+      if (picker) picker.value = dateStr;
       $("health-notes").value = "";
       $("health-save-status").textContent = "";
       $("health-delete-btn").classList.add("hidden");
-      $("health-empty-state").classList.add("hidden");
-      $("health-editor").classList.remove("hidden");
       $("health-repeat-picker").classList.add("hidden");
       health.renderExercises();
       health.renderActivityTotals();
       health.renderFoods();
-      health.renderCalendar();
-      health.renderLogList();
 
       try {
         const log = await api.call("GET", `/health/${dateStr}`);
@@ -12868,6 +12892,11 @@
   $("health-repeat-search").addEventListener("input", (e) => health.renderRepeatResults(e.target.value));
 
   $("hl-food-add")?.addEventListener("click", () => health.addFood());
+
+  $("health-date-picker")?.addEventListener("change", e => {
+    const v = e.target.value;
+    if (v) health.openLog(v);
+  });
   ["hl-food-name", "hl-food-cal"].forEach(id => {
     const el = $(id);
     if (el) el.addEventListener("keydown", e => {
@@ -15446,7 +15475,11 @@
         if (state.tasks.length === 0) app.loadTasks();
         if (habits.data.length === 0) habits.load();
       }
-      if (name === "health"    && health.logs.length === 0)     health.load();
+      if (name === "health") {
+        if (health.logs.length === 0) health.load();
+        // Always open today on entry so stats render without a click
+        health.openLog(todayStr());
+      }
       if (name === "nutrition" && nutrition.logs.length === 0) nutrition.load();
       if (name === "feeds")     feeds.refresh();
       if (name === "favorites") { if (!favs.loaded) favs.load(); else favs.render(); }
