@@ -4392,12 +4392,39 @@
       justify-content: center;
       gap: 10px;
       padding: 12px;
-      background: linear-gradient(135deg, var(--surface) 0%, var(--bg) 100%);
+      background: linear-gradient(135deg, var(--bm-color-1, var(--surface)) 0%, var(--bm-color-2, var(--bg)) 100%);
+      position: relative;
+    }
+    .bm-card-no-thumb::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 30% 20%, rgba(255,255,255,.18), transparent 60%);
+      pointer-events: none;
     }
     .bm-favicon {
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      background: rgba(255,255,255,.92);
+      padding: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.18);
+      object-fit: contain;
+    }
+    .bm-letter {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+      background: rgba(255,255,255,.18);
+      backdrop-filter: blur(4px);
+      text-shadow: 0 1px 2px rgba(0,0,0,.25);
       flex-shrink: 0;
     }
     .bm-card-label {
@@ -4417,7 +4444,7 @@
     }
     .bm-card-label-plain {
       font-size: 12px;
-      color: var(--text);
+      color: #fff;
       text-align: center;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -4425,7 +4452,10 @@
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       width: 100%;
-      opacity: .75;
+      font-weight: 500;
+      text-shadow: 0 1px 2px rgba(0,0,0,.35);
+      position: relative;
+      z-index: 1;
     }
     .bm-card-actions {
       position: absolute;
@@ -12235,8 +12265,9 @@
       } finally {
         hideLoader("journal-loader");
       }
-      const now = new Date();
-      journal.calMonth = { year: now.getFullYear(), month: now.getMonth() };
+      const today = todayStr();
+      const [yStr, mStr] = today.split("-");
+      journal.calMonth = { year: parseInt(yStr, 10), month: parseInt(mStr, 10) - 1 };
       journal.renderCalendar();
       journal.renderEntryList();
     },
@@ -15834,8 +15865,9 @@
       if (name === "goals"   && goals.data.length === 0) goals.load();
       if (name === "notes"   && notesApp.folders.length === 0) notesApp.load();
       if (name === "journal") {
-        if (journal.entries.length === 0) journal.load().then(renderJournalStreaks);
-        else renderJournalStreaks();
+        const openToday = () => journal.openDay(todayStr());
+        if (journal.entries.length === 0) journal.load().then(() => { renderJournalStreaks(); openToday(); });
+        else { renderJournalStreaks(); openToday(); }
         if (state.tasks.length === 0) app.loadTasks();
         if (habits.data.length === 0) habits.load();
       }
@@ -16351,6 +16383,17 @@
       ].join("");
     },
 
+    _colorFor(seed) {
+      let h = 0;
+      for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+      const hue = h % 360;
+      const hue2 = (hue + 35) % 360;
+      return {
+        c1: `hsl(${hue}, 65%, 52%)`,
+        c2: `hsl(${hue2}, 70%, 38%)`,
+      };
+    },
+
     _cardHTML(b) {
       const id       = b.bookmark_id;
       const hostname = (() => { try { return new URL(b.url).hostname.replace(/^www\./, ""); } catch { return b.url; } })();
@@ -16374,13 +16417,16 @@
           ${actions}
         </div>`;
       }
-      const favicon = b.favicon_url
-        ? `<img class="bm-favicon" src="${escHtml(b.favicon_url)}" onerror="this.style.display='none'" alt="">`
-        : "";
+      const { c1, c2 } = this._colorFor(hostname || label || id);
+      const initial = (label.trim()[0] || "?").toUpperCase();
+      const visual = b.favicon_url
+        ? `<img class="bm-favicon" src="${escHtml(b.favicon_url)}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'bm-letter',textContent:${JSON.stringify(initial)}}))" alt="">`
+        : `<div class="bm-letter">${escHtml(initial)}</div>`;
+      const styleVars = `--bm-color-1:${c1};--bm-color-2:${c2};`;
       return `<div class="bm-card">
         <a class="bm-card-link" href="${escHtml(b.url)}" target="_blank" rel="noopener noreferrer">
-          <div class="bm-card-no-thumb">
-            ${favicon}
+          <div class="bm-card-no-thumb" style="${styleVars}">
+            ${visual}
             <span class="bm-card-label-plain">${escHtml(label)}</span>
           </div>
         </a>
