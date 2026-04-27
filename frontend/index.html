@@ -5556,12 +5556,15 @@
       animation: fb-card-in .6s var(--ease) backwards;
       animation-delay: 280ms;
       position: relative;
-      overflow: hidden;
+      /* Do NOT clip overflow — the autocomplete dropdown anchors to the
+         input and must escape the card bounds. */
     }
     .fb-quickadd::before {
       content: "";
       position: absolute;
-      inset: 0 0 0 0;
+      top: 0;
+      bottom: 0;
+      left: 0;
       width: 3px;
       background: linear-gradient(180deg, var(--accent) 0%, var(--primary) 100%);
       opacity: .8;
