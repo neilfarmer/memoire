@@ -23,17 +23,15 @@ resource "aws_lambda_function" "export" {
 
   environment {
     variables = {
-      TASKS_TABLE        = aws_dynamodb_table.tasks.name
-      TASK_FOLDERS_TABLE = aws_dynamodb_table.task_folders.name
-      JOURNAL_TABLE      = aws_dynamodb_table.journal.name
-      NOTES_TABLE        = aws_dynamodb_table.notes.name
-      FOLDERS_TABLE      = aws_dynamodb_table.note_folders.name
-      HEALTH_TABLE       = aws_dynamodb_table.health.name
-      NUTRITION_TABLE    = aws_dynamodb_table.nutrition.name
-      GOALS_TABLE        = aws_dynamodb_table.goals.name
-      HABITS_TABLE       = aws_dynamodb_table.habits.name
-      HABIT_LOGS_TABLE   = aws_dynamodb_table.habit_logs_v2.name
-      FRONTEND_BUCKET    = aws_s3_bucket.frontend.id
+      TASKS_TABLE      = aws_dynamodb_table.tasks.name
+      JOURNAL_TABLE    = aws_dynamodb_table.journal.name
+      NOTES_TABLE      = aws_dynamodb_table.notes.name
+      FOLDERS_TABLE    = aws_dynamodb_table.note_folders.name
+      HEALTH_TABLE     = aws_dynamodb_table.health.name
+      GOALS_TABLE      = aws_dynamodb_table.goals.name
+      HABITS_TABLE     = aws_dynamodb_table.habits.name
+      HABIT_LOGS_TABLE = aws_dynamodb_table.habit_logs_v2.name
+      FRONTEND_BUCKET  = aws_s3_bucket.frontend.id
     }
   }
 }
@@ -54,12 +52,10 @@ resource "aws_iam_role_policy" "export_dynamodb" {
       Action = ["dynamodb:Query"]
       Resource = [
         aws_dynamodb_table.tasks.arn,
-        aws_dynamodb_table.task_folders.arn,
         aws_dynamodb_table.journal.arn,
         aws_dynamodb_table.notes.arn,
         aws_dynamodb_table.note_folders.arn,
         aws_dynamodb_table.health.arn,
-        aws_dynamodb_table.nutrition.arn,
         aws_dynamodb_table.goals.arn,
         aws_dynamodb_table.habits.arn,
         aws_dynamodb_table.habit_logs_v2.arn,

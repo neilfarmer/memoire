@@ -88,18 +88,23 @@ def auto_schedule(user_id: str, body: dict) -> dict:
     scheduled = []
     skipped = []
 
+    default_duration = cal.get("default_duration_minutes") or cal["slot_minutes"]
+
     for task in targets:
         try:
-            duration = int(task.get("duration_minutes") or cal["slot_minutes"])
+            duration = int(task.get("duration_minutes") or default_duration)
         except (TypeError, ValueError):
-            duration = cal["slot_minutes"]
+            duration = default_duration
 
         cutoff = _due_horizon(task)
         slot = scheduler._find_free_slot(now, duration, cal, tz, busy, exclude_id=task.get("task_id"))
         if not slot:
             skipped.append({"task_id": task["task_id"], "reason": "no free slot"})
             continue
-        if cutoff is not None and slot.timestamp() + duration * 60 > cutoff:
+        # Only enforce the due-date cutoff for tasks that aren't already overdue.
+        # Already-overdue tasks should still get scheduled into the next free slot.
+        already_overdue = cutoff is not None and cutoff < now.timestamp()
+        if cutoff is not None and not already_overdue and slot.timestamp() + duration * 60 > cutoff:
             skipped.append({"task_id": task["task_id"], "reason": "past due date"})
             continue
 

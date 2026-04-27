@@ -12,7 +12,6 @@ from moto import mock_aws
 from conftest import USER, load_lambda, make_table, make_links_table
 
 os.environ["TABLE_NAME"]     = "test-tasks"
-os.environ["FOLDERS_TABLE"]  = "test-task-folders"
 os.environ["SETTINGS_TABLE"] = "test-settings"
 
 crud = load_lambda("tasks", "crud.py")
@@ -113,15 +112,40 @@ class TestAutoSchedule:
         assert len(body["scheduled"]) == 1
         assert body["scheduled"][0]["task_id"] == a["task_id"]
 
-    def test_skipped_when_past_due(self, tbls):
+    def test_overdue_tasks_still_scheduled(self, tbls):
+        """Already-overdue tasks should be scheduled into the next free slot."""
         crud.create_task(USER, {"title": "Stale", "due_date": "2026-01-01"})
         with patch("auto_schedule.datetime") as dt:
             dt.now.return_value = NOW_UTC
             dt.fromisoformat = datetime.fromisoformat
             r = auto.auto_schedule(USER, {})
         body = json.loads(r["body"])
-        assert body["scheduled"] == []
-        assert body["skipped"][0]["reason"] == "past due date"
+        assert len(body["scheduled"]) == 1
+        assert body["scheduled"][0]["title"] == "Stale"
+        assert body["skipped"] == []
+
+    def test_skipped_when_slot_falls_after_future_due(self, tbls):
+        """A not-yet-overdue task whose only free slot lands after its due date is skipped."""
+        # Block the entire workday today + tomorrow so the only free slot is after the due date.
+        for hour in range(13, 21):  # 09:00 - 17:00 EDT == 13:00 - 21:00 UTC
+            crud.create_task(USER, {
+                "title": f"Block-{hour}",
+                "scheduled_start": f"2026-04-28T{hour:02d}:00:00Z",
+                "duration_minutes": 60,
+            })
+            crud.create_task(USER, {
+                "title": f"Block-{hour}-tmrw",
+                "scheduled_start": f"2026-04-29T{hour:02d}:00:00Z",
+                "duration_minutes": 60,
+            })
+        crud.create_task(USER, {"title": "DueTomorrow", "due_date": "2026-04-29"})
+        with patch("auto_schedule.datetime") as dt:
+            dt.now.return_value = NOW_UTC
+            dt.fromisoformat = datetime.fromisoformat
+            r = auto.auto_schedule(USER, {})
+        body = json.loads(r["body"])
+        skipped_titles = {s["reason"] for s in body["skipped"]}
+        assert "past due date" in skipped_titles
 
     def test_avoids_overlap_with_existing_block(self, tbls):
         crud.create_task(USER, {
@@ -143,6 +167,30 @@ class TestAutoSchedule:
     def test_horizon_days_validation(self, tbls):
         r = auto.auto_schedule(USER, {"horizon_days": "lots"})
         assert r["statusCode"] == 400
+
+    def test_uses_settings_default_duration_when_task_has_none(self, tbls):
+        # Set non-default duration in settings (90 min)
+        tbls.Table(SETTINGS_TABLE).put_item(Item={
+            "user_id": USER,
+            "calendar": {
+                "timezone": "America/New_York",
+                "working_hours_start": "09:00",
+                "working_hours_end":   "17:00",
+                "working_days": [1, 2, 3, 4, 5],
+                "slot_minutes": 30,
+                "horizon_days": 14,
+                "reschedule_min_gap_days": 2,
+                "max_reschedules": 3,
+                "default_duration_minutes": 90,
+            },
+        })
+        crud.create_task(USER, {"title": "Estimate me"})
+        with patch("auto_schedule.datetime") as dt:
+            dt.now.return_value = NOW_UTC
+            dt.fromisoformat = datetime.fromisoformat
+            r = auto.auto_schedule(USER, {})
+        body = json.loads(r["body"])
+        assert body["scheduled"][0]["duration_minutes"] == 90
 
     def test_respect_priority_false(self, tbls):
         json.loads(crud.create_task(USER, {"title": "A", "priority": "low"})["body"])

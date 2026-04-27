@@ -53,10 +53,6 @@ run "all_lambdas_use_runtime_variable" {
     error_message = "health: runtime must use var.lambda_runtime"
   }
   assert {
-    condition     = aws_lambda_function.nutrition.runtime == var.lambda_runtime
-    error_message = "nutrition: runtime must use var.lambda_runtime"
-  }
-  assert {
     condition     = aws_lambda_function.goals.runtime == var.lambda_runtime
     error_message = "goals: runtime must use var.lambda_runtime"
   }
@@ -116,10 +112,6 @@ run "all_log_groups_have_retention" {
   assert {
     condition     = aws_cloudwatch_log_group.health.retention_in_days == var.log_retention_days
     error_message = "health log group: retention_in_days must use var.log_retention_days"
-  }
-  assert {
-    condition     = aws_cloudwatch_log_group.nutrition.retention_in_days == var.log_retention_days
-    error_message = "nutrition log group: retention_in_days must use var.log_retention_days"
   }
   assert {
     condition     = aws_cloudwatch_log_group.goals.retention_in_days == var.log_retention_days

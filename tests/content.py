@@ -55,7 +55,7 @@ def deploy(token: str, api_url: str) -> None:
         destroy(token, api_url)
 
     ids = {
-        "task_folders": [], "tasks": [],
+        "tasks": [],
         "habits": [],
         "journal": [],
         "note_folders": [], "notes": [],
@@ -66,48 +66,38 @@ def deploy(token: str, api_url: str) -> None:
 
     print(f"\n{BOLD}Deploying test content…{RESET}")
 
-    # ── Task folders ──────────────────────────────────────────────────────────
-    print(f"\n{BOLD}Task Folders{RESET}")
-    task_folder_defs = ["Work", "Personal", "Learning", "Side Projects", "Health & Fitness"]
-    task_folders = {}
-    for name in task_folder_defs:
-        r = api("POST", "/tasks/folders", token, api_url, {"name": name})
-        d = ok(r, 201, f"Folder: {name}")
-        task_folders[name] = d["folder_id"]
-        ids["task_folders"].append(d["folder_id"])
-
     # ── Tasks ─────────────────────────────────────────────────────────────────
     print(f"\n{BOLD}Tasks{RESET}")
     tasks = [
         # Work
-        {"title": "Set up CI pipeline",            "folder_id": task_folders["Work"],              "status": "done",        "priority": "high",   "description": "Configure GitHub Actions for automated testing and deployment"},
-        {"title": "Write API documentation",        "folder_id": task_folders["Work"],              "status": "in_progress", "priority": "medium", "description": "Document all endpoints in OpenAPI spec", "due_date": "2099-04-15"},
-        {"title": "Review pull request #42",        "folder_id": task_folders["Work"],              "status": "todo",        "priority": "high",   "due_date": "2099-04-01"},
-        {"title": "Refactor auth middleware",        "folder_id": task_folders["Work"],              "status": "in_progress", "priority": "medium", "description": "Extract token validation into reusable module"},
-        {"title": "Fix login redirect bug",          "folder_id": task_folders["Work"],              "status": "done",        "priority": "high",   "description": "Resolved issue with OAuth callback URL losing state"},
-        {"title": "Update dependencies",             "folder_id": task_folders["Work"],              "status": "todo",        "priority": "low",    "description": "Bump all packages to latest minor versions"},
-        {"title": "Design new dashboard UI",         "folder_id": task_folders["Work"],              "status": "todo",        "priority": "medium", "description": "Wireframes for the new home dashboard in Figma", "due_date": "2099-04-20"},
-        {"title": "Performance audit",               "folder_id": task_folders["Work"],              "status": "todo",        "priority": "high",   "description": "Profile cold start times and p99 latency", "due_date": "2099-06-30"},
+        {"title": "Set up CI pipeline",                "tags": ["Work"],             "status": "done",        "priority": "high",   "description": "Configure GitHub Actions for automated testing and deployment"},
+        {"title": "Write API documentation",           "tags": ["Work"],             "status": "in_progress", "priority": "medium", "description": "Document all endpoints in OpenAPI spec", "due_date": "2099-04-15"},
+        {"title": "Review pull request #42",           "tags": ["Work"],             "status": "todo",        "priority": "high",   "due_date": "2099-04-01"},
+        {"title": "Refactor auth middleware",           "tags": ["Work"],             "status": "in_progress", "priority": "medium", "description": "Extract token validation into reusable module"},
+        {"title": "Fix login redirect bug",             "tags": ["Work"],             "status": "done",        "priority": "high",   "description": "Resolved issue with OAuth callback URL losing state"},
+        {"title": "Update dependencies",                "tags": ["Work"],             "status": "todo",        "priority": "low",    "description": "Bump all packages to latest minor versions"},
+        {"title": "Design new dashboard UI",            "tags": ["Work"],             "status": "todo",        "priority": "medium", "description": "Wireframes for the new home dashboard in Figma", "due_date": "2099-04-20"},
+        {"title": "Performance audit",                  "tags": ["Work"],             "status": "todo",        "priority": "high",   "description": "Profile cold start times and p99 latency", "due_date": "2099-06-30"},
         # Personal
-        {"title": "Book dentist appointment",        "folder_id": task_folders["Personal"],          "status": "todo",        "priority": "medium", "due_date": "2099-04-05"},
-        {"title": "Renew car insurance",             "folder_id": task_folders["Personal"],          "status": "todo",        "priority": "high",   "due_date": "2099-04-10"},
-        {"title": "Plan summer holiday",             "folder_id": task_folders["Personal"],          "status": "in_progress", "priority": "low",    "description": "Research destinations, compare flights"},
-        {"title": "Sort out tax return",             "folder_id": task_folders["Personal"],          "status": "todo",        "priority": "high",   "due_date": "2099-05-31"},
-        {"title": "Fix leaking kitchen tap",         "folder_id": task_folders["Personal"],          "status": "done",        "priority": "medium"},
+        {"title": "Book dentist appointment",           "tags": ["Personal"],         "status": "todo",        "priority": "medium", "due_date": "2099-04-05"},
+        {"title": "Renew car insurance",                "tags": ["Personal"],         "status": "todo",        "priority": "high",   "due_date": "2099-04-10"},
+        {"title": "Plan summer holiday",                "tags": ["Personal"],         "status": "in_progress", "priority": "low",    "description": "Research destinations, compare flights"},
+        {"title": "Sort out tax return",                "tags": ["Personal"],         "status": "todo",        "priority": "high",   "due_date": "2099-05-31"},
+        {"title": "Fix leaking kitchen tap",            "tags": ["Personal"],         "status": "done",        "priority": "medium"},
         # Learning
-        {"title": "Finish Rust book chapter 10",     "folder_id": task_folders["Learning"],          "status": "in_progress", "priority": "medium"},
-        {"title": "Complete AWS SAA practice exam",  "folder_id": task_folders["Learning"],          "status": "todo",        "priority": "medium", "due_date": "2099-05-01"},
-        {"title": "Watch DynamoDB deep dive talk",   "folder_id": task_folders["Learning"],          "status": "done",        "priority": "low"},
-        {"title": "Work through Advent of Code",     "folder_id": task_folders["Learning"],          "status": "in_progress", "priority": "low",    "description": "Currently on day 14"},
+        {"title": "Finish Rust book chapter 10",        "tags": ["Learning"],         "status": "in_progress", "priority": "medium"},
+        {"title": "Complete AWS SAA practice exam",     "tags": ["Learning"],         "status": "todo",        "priority": "medium", "due_date": "2099-05-01"},
+        {"title": "Watch DynamoDB deep dive talk",      "tags": ["Learning"],         "status": "done",        "priority": "low"},
+        {"title": "Work through Advent of Code",        "tags": ["Learning"],         "status": "in_progress", "priority": "low",    "description": "Currently on day 14"},
         # Side Projects
-        {"title": "Set up domain for finance tracker","folder_id": task_folders["Side Projects"],    "status": "done",        "priority": "medium"},
-        {"title": "Build transaction import CSV parser","folder_id": task_folders["Side Projects"],  "status": "in_progress", "priority": "high",   "description": "Support Monzo, Revolut, and Barclays CSV formats"},
-        {"title": "Write landing page copy",         "folder_id": task_folders["Side Projects"],    "status": "todo",        "priority": "low"},
-        {"title": "Set up error monitoring",         "folder_id": task_folders["Side Projects"],    "status": "todo",        "priority": "medium", "due_date": "2099-05-15"},
+        {"title": "Set up domain for finance tracker",  "tags": ["Side Projects"],    "status": "done",        "priority": "medium"},
+        {"title": "Build transaction import CSV parser","tags": ["Side Projects"],    "status": "in_progress", "priority": "high",   "description": "Support Monzo, Revolut, and Barclays CSV formats"},
+        {"title": "Write landing page copy",            "tags": ["Side Projects"],    "status": "todo",        "priority": "low"},
+        {"title": "Set up error monitoring",            "tags": ["Side Projects"],    "status": "todo",        "priority": "medium", "due_date": "2099-05-15"},
         # Health & Fitness
-        {"title": "Book physio appointment",         "folder_id": task_folders["Health & Fitness"],  "status": "todo",        "priority": "high",   "due_date": "2099-04-03"},
-        {"title": "Research 5K training plan",       "folder_id": task_folders["Health & Fitness"],  "status": "done",        "priority": "medium"},
-        {"title": "Buy new running shoes",           "folder_id": task_folders["Health & Fitness"],  "status": "todo",        "priority": "medium"},
+        {"title": "Book physio appointment",            "tags": ["Health & Fitness"], "status": "todo",        "priority": "high",   "due_date": "2099-04-03"},
+        {"title": "Research 5K training plan",          "tags": ["Health & Fitness"], "status": "done",        "priority": "medium"},
+        {"title": "Buy new running shoes",              "tags": ["Health & Fitness"], "status": "todo",        "priority": "medium"},
     ]
     for t in tasks:
         r = api("POST", "/tasks", token, api_url, t)
@@ -393,7 +383,6 @@ def destroy(token: str, api_url: str) -> None:
         print(f"  {status}    {label}")
 
     for task_id   in ids.get("tasks",         []): delete(f"/tasks/{task_id}",         f"task      {task_id}")
-    for folder_id in ids.get("task_folders",  []): delete(f"/tasks/folders/{folder_id}",f"task folder {folder_id}")
     for habit_id  in ids.get("habits",        []): delete(f"/habits/{habit_id}",        f"habit     {habit_id}")
     for date      in ids.get("journal",       []): delete(f"/journal/{date}",           f"journal   {date}")
     for note_id   in ids.get("notes",         []): delete(f"/notes/{note_id}",          f"note      {note_id}")

@@ -750,6 +750,37 @@
     }
     .sb-sub-link:hover { background: var(--hover); color: var(--text); }
     .sb-sub-link.active { color: var(--primary); background: var(--hover); border-left-color: var(--primary); }
+    .task-tags-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 8px 0 12px;
+    }
+    .task-tags-chips:empty { display: none; }
+    .task-tag-chip-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      border-radius: 999px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background .1s, color .1s, border-color .1s;
+    }
+    .task-tag-chip-btn:hover { color: var(--text); border-color: var(--text); }
+    .task-tag-chip-btn.active {
+      color: var(--primary);
+      border-color: var(--primary);
+      background: rgba(59, 130, 246, 0.08);
+    }
+    .task-tag-chip-count {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .task-tag-chip-btn.active .task-tag-chip-count { color: var(--primary); }
     .sb-hdr-action {
       display: inline-flex;
       align-items: center;
@@ -1268,6 +1299,49 @@
     .due-date.overdue::before   { content: "Overdue •"; font-size: var(--text-xs); letter-spacing: .3px; text-transform: uppercase; }
     .due-date.due-today { color: var(--warning-soft); font-weight: var(--weight-semibold); }
     .due-date.due-today::before { content: "Today •"; font-size: var(--text-xs); letter-spacing: .3px; text-transform: uppercase; }
+    .scheduled-chip {
+      font-size: var(--text-xs);
+      color: var(--primary);
+      background: rgba(59, 130, 246, 0.08);
+      padding: 2px 8px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .scheduled-chip::before { content: "Scheduled"; opacity: .7; }
+    .task-tag-chip {
+      font-size: var(--text-xs);
+      color: var(--muted);
+      background: var(--hover);
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .auto-schedule-banner {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      margin: 12px 0;
+      padding: 10px 14px;
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: var(--text-sm);
+    }
+    .auto-schedule-banner.is-visible { display: flex; }
+    .auto-schedule-banner-body  { flex: 1; }
+    .auto-schedule-banner-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1;
+      padding: 4px 8px;
+    }
+    .auto-schedule-banner-close:hover { color: var(--text); }
 
     .task-card.is-overdue {
       border-left: 3px solid var(--danger);
@@ -3400,12 +3474,92 @@
     }
 
     /* ── Health two-pane layout ── */
-    #page-health {
-      max-width: none;
-      padding: 0;
+    /* ──────────────────────────────────────────────────────────────────────
+       Health page (.hl-page) — sibling of .fb-page. Same editorial-data
+       vocabulary: Fraunces display numerals, Sora uppercase tracked
+       eyebrows, soft accent washes via color-mix, gradient mesh backdrop.
+       ────────────────────────────────────────────────────────────────── */
+
+    #page-health.hl-page {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 28px 24px 56px;
+      display: block;
+      height: auto;
+      overflow: visible;
+      position: relative;
+      isolation: isolate;
+    }
+    #page-health.hl-page::before {
+      content: "";
+      position: absolute;
+      inset: -40px -20px auto -20px;
+      height: 380px;
+      background:
+        radial-gradient(ellipse 60% 60% at 12% 0%,  color-mix(in oklab, var(--positive) 18%, transparent) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 60% at 88% 5%,  color-mix(in oklab, #ec4899     16%, transparent)     0%, transparent 70%),
+        radial-gradient(ellipse 60% 60% at 50% 0%,  color-mix(in oklab, var(--accent) 12%, transparent)   0%, transparent 70%);
+      filter: blur(40px);
+      pointer-events: none;
+      opacity: .55;
+      z-index: -1;
+    }
+    html[data-theme="dark"] #page-health.hl-page::before { opacity: .35; }
+
+    .hl-toolbar {
       display: flex;
-      height: 100%;
-      overflow: hidden;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+    }
+    .hl-toolbar h2 {
+      font-family: var(--font-display);
+      font-size: 40px;
+      font-weight: 600;
+      letter-spacing: -1.2px;
+      line-height: 1;
+      margin: 0;
+    }
+    .hl-eyebrow {
+      display: block;
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: var(--weight-medium);
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+    .hl-toolbar-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .hl-date-picker {
+      height: 36px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      transition: border-color .15s var(--ease), background .15s var(--ease);
+    }
+    .hl-date-picker:hover { border-color: color-mix(in oklab, var(--primary) 35%, var(--border)); }
+    .hl-date-picker:focus { outline: none; border-color: var(--primary); background: color-mix(in oklab, var(--primary) 5%, var(--surface)); }
+    .hl-save-status {
+      display: block;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--muted);
+      margin: -8px 0 12px;
+      min-height: 16px;
     }
 
     #page-nutrition {
@@ -3903,9 +4057,8 @@
       box-shadow: inset 0 1px 0 var(--primary);
     }
     .week-block {
-      position: absolute;
-      left: 2px;
-      right: 2px;
+      position: relative;
+      margin: 1px 2px;
       border-radius: 4px;
       padding: 4px 6px;
       font-size: 11px;
@@ -5160,6 +5313,1217 @@
       .task-card:hover { transform: none; }
       .home-widget:hover { transform: none; }
     }
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       Fitbit dashboard
+       Editorial-data style: Fraunces display numbers, accent rings, soft
+       atmospheric tints. All accent colors come from existing semantic tokens
+       so the page adapts to dark mode automatically.
+       ────────────────────────────────────────────────────────────────────── */
+
+    #page-fitbit.fb-page {
+      position: relative;
+      isolation: isolate;
+    }
+    #page-fitbit.fb-page::before {
+      content: "";
+      position: absolute;
+      inset: -40px -20px auto -20px;
+      height: 380px;
+      background:
+        radial-gradient(ellipse 60% 60% at 12% 0%,  color-mix(in oklab, var(--positive) 18%, transparent) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 60% at 88% 5%,  color-mix(in oklab, var(--primary) 16%, transparent)  0%, transparent 70%),
+        radial-gradient(ellipse 60% 60% at 50% 0%,  color-mix(in oklab, var(--accent) 12%, transparent)   0%, transparent 70%);
+      filter: blur(40px);
+      pointer-events: none;
+      opacity: .55;
+      z-index: -1;
+    }
+    html[data-theme="dark"] #page-fitbit.fb-page::before { opacity: .35; }
+
+    /* Toolbar */
+    .fb-toolbar { align-items: flex-end; }
+    .fb-title-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .fb-eyebrow {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: var(--weight-medium);
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .fb-eyebrow #fb-today-date {
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+    }
+    .fb-toolbar h2 {
+      font-family: var(--font-display);
+      font-size: 36px;
+      font-weight: 600;
+      letter-spacing: -1px;
+      line-height: 1;
+      margin: 0;
+    }
+    .fb-toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .fb-sync-time {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: .3px;
+      color: var(--muted);
+    }
+    .fb-sync-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      letter-spacing: .3px;
+    }
+    .fb-sync-btn svg {
+      width: 13px;
+      height: 13px;
+      transition: transform .6s var(--ease);
+    }
+    .fb-sync-btn:disabled svg { animation: fb-spin 1s linear infinite; }
+    @keyframes fb-spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    /* Dashboard grid */
+    .fb-dashboard {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-auto-flow: row dense;
+      gap: 16px;
+      margin-top: 18px;
+    }
+    .fb-dashboard.hidden { display: none; }
+    .fb-dashboard > .fb-quickadd,
+    .fb-dashboard > .fb-feed-section { grid-column: 1 / -1; }
+
+    @media (max-width: 920px) {
+      .fb-dashboard { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 520px) {
+      .fb-dashboard { grid-template-columns: 1fr; }
+    }
+
+    /* Card */
+    .fb-card {
+      --fb-accent: var(--primary);
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 18px 20px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      min-height: 220px;
+      animation: fb-card-in .55s var(--ease) backwards;
+      transition: transform .25s var(--ease), box-shadow .25s var(--ease), border-color .25s var(--ease);
+    }
+    .fb-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 100% at 100% 0%,
+          color-mix(in oklab, var(--fb-accent) 14%, transparent) 0%,
+          transparent 60%);
+      pointer-events: none;
+      opacity: .9;
+      transition: opacity .3s var(--ease);
+    }
+    .fb-card::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--fb-accent);
+      opacity: .65;
+      border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    }
+    html[data-theme="dark"] .fb-card::before { opacity: .55; }
+    .fb-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: color-mix(in oklab, var(--fb-accent) 35%, var(--border));
+    }
+    .fb-card:hover::before { opacity: 1; }
+    .fb-card:nth-child(1) { animation-delay: 0ms;   }
+    .fb-card:nth-child(2) { animation-delay: 70ms;  }
+    .fb-card:nth-child(3) { animation-delay: 140ms; }
+    .fb-card:nth-child(4) { animation-delay: 210ms; }
+    @keyframes fb-card-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .fb-card--steps  { --fb-accent: var(--positive); }
+    .fb-card--food   { --fb-accent: var(--accent);   }
+    .fb-card--weight { --fb-accent: #ec4899; }
+    html[data-theme="dark"] .fb-card--weight { --fb-accent: #f472b6; }
+    .fb-card--sleep  { --fb-accent: var(--primary); }
+
+    .fb-card-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      position: relative;
+      z-index: 1;
+    }
+    .fb-card-label {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: color-mix(in oklab, var(--fb-accent) 80%, var(--text));
+    }
+    .fb-card-goal {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: .4px;
+      color: var(--muted);
+    }
+    .fb-card-body {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .fb-card-body--ring {
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    /* Big editorial number */
+    .fb-metric-num {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 52px;
+      line-height: .95;
+      letter-spacing: -1.5px;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "ss02";
+    }
+    .fb-card-body--ring .fb-metric-num { font-size: 30px; letter-spacing: -.7px; }
+    .fb-metric-unit {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: var(--weight-medium);
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .fb-card-body--ring .fb-metric-unit { margin-top: 0; font-size: 10px; }
+    .fb-card-sub {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: .2px;
+      margin-top: 6px;
+      font-variant-numeric: tabular-nums;
+      min-height: 14px;
+    }
+    .fb-card-body--ring .fb-card-sub { text-align: center; margin-top: 0; }
+
+    /* Ring */
+    .fb-ring {
+      position: relative;
+      width: 148px;
+      height: 148px;
+    }
+    .fb-ring svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+      overflow: visible;
+    }
+    .fb-ring-track {
+      fill: none;
+      stroke: color-mix(in oklab, var(--fb-accent) 18%, transparent);
+      stroke-width: 8;
+    }
+    html[data-theme="dark"] .fb-ring-track {
+      stroke: color-mix(in oklab, var(--fb-accent) 22%, transparent);
+    }
+    .fb-ring-fill {
+      --fb-pct: 0;
+      --fb-circ: 326.7256;
+      fill: none;
+      stroke: var(--fb-accent);
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-dasharray: var(--fb-circ);
+      stroke-dashoffset: calc(var(--fb-circ) * (1 - var(--fb-pct)));
+      transition: stroke-dashoffset 1.1s cubic-bezier(.22,.9,.3,1);
+      filter: drop-shadow(0 0 6px color-mix(in oklab, var(--fb-accent) 40%, transparent));
+    }
+    .fb-ring-content {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    /* Food bar (calories in vs calories out) */
+    .fb-bar {
+      width: 100%;
+      height: 6px;
+      background: color-mix(in oklab, var(--fb-accent) 14%, transparent);
+      border-radius: var(--radius-pill);
+      overflow: hidden;
+      margin-top: 14px;
+      position: relative;
+    }
+    .fb-bar-fill {
+      --fb-pct: 0;
+      width: calc(var(--fb-pct) * 100%);
+      max-width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg,
+        color-mix(in oklab, var(--fb-accent) 80%, var(--text)) 0%,
+        var(--fb-accent) 100%);
+      border-radius: var(--radius-pill);
+      transition: width 1.1s cubic-bezier(.22,.9,.3,1);
+    }
+
+    /* Weight: subtle horizontal accent line as visual anchor */
+    .fb-card--weight .fb-card-body::after {
+      content: "";
+      width: 36px;
+      height: 2px;
+      background: var(--fb-accent);
+      border-radius: var(--radius-pill);
+      margin-top: 10px;
+      opacity: .7;
+    }
+
+    /* Quick-add capture row */
+    .fb-quickadd {
+      grid-column: 1 / -1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 18px;
+      box-shadow: var(--shadow);
+      animation: fb-card-in .6s var(--ease) backwards;
+      animation-delay: 280ms;
+      position: relative;
+      /* Do NOT clip overflow — the autocomplete dropdown anchors to the
+         input and must escape the card bounds. */
+    }
+    .fb-quickadd::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 3px;
+      background: linear-gradient(180deg, var(--accent) 0%, var(--primary) 100%);
+      opacity: .8;
+      border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    }
+    .fb-quickadd-rail {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .fb-quickadd-eyebrow {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .fb-quickadd-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 100px 38px 160px auto;
+      gap: 10px;
+      align-items: stretch;
+    }
+    .fb-quickadd-row .fb-input,
+    .fb-quickadd-row select.fb-input {
+      width: 100%;
+      height: 38px;
+      padding: 0 12px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text);
+      transition: border-color .15s var(--ease), background .15s var(--ease);
+    }
+    .fb-quickadd-row .fb-input:hover {
+      border-color: color-mix(in oklab, var(--accent) 40%, var(--border));
+    }
+    .fb-quickadd-row .fb-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: color-mix(in oklab, var(--accent) 5%, transparent);
+    }
+    .fb-input--name {
+      font-family: var(--font-display);
+      font-size: 15px;
+      letter-spacing: -.2px;
+    }
+    .fb-input--cal {
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      padding-right: 8px !important;
+    }
+    .fb-input-suffix {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-md);
+    }
+    .fb-input--meal {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+        linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+      background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+      background-size: 5px 5px;
+      background-repeat: no-repeat;
+      padding-right: 28px !important;
+    }
+    .fb-quickadd-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 18px;
+      height: 38px;
+      font-size: 12px;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      font-weight: var(--weight-semibold);
+      box-shadow: 0 2px 8px color-mix(in oklab, var(--primary) 25%, transparent);
+    }
+    .fb-quickadd-btn:hover:not(:disabled) {
+      box-shadow: 0 4px 14px color-mix(in oklab, var(--primary) 40%, transparent) !important;
+    }
+    .fb-quickadd-msg {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      letter-spacing: .2px;
+    }
+
+    @media (max-width: 760px) {
+      .fb-quickadd-row {
+        grid-template-columns: 1fr 1fr;
+      }
+      .fb-combobox         { grid-column: 1 / -1; }
+      .fb-input--cal       { grid-column: 1 / 2; }
+      .fb-input-suffix     { display: none; }
+      .fb-input--meal      { grid-column: 2 / 3; }
+      .fb-quickadd-btn     { grid-column: 1 / -1; }
+    }
+
+    /* Food autocomplete combobox */
+    .fb-combobox {
+      position: relative;
+      min-width: 0;
+    }
+    .fb-combobox .fb-input--name {
+      width: 100%;
+    }
+    .fb-combobox-panel {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      max-height: 320px;
+      overflow-y: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      z-index: 50;
+      padding: 4px;
+    }
+    .fb-combobox-panel.hidden { display: none; }
+    .fb-combobox-empty,
+    .fb-combobox-loading {
+      padding: 16px 14px;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: .2px;
+    }
+    .fb-combobox-loading::before {
+      content: "";
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      margin-right: 8px;
+      border-radius: 50%;
+      border: 2px solid color-mix(in oklab, var(--primary) 30%, transparent);
+      border-top-color: var(--primary);
+      animation: fb-spin .8s linear infinite;
+      vertical-align: -1px;
+    }
+    .fb-combobox-option {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background .12s var(--ease);
+      border: 1px solid transparent;
+    }
+    .fb-combobox-option:hover,
+    .fb-combobox-option.is-active {
+      background: color-mix(in oklab, var(--accent) 10%, transparent);
+      border-color: color-mix(in oklab, var(--accent) 25%, transparent);
+    }
+    .fb-combobox-option-main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .fb-combobox-option-name {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: -.1px;
+      color: var(--text);
+      line-height: 1.25;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .fb-combobox-option-meta {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: .2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .fb-combobox-option-cal {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -.2px;
+      color: color-mix(in oklab, var(--accent) 70%, var(--text));
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .fb-combobox-option-cal-unit {
+      font-family: var(--font-sans);
+      font-size: 9px;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-left: 3px;
+      font-weight: var(--weight-medium);
+    }
+
+    /* Feed */
+    .fb-feed-section {
+      grid-column: 1 / -1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 6px 8px;
+      box-shadow: var(--shadow);
+      animation: fb-card-in .6s var(--ease) backwards;
+      animation-delay: 350ms;
+    }
+    .fb-feed-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 0 14px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .fb-feed-label {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .fb-feed-empty {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      color: var(--muted);
+      padding: 24px 14px;
+      text-align: center;
+      font-style: italic;
+    }
+    .fb-feed {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .fb-feed.hidden { display: none; }
+    .fb-feed-item {
+      --fb-accent: var(--muted);
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+      transition: background .15s var(--ease);
+    }
+    .fb-feed-item:last-child { border-bottom: none; }
+    .fb-feed-item:hover { background: var(--hover); }
+    .fb-feed-item[data-meal="1"] { --fb-accent: #f59e0b; } /* Breakfast — amber */
+    .fb-feed-item[data-meal="2"] { --fb-accent: #84cc16; } /* Morning Snack — lime */
+    .fb-feed-item[data-meal="3"] { --fb-accent: #06b6d4; } /* Lunch — cyan */
+    .fb-feed-item[data-meal="4"] { --fb-accent: #a855f7; } /* Afternoon Snack — purple */
+    .fb-feed-item[data-meal="5"] { --fb-accent: #ec4899; } /* Dinner — pink */
+    .fb-feed-item[data-meal="7"] { --fb-accent: var(--muted); } /* Anytime */
+
+    .fb-meal-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      background: color-mix(in oklab, var(--fb-accent) 14%, transparent);
+      color: color-mix(in oklab, var(--fb-accent) 90%, var(--text));
+      font-family: var(--font-sans);
+      font-size: 10px;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      border: 1px solid color-mix(in oklab, var(--fb-accent) 25%, transparent);
+    }
+    .fb-meal-chip::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--fb-accent);
+    }
+    .fb-feed-name {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 500;
+      letter-spacing: -.2px;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .fb-feed-meta {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: .2px;
+      margin-top: 2px;
+    }
+    .fb-feed-cal {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -.3px;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .fb-feed-cal-unit {
+      font-family: var(--font-sans);
+      font-size: 10px;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-left: 4px;
+      font-weight: var(--weight-medium);
+    }
+
+    @media (max-width: 520px) {
+      .fb-toolbar h2 { font-size: 28px; }
+      .fb-metric-num { font-size: 42px; }
+      .fb-card-body--ring .fb-metric-num { font-size: 26px; }
+      .fb-ring { width: 124px; height: 124px; }
+    }
+
+    /* ── Health page: unified activity + nutrition + exercise + trends ─── */
+
+    .hl-section {
+      --hl-accent: var(--primary);
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 22px 22px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      animation: hl-section-in .55s var(--ease) backwards;
+      overflow: hidden;
+    }
+    .hl-section::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--hl-accent);
+      opacity: .65;
+      border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    }
+    .hl-section--activity  { --hl-accent: var(--positive); animation-delay: 0ms; }
+    .hl-section--nutrition { --hl-accent: var(--accent);   animation-delay: 70ms; }
+    .hl-section--exercise  { --hl-accent: var(--primary);  animation-delay: 140ms; }
+    .hl-section--trends    { --hl-accent: #ec4899;         animation-delay: 210ms; }
+    html[data-theme="dark"] .hl-section--trends { --hl-accent: #f472b6; }
+
+    @keyframes hl-section-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .hl-section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid color-mix(in oklab, var(--hl-accent) 18%, var(--border));
+    }
+    .hl-section-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      color: color-mix(in oklab, var(--hl-accent) 80%, var(--text));
+    }
+    .hl-section-title::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--hl-accent);
+      box-shadow: 0 0 0 3px color-mix(in oklab, var(--hl-accent) 18%, transparent);
+    }
+    .hl-section-aside {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      letter-spacing: .4px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ─── Activity stat tiles ─────────────────────────────────────────── */
+    .hl-activity-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+    @media (max-width: 920px) { .hl-activity-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 520px) { .hl-activity-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .hl-stat {
+      --hl-stat-accent: var(--primary);
+      position: relative;
+      background:
+        linear-gradient(140deg,
+          color-mix(in oklab, var(--hl-stat-accent) 8%, var(--surface)) 0%,
+          var(--surface) 70%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+      overflow: hidden;
+      transition: transform .22s var(--ease), border-color .22s var(--ease);
+    }
+    .hl-stat::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--hl-stat-accent);
+      opacity: .8;
+    }
+    .hl-stat:hover {
+      transform: translateY(-1px);
+      border-color: color-mix(in oklab, var(--hl-stat-accent) 30%, var(--border));
+    }
+    .hl-stat--steps    { --hl-stat-accent: var(--positive); }
+    .hl-stat--distance { --hl-stat-accent: #06b6d4; }
+    .hl-stat--active   { --hl-stat-accent: var(--accent); }
+    .hl-stat--burned   { --hl-stat-accent: #f97316; }
+    .hl-stat--sleep    { --hl-stat-accent: var(--primary); }
+    .hl-stat--weight   { --hl-stat-accent: #ec4899; }
+    html[data-theme="dark"] .hl-stat--weight   { --hl-stat-accent: #f472b6; }
+    html[data-theme="dark"] .hl-stat--burned   { --hl-stat-accent: #fb923c; }
+    html[data-theme="dark"] .hl-stat--distance { --hl-stat-accent: #22d3ee; }
+
+    .hl-stat-label {
+      font-family: var(--font-sans);
+      font-size: 9px;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: color-mix(in oklab, var(--hl-stat-accent) 70%, var(--text));
+    }
+    .hl-stat-value {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 600;
+      letter-spacing: -.7px;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.05;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    @media (max-width: 520px) { .hl-stat-value { font-size: 22px; } }
+
+    /* ─── Nutrition fast capture + feed ───────────────────────────────── */
+    .hl-quickadd {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: stretch;
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      background: color-mix(in oklab, var(--accent) 6%, transparent);
+      border: 1px dashed color-mix(in oklab, var(--accent) 30%, var(--border));
+    }
+    .hl-quickadd .hl-input          { flex: 1 1 200px; min-width: 0; }
+    .hl-quickadd .hl-input--cal     { flex: 0 0 90px;  text-align: right; }
+    .hl-quickadd #hl-food-meal      { flex: 0 0 150px; }
+    .hl-quickadd #hl-food-add       { flex: 0 0 auto;
+                                      box-shadow: 0 2px 8px color-mix(in oklab, var(--primary) 25%, transparent); }
+    .hl-quickadd #hl-food-add:hover:not(:disabled) {
+      box-shadow: 0 4px 14px color-mix(in oklab, var(--primary) 40%, transparent) !important;
+    }
+    @media (max-width: 720px) {
+      .hl-quickadd #hl-food-name { flex: 1 1 100%; }
+      .hl-quickadd #hl-food-add  { flex: 1 1 100%; }
+    }
+    .hl-input {
+      height: 36px;
+      padding: 0 12px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      transition: border-color .15s var(--ease), background .15s var(--ease);
+    }
+    .hl-input:hover { border-color: color-mix(in oklab, var(--accent) 30%, var(--border)); }
+    .hl-input:focus { outline: none; border-color: var(--accent); background: color-mix(in oklab, var(--accent) 6%, var(--surface)); }
+    .hl-input--cal  { font-variant-numeric: tabular-nums; text-align: right; padding-right: 10px; }
+    #hl-food-name {
+      font-family: var(--font-display);
+      font-size: 15px;
+      letter-spacing: -.2px;
+    }
+
+    .hl-totals {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: .3px;
+      margin: 4px 4px 10px;
+      font-variant-numeric: tabular-nums;
+    }
+    .hl-totals strong {
+      font-family: var(--font-display);
+      color: var(--text);
+      font-weight: 600;
+      font-size: 16px;
+      letter-spacing: -.3px;
+      margin-right: 4px;
+    }
+
+    .hl-food-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .hl-food-list:empty { display: none; }
+    .hl-food-item {
+      --hl-meal: var(--muted);
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 8px;
+      border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+      min-width: 0;
+      transition: background .15s var(--ease);
+    }
+    .hl-food-item:last-child { border-bottom: none; }
+    .hl-food-item:hover { background: var(--hover); }
+    .hl-food-item[data-meal="1"] { --hl-meal: #f59e0b; }
+    .hl-food-item[data-meal="2"] { --hl-meal: #84cc16; }
+    .hl-food-item[data-meal="3"] { --hl-meal: #06b6d4; }
+    .hl-food-item[data-meal="4"] { --hl-meal: #a855f7; }
+    .hl-food-item[data-meal="5"] { --hl-meal: #ec4899; }
+    .hl-food-item[data-meal="7"] { --hl-meal: var(--muted); }
+
+    .hl-food-meal {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      font-family: var(--font-sans);
+      font-size: 9px;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+      background: color-mix(in oklab, var(--hl-meal) 14%, transparent);
+      color: color-mix(in oklab, var(--hl-meal) 90%, var(--text));
+      border: 1px solid color-mix(in oklab, var(--hl-meal) 25%, transparent);
+    }
+    .hl-food-meal::before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--hl-meal);
+    }
+    .hl-food-name {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 500;
+      letter-spacing: -.2px;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1.25;
+    }
+    .hl-food-cal {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -.3px;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .hl-food-cal-unit {
+      font-family: var(--font-sans);
+      font-size: 9px;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-left: 3px;
+      font-weight: var(--weight-medium);
+    }
+    .hl-food-del {
+      width: 26px;
+      height: 26px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      cursor: pointer;
+      transition: color .15s, border-color .15s, background .15s;
+      font-size: 16px;
+      line-height: 1;
+    }
+    .hl-food-del:hover {
+      color: var(--danger);
+      border-color: var(--danger);
+      background: color-mix(in oklab, var(--danger) 8%, transparent);
+    }
+    @media (max-width: 520px) {
+      .hl-food-item { gap: 8px; padding: 10px 4px; }
+      .hl-food-meal { display: none; }
+    }
+
+    .hl-empty {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      color: var(--muted);
+      font-style: italic;
+      padding: 18px 6px;
+      text-align: center;
+    }
+    .hl-food-list:not(:empty) + .hl-empty { display: none; }
+
+    /* ─── Trends header range pills (mirrors .fb-range from Fitbit) ───── */
+    .hl-trends-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid color-mix(in oklab, var(--hl-accent) 18%, var(--border));
+    }
+
+    /* History / trend charts */
+    .fb-history-section {
+      grid-column: 1 / -1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 18px 20px;
+      box-shadow: var(--shadow);
+      animation: fb-card-in .6s var(--ease) backwards;
+      animation-delay: 420ms;
+    }
+    .fb-history-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .fb-range {
+      display: inline-flex;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      padding: 2px;
+      background: color-mix(in oklab, var(--text) 4%, transparent);
+    }
+    .fb-range-btn {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      transition: background .15s var(--ease), color .15s var(--ease);
+    }
+    .fb-range-btn:hover { color: var(--text); }
+    .fb-range-btn.is-active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+    html[data-theme="dark"] .fb-range-btn.is-active {
+      background: color-mix(in oklab, var(--primary) 18%, var(--surface));
+    }
+
+    .fb-charts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 720px) {
+      .fb-charts { grid-template-columns: 1fr; }
+    }
+
+    .fb-chart {
+      --fb-accent: var(--primary);
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 14px 8px;
+      background: color-mix(in oklab, var(--fb-accent) 4%, var(--surface));
+      overflow: hidden;
+    }
+    .fb-chart::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--fb-accent);
+      opacity: .55;
+    }
+    .fb-chart--steps  { --fb-accent: var(--positive); }
+    .fb-chart--food   { --fb-accent: var(--accent);   }
+    .fb-chart--weight { --fb-accent: #ec4899; }
+    html[data-theme="dark"] .fb-chart--weight { --fb-accent: #f472b6; }
+    .fb-chart--sleep  { --fb-accent: var(--primary); }
+
+    .fb-chart-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .fb-chart-label {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: color-mix(in oklab, var(--fb-accent) 80%, var(--text));
+    }
+    .fb-chart-summary {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: -.2px;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .fb-chart-svg {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 7;
+      min-height: 110px;
+    }
+    .fb-chart-svg svg { display: block; width: 100%; height: 100%; overflow: visible; }
+    .fb-chart-grid line {
+      stroke: var(--border);
+      stroke-dasharray: 2 4;
+      stroke-width: 1;
+    }
+    .fb-chart-axis-label {
+      font-family: var(--font-sans);
+      font-size: 9px;
+      fill: var(--muted);
+      letter-spacing: .4px;
+      font-feature-settings: "tnum";
+    }
+    .fb-chart-area {
+      fill: var(--fb-accent);
+      fill-opacity: .12;
+    }
+    .fb-chart-line {
+      fill: none;
+      stroke: var(--fb-accent);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 1px 2px color-mix(in oklab, var(--fb-accent) 35%, transparent));
+    }
+    .fb-chart-dot {
+      fill: var(--surface);
+      stroke: var(--fb-accent);
+      stroke-width: 2;
+    }
+    .fb-chart-hover-line {
+      stroke: var(--fb-accent);
+      stroke-width: 1;
+      stroke-dasharray: 2 3;
+      opacity: 0;
+      transition: opacity .15s var(--ease);
+      pointer-events: none;
+    }
+    .fb-chart-hover-dot {
+      fill: var(--fb-accent);
+      stroke: var(--surface);
+      stroke-width: 2;
+      r: 4;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .fb-chart-svg.is-hover .fb-chart-hover-line,
+    .fb-chart-svg.is-hover .fb-chart-hover-dot { opacity: 1; }
+    .fb-chart-tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: var(--text);
+      color: var(--bg);
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      padding: 5px 10px;
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+      transform: translate(-50%, calc(-100% - 8px));
+      opacity: 0;
+      transition: opacity .15s var(--ease);
+      box-shadow: var(--shadow-md);
+      z-index: 5;
+    }
+    .fb-chart-tooltip-date {
+      display: block;
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      opacity: .6;
+      margin-bottom: 1px;
+    }
+    .fb-chart-svg.is-hover .fb-chart-tooltip { opacity: 1; }
+    .fb-chart-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--muted);
+      font-style: italic;
+    }
+    .fb-history-empty {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      padding: 24px 14px;
+      font-style: italic;
+    }
+
         </style>
     </head>
     <body>
@@ -5300,10 +6664,6 @@
                                     </svg>
                                 </span>
                                 <span class="sb-hdr-label">Tasks</span>
-                                <button class="sb-hdr-btn"
-                                        id="new-task-folder-btn"
-                                        onclick="event.stopPropagation()"
-                                        title="New folder">+ Folder</button>
                                 <span class="sb-arrow">
                                     <svg viewBox="0 0 10 10" fill="currentColor">
                                         <polygon points="2,1 8,5 2,9" />
@@ -5311,7 +6671,14 @@
                                 </span>
                             </div>
                             <div class="sb-section-body hidden" id="sb-tasks-body">
-                                <div id="task-folders-tree"></div>
+                                <div class="sb-section-body-inner">
+                                    <button class="sb-sub-link"
+                                            id="task-list-link"
+                                            onclick="event.stopPropagation(); taskTags.showList()">List</button>
+                                    <button class="sb-sub-link"
+                                            id="task-calendar-link"
+                                            onclick="event.stopPropagation(); taskTags.openCalendar()">Calendar</button>
+                                </div>
                             </div>
                         </div>
                         <div class="sb-section" id="sb-notes">
@@ -5417,10 +6784,10 @@
                                         <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
                                     </svg>
                                 </span>
-                                <span class="sb-hdr-label">Exercise</span>
+                                <span class="sb-hdr-label">Health</span>
                             </div>
                         </div>
-                        <div class="sb-section" id="sb-nutrition">
+                        <div class="sb-section hidden" id="sb-nutrition">
                             <div class="sb-section-hdr" onclick="sidebar.navigate('nutrition')">
                                 <span class="sb-icon">
                                     <svg viewBox="0 0 24 24"
@@ -5540,6 +6907,22 @@
                                 </button>
                             </div>
                         </div>
+                        <div class="sb-group-label hidden" id="sb-group-custom">Custom</div>
+                        <div class="sb-section hidden" id="sb-fitbit">
+                            <div class="sb-section-hdr" onclick="sidebar.navigate('fitbit')">
+                                <span class="sb-icon">
+                                    <svg viewBox="0 0 24 24"
+                                         fill="none"
+                                         stroke="currentColor"
+                                         stroke-width="2"
+                                         stroke-linecap="round"
+                                         stroke-linejoin="round">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                                    </svg>
+                                </span>
+                                <span class="sb-hdr-label">Fitbit</span>
+                            </div>
+                        </div>
                         <div class="sb-spacer"></div>
                         <div class="sb-pal" id="sb-pal">
                             <button type="button"
@@ -5617,34 +7000,6 @@
                                 </svg>
                                 Pomodoro
                             </button>
-                            <button class="btn btn-secondary u-row-sm" id="task-view-btn">
-                                <svg width="14"
-                                     height="14"
-                                     viewBox="0 0 24 24"
-                                     fill="none"
-                                     stroke="currentColor"
-                                     stroke-width="2"
-                                     stroke-linecap="round"
-                                     stroke-linejoin="round">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-                                </svg>
-                                Calendar
-                            </button>
-                            <button class="btn btn-secondary u-row-sm"
-                                    id="task-week-btn"
-                                    title="Week view">
-                                <svg width="14"
-                                     height="14"
-                                     viewBox="0 0 24 24"
-                                     fill="none"
-                                     stroke="currentColor"
-                                     stroke-width="2"
-                                     stroke-linecap="round"
-                                     stroke-linejoin="round">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="8" y1="4" x2="8" y2="22" /><line x1="13" y1="4" x2="13" y2="22" /><line x1="18" y1="4" x2="18" y2="22" />
-                                </svg>
-                                Week
-                            </button>
                             <button class="btn btn-secondary u-row-sm"
                                     id="auto-schedule-btn"
                                     title="Auto-schedule unscheduled tasks">
@@ -5662,6 +7017,7 @@
                             </button>
                             <button class="btn btn-primary" id="new-task-btn">+ New task</button>
                         </div>
+                        <div id="task-tags-chips" class="task-tags-chips"></div>
                         <div class="filters">
                             <button class="filter-btn active" data-filter="all">
                                 All <span class="filter-count" id="fc-all">0</span>
@@ -5721,7 +7077,6 @@
                             <div class="spinner"></div>
                         </div>
                         <div id="task-list"></div>
-                        <div id="task-calendar" class="hidden"></div>
                         <div id="task-week" class="hidden"></div>
                     </main>
                     <!-- Habits page -->
@@ -5877,60 +7232,152 @@
                         </div>
                     </main>
                     <!-- Health page -->
-                    <main id="page-health" class="hidden">
-                        <!-- Left: calendar + log list -->
-                        <div class="health-left">
-                            <div class="health-left-header">
-                                <h2>Exercise</h2>
-                                <button class="btn btn-primary btn-sm" id="health-today-btn">Log today</button>
+                    <main id="page-health" class="hidden hl-page">
+                        <div class="hl-toolbar">
+                            <div>
+                                <span class="hl-eyebrow" id="health-date-label">Today</span>
+                                <h2>Health</h2>
                             </div>
-                            <div class="health-list-scroll">
-                                <div id="health-loader" class="page-loader hidden">
-                                    <div class="spinner"></div>
-                                </div>
-                                <div id="health-log-list"></div>
-                            </div>
-                        </div>
-                        <!-- Right: workout editor -->
-                        <div class="health-right">
-                            <div class="health-empty-state" id="health-empty-state">
-                                <div class="empty-icon">&#127939;</div>
-                                <p>
-                                    Select a day from the calendar
-                                    <br>
-                                    to log your workout.
-                                </p>
-                            </div>
-                            <div id="health-editor" class="hidden u-stretch-col">
-                                <div class="health-editor-header">
-                                    <span class="health-date-label" id="health-date-label"></span>
-                                    <button class="btn btn-danger hidden" id="health-delete-btn">Delete</button>
-                                    <button class="btn btn-primary" id="health-save-btn">Save</button>
-                                </div>
-                                <div class="health-editor-body">
-                                    <div id="health-totals" class="nutrition-totals hidden"></div>
-                                    <div id="health-repeat-picker" class="repeat-picker hidden">
-                                        <input class="repeat-picker-search"
-                                               id="health-repeat-search"
-                                               type="search"
-                                               placeholder="Search previous workouts..." />
-                                        <div class="repeat-picker-results" id="health-repeat-results"></div>
-                                    </div>
-                                    <div id="health-exercises"></div>
-                                    <div class="editor-btn-row">
-                                        <button class="btn btn-secondary" id="health-add-exercise-btn">+ Add exercise</button>
-                                        <button class="btn btn-secondary" id="health-repeat-btn">+ Repeat previous</button>
-                                    </div>
-                                    <div class="field">
-                                        <label class="u-text-xs u-muted">Notes</label>
-                                        <textarea id="health-notes" placeholder="How did it go?..." rows="3"></textarea>
-                                    </div>
-                                </div>
-                                <div class="health-editor-footer">
-                                    <span id="health-save-status"></span>
-                                </div>
+                            <div class="hl-toolbar-actions">
+                                <input type="date" id="health-date-picker" class="hl-date-picker" />
+                                <button class="btn btn-secondary" id="health-today-btn">Today</button>
+                                <button class="btn btn-danger hidden" id="health-delete-btn">Delete</button>
+                                <button class="btn btn-primary" id="health-save-btn">Save</button>
                             </div>
                         </div>
+                        <div id="health-loader" class="page-loader hidden">
+                            <div class="spinner"></div>
+                        </div>
+                        <span id="health-save-status" class="hl-save-status"></span>
+
+                        <!-- Hidden shells the existing JS still references -->
+                        <div id="health-empty-state" class="hidden"></div>
+                        <div id="health-editor" class="hidden"></div>
+                        <div id="health-log-list" class="hidden"></div>
+
+                        <!-- Activity totals (top) -->
+                        <section class="hl-section hl-section--activity">
+                            <header class="hl-section-head">
+                                <span class="hl-section-title">Activity</span>
+                                <span class="hl-section-aside">Today's totals</span>
+                            </header>
+                            <div id="hl-activity-grid" class="hl-activity-grid">
+                                <div class="hl-stat hl-stat--steps">
+                                    <span class="hl-stat-label">Steps</span>
+                                    <span class="hl-stat-value" id="hl-stat-steps">—</span>
+                                </div>
+                                <div class="hl-stat hl-stat--distance">
+                                    <span class="hl-stat-label">Distance</span>
+                                    <span class="hl-stat-value" id="hl-stat-distance">—</span>
+                                </div>
+                                <div class="hl-stat hl-stat--active">
+                                    <span class="hl-stat-label">Active</span>
+                                    <span class="hl-stat-value" id="hl-stat-active">—</span>
+                                </div>
+                                <div class="hl-stat hl-stat--burned">
+                                    <span class="hl-stat-label">Burned</span>
+                                    <span class="hl-stat-value" id="hl-stat-burned">—</span>
+                                </div>
+                                <div class="hl-stat hl-stat--sleep">
+                                    <span class="hl-stat-label">Sleep</span>
+                                    <span class="hl-stat-value" id="hl-stat-sleep">—</span>
+                                </div>
+                                <div class="hl-stat hl-stat--weight">
+                                    <span class="hl-stat-label">Weight</span>
+                                    <span class="hl-stat-value" id="hl-stat-weight">—</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Nutrition (middle) -->
+                        <section class="hl-section hl-section--nutrition">
+                            <header class="hl-section-head">
+                                <span class="hl-section-title">Nutrition</span>
+                                <span class="hl-section-aside" id="hl-food-aside-totals"></span>
+                            </header>
+                            <div class="hl-quickadd">
+                                <input type="text" id="hl-food-name" class="hl-input" placeholder="What did you eat?" autocomplete="off" />
+                                <input type="number" id="hl-food-cal" class="hl-input hl-input--cal" min="0" max="10000" placeholder="kcal" inputmode="numeric" />
+                                <select id="hl-food-meal" class="hl-input">
+                                    <option value="1">Breakfast</option>
+                                    <option value="2">Morning Snack</option>
+                                    <option value="3">Lunch</option>
+                                    <option value="4">Afternoon Snack</option>
+                                    <option value="5">Dinner</option>
+                                    <option value="7" selected>Anytime</option>
+                                </select>
+                                <button class="btn btn-primary" id="hl-food-add">Log</button>
+                            </div>
+                            <div class="hl-totals" id="hl-food-totals"></div>
+                            <ul class="hl-food-list" id="hl-food-list"></ul>
+                            <p class="hl-empty" id="hl-food-empty">No food logged yet today.</p>
+                        </section>
+
+                        <!-- Exercise (bottom) -->
+                        <section class="hl-section hl-section--exercise">
+                            <header class="hl-section-head">
+                                <span class="hl-section-title">Exercise</span>
+                            </header>
+                            <div id="health-repeat-picker" class="repeat-picker hidden">
+                                <input class="repeat-picker-search"
+                                       id="health-repeat-search"
+                                       type="search"
+                                       placeholder="Search previous workouts..." />
+                                <div class="repeat-picker-results" id="health-repeat-results"></div>
+                            </div>
+                            <div id="health-exercises"></div>
+                            <div class="editor-btn-row">
+                                <button class="btn btn-secondary" id="health-add-exercise-btn">+ Add exercise</button>
+                                <button class="btn btn-secondary" id="health-repeat-btn">+ Repeat previous</button>
+                            </div>
+                            <div class="field" style="margin-top:14px;">
+                                <label class="u-text-xs u-muted">Notes</label>
+                                <textarea id="health-notes" placeholder="How did it go?..." rows="3"></textarea>
+                            </div>
+                        </section>
+
+                        <!-- Trends -->
+                        <section class="hl-section hl-section--trends">
+                            <header class="hl-trends-head">
+                                <span class="hl-section-title">Trends</span>
+                                <div class="fb-range" role="tablist" aria-label="History range">
+                                    <button type="button" class="fb-range-btn"           data-hl-range="7">7d</button>
+                                    <button type="button" class="fb-range-btn is-active" data-hl-range="30">30d</button>
+                                    <button type="button" class="fb-range-btn"           data-hl-range="90">90d</button>
+                                </div>
+                            </header>
+                            <div class="fb-charts">
+                                <div class="fb-chart fb-chart--steps">
+                                    <header class="fb-chart-head">
+                                        <span class="fb-chart-label">Steps</span>
+                                        <span class="fb-chart-summary" id="hl-trend-steps-summary"></span>
+                                    </header>
+                                    <div class="fb-chart-svg" id="hl-trend-steps"></div>
+                                </div>
+                                <div class="fb-chart fb-chart--weight">
+                                    <header class="fb-chart-head">
+                                        <span class="fb-chart-label">Weight</span>
+                                        <span class="fb-chart-summary" id="hl-trend-weight-summary"></span>
+                                    </header>
+                                    <div class="fb-chart-svg" id="hl-trend-weight"></div>
+                                </div>
+                                <div class="fb-chart fb-chart--sleep">
+                                    <header class="fb-chart-head">
+                                        <span class="fb-chart-label">Sleep</span>
+                                        <span class="fb-chart-summary" id="hl-trend-sleep-summary"></span>
+                                    </header>
+                                    <div class="fb-chart-svg" id="hl-trend-sleep"></div>
+                                </div>
+                                <div class="fb-chart fb-chart--food">
+                                    <header class="fb-chart-head">
+                                        <span class="fb-chart-label">Calories</span>
+                                        <span class="fb-chart-summary" id="hl-trend-cal-summary"></span>
+                                    </header>
+                                    <div class="fb-chart-svg" id="hl-trend-cal"></div>
+                                </div>
+                            </div>
+                            <p class="hl-empty" id="hl-trend-empty" style="display:none;">No history yet — finalized days will appear here after midnight.</p>
+                        </section>
                     </main>
                     <!-- Nutrition page -->
                     <main id="page-nutrition" class="hidden">
@@ -6122,6 +7569,19 @@
                                 </div>
                                 <div id="ntfy-msg" class="hidden" style="font-size:13px;"></div>
                             </div>
+                            <div class="settings-row" style="margin-top:14px;">
+                                <div>
+                                    <div class="settings-label">Browser notifications for due tasks</div>
+                                    <div class="settings-desc">
+                                        One desktop notification per task on its due date. Fires while a Memoire tab is open (focused or in background). Browser must allow notifications.
+                                    </div>
+                                    <div id="browser-notify-status" class="settings-desc" style="margin-top:4px;"></div>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="browser-notify-toggle" />
+                                    <span class="toggle-track"></span>
+                                </label>
+                            </div>
                         </div>
                         <div class="settings-section">
                             <div class="settings-section-title">Smart Calendar</div>
@@ -6161,6 +7621,10 @@
                                     <label style="display:flex; flex-direction:column; gap:4px; font-size:12px;">
                                         <span class="settings-label" style="font-weight:500;">Max reschedules</span>
                                         <input type="number" id="cal-max-reschedules" min="0" max="50" />
+                                    </label>
+                                    <label style="display:flex; flex-direction:column; gap:4px; font-size:12px;">
+                                        <span class="settings-label" style="font-weight:500;">Default task duration (minutes)</span>
+                                        <input type="number" id="cal-default-duration" min="5" max="480" step="5" />
                                     </label>
                                 </div>
                                 <div>
@@ -6255,6 +7719,33 @@
                             <div id="pat-list" style="padding:0 18px 14px;"></div>
                         </div>
                         <div class="settings-section">
+                            <div class="settings-section-title">Integrations</div>
+                            <div class="settings-row">
+                                <div>
+                                    <div class="settings-label">Fitbit</div>
+                                    <div class="settings-desc">
+                                        Show today's steps, food, weight, and sleep on a dedicated Fitbit page. Data syncs every 30 minutes.
+                                    </div>
+                                    <div id="fitbit-status-line" class="settings-desc" style="margin-top:4px;"></div>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="fitbit-toggle" />
+                                    <span class="toggle-track"></span>
+                                </label>
+                            </div>
+                            <div class="settings-row" id="fitbit-actions-row" style="margin-top:10px; display:none;">
+                                <div>
+                                    <div class="settings-label">Connection</div>
+                                    <div class="settings-desc">Authorize Memoire to read your Fitbit data.</div>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="btn btn-secondary" id="fitbit-connect-btn">Connect Fitbit</button>
+                                    <button class="btn btn-secondary" id="fitbit-disconnect-btn" style="display:none;">Disconnect</button>
+                                </div>
+                            </div>
+                            <div id="fitbit-msg" class="hidden" style="font-size:13px; margin-top:6px;"></div>
+                        </div>
+                        <div class="settings-section">
                             <div class="settings-section-title">Editor</div>
                             <div class="settings-row">
                                 <div>
@@ -6323,6 +7814,190 @@
                             <p class="u-text-sm u-muted">Heart articles on the RSS Feeds page to save them here.</p>
                         </div>
                         <div id="favorites-grid" class="feeds-grid"></div>
+                    </main>
+                    <!-- Fitbit page -->
+                    <main id="page-fitbit" class="hidden fb-page">
+                        <div class="toolbar fb-toolbar">
+                            <div class="fb-title-block">
+                                <span class="fb-eyebrow">Today · <span id="fb-today-date">—</span></span>
+                                <h2>Fitbit</h2>
+                            </div>
+                            <div class="fb-toolbar-actions">
+                                <span id="fitbit-last-sync" class="fb-sync-time"></span>
+                                <button class="btn btn-secondary fb-sync-btn" id="fitbit-sync-btn" type="button">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <polyline points="1 20 1 14 7 14"></polyline>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+                                        <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+                                    </svg>
+                                    <span>Sync</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="fitbit-loader" class="page-loader hidden">
+                            <div class="spinner"></div>
+                        </div>
+                        <div id="fitbit-empty" class="empty-state hidden">
+                            <p>No Fitbit data yet.</p>
+                            <p class="u-text-sm u-muted">If you just connected, the next scheduled sync will populate this page. You can also use the "Sync now" button.</p>
+                        </div>
+                        <div id="fitbit-disconnected" class="empty-state hidden">
+                            <p>Fitbit is not connected.</p>
+                            <p class="u-text-sm u-muted">Connect Fitbit in Settings to start syncing.</p>
+                        </div>
+                        <div id="fitbit-cards" class="hidden fb-dashboard">
+                            <article class="fb-card fb-card--steps">
+                                <header class="fb-card-head">
+                                    <span class="fb-card-label">Steps</span>
+                                    <span class="fb-card-goal">Goal 10,000</span>
+                                </header>
+                                <div class="fb-card-body fb-card-body--ring">
+                                    <div class="fb-ring">
+                                        <svg viewBox="0 0 120 120" aria-hidden="true">
+                                            <circle class="fb-ring-track" cx="60" cy="60" r="52"></circle>
+                                            <circle class="fb-ring-fill"  cx="60" cy="60" r="52" id="fb-steps-ring-fill"></circle>
+                                        </svg>
+                                        <div class="fb-ring-content">
+                                            <div class="fb-metric-num" id="fitbit-steps">—</div>
+                                            <div class="fb-metric-unit">steps</div>
+                                        </div>
+                                    </div>
+                                    <div class="fb-card-sub" id="fitbit-steps-sub"></div>
+                                </div>
+                            </article>
+
+                            <article class="fb-card fb-card--sleep">
+                                <header class="fb-card-head">
+                                    <span class="fb-card-label">Sleep</span>
+                                    <span class="fb-card-goal">Goal 8h</span>
+                                </header>
+                                <div class="fb-card-body fb-card-body--ring">
+                                    <div class="fb-ring">
+                                        <svg viewBox="0 0 120 120" aria-hidden="true">
+                                            <circle class="fb-ring-track" cx="60" cy="60" r="52"></circle>
+                                            <circle class="fb-ring-fill"  cx="60" cy="60" r="52" id="fb-sleep-ring-fill"></circle>
+                                        </svg>
+                                        <div class="fb-ring-content">
+                                            <div class="fb-metric-num" id="fitbit-sleep">—</div>
+                                        </div>
+                                    </div>
+                                    <div class="fb-card-sub" id="fitbit-sleep-sub"></div>
+                                </div>
+                            </article>
+
+                            <article class="fb-card fb-card--food">
+                                <header class="fb-card-head">
+                                    <span class="fb-card-label">Food</span>
+                                    <span class="fb-card-goal" id="fb-food-goal"></span>
+                                </header>
+                                <div class="fb-card-body">
+                                    <div class="fb-metric-num" id="fitbit-calories-in">—</div>
+                                    <div class="fb-metric-unit">kcal in</div>
+                                    <div class="fb-card-sub" id="fitbit-calories-sub"></div>
+                                    <div class="fb-bar"><div class="fb-bar-fill" id="fb-food-bar-fill"></div></div>
+                                </div>
+                            </article>
+
+                            <article class="fb-card fb-card--weight">
+                                <header class="fb-card-head">
+                                    <span class="fb-card-label">Weight</span>
+                                </header>
+                                <div class="fb-card-body">
+                                    <div class="fb-metric-num" id="fitbit-weight">—</div>
+                                    <div class="fb-metric-unit">lb</div>
+                                    <div class="fb-card-sub" id="fitbit-weight-sub"></div>
+                                </div>
+                            </article>
+
+                            <section class="fb-quickadd">
+                                <div class="fb-quickadd-rail">
+                                    <span class="fb-quickadd-eyebrow">Log food</span>
+                                    <div class="fb-quickadd-row">
+                                        <div class="fb-combobox" id="fb-food-combobox">
+                                            <input type="text"
+                                                   id="fitbit-food-name"
+                                                   class="fb-input fb-input--name"
+                                                   placeholder="Search Fitbit foods..."
+                                                   autocomplete="off"
+                                                   role="combobox"
+                                                   aria-autocomplete="list"
+                                                   aria-expanded="false"
+                                                   aria-controls="fb-food-results" />
+                                            <div class="fb-combobox-panel hidden" id="fb-food-results" role="listbox"></div>
+                                        </div>
+                                        <input type="number" id="fitbit-food-calories" class="fb-input fb-input--cal" min="0" max="10000" placeholder="0" inputmode="numeric" />
+                                        <span class="fb-input-suffix">kcal</span>
+                                        <select id="fitbit-food-meal" class="fb-input fb-input--meal">
+                                            <option value="1">Breakfast</option>
+                                            <option value="2">Morning Snack</option>
+                                            <option value="3">Lunch</option>
+                                            <option value="4">Afternoon Snack</option>
+                                            <option value="5">Dinner</option>
+                                            <option value="7" selected>Anytime</option>
+                                        </select>
+                                        <button class="btn btn-primary fb-quickadd-btn" id="fitbit-food-add-btn" type="button">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                <line x1="5"  y1="12" x2="19" y2="12"></line>
+                                            </svg>
+                                            <span>Log</span>
+                                        </button>
+                                    </div>
+                                    <div id="fitbit-food-msg" class="fb-quickadd-msg hidden"></div>
+                                </div>
+                            </section>
+
+                            <section class="fb-feed-section">
+                                <header class="fb-feed-head">
+                                    <span class="fb-feed-label">Today's log</span>
+                                </header>
+                                <p id="fitbit-food-list-empty" class="fb-feed-empty">No food logged yet today.</p>
+                                <ul id="fitbit-food-list" class="fb-feed hidden"></ul>
+                            </section>
+
+                            <section class="fb-history-section">
+                                <header class="fb-history-head">
+                                    <span class="fb-feed-label">Trends</span>
+                                    <div class="fb-range" role="tablist" aria-label="History range">
+                                        <button type="button" class="fb-range-btn"               data-range="7">7d</button>
+                                        <button type="button" class="fb-range-btn is-active"     data-range="30">30d</button>
+                                        <button type="button" class="fb-range-btn"               data-range="90">90d</button>
+                                    </div>
+                                </header>
+                                <div class="fb-charts">
+                                    <div class="fb-chart fb-chart--steps">
+                                        <header class="fb-chart-head">
+                                            <span class="fb-chart-label">Steps</span>
+                                            <span class="fb-chart-summary" id="fb-chart-steps-summary"></span>
+                                        </header>
+                                        <div class="fb-chart-svg" id="fb-chart-steps"></div>
+                                    </div>
+                                    <div class="fb-chart fb-chart--weight">
+                                        <header class="fb-chart-head">
+                                            <span class="fb-chart-label">Weight</span>
+                                            <span class="fb-chart-summary" id="fb-chart-weight-summary"></span>
+                                        </header>
+                                        <div class="fb-chart-svg" id="fb-chart-weight"></div>
+                                    </div>
+                                    <div class="fb-chart fb-chart--sleep">
+                                        <header class="fb-chart-head">
+                                            <span class="fb-chart-label">Sleep</span>
+                                            <span class="fb-chart-summary" id="fb-chart-sleep-summary"></span>
+                                        </header>
+                                        <div class="fb-chart-svg" id="fb-chart-sleep"></div>
+                                    </div>
+                                    <div class="fb-chart fb-chart--food">
+                                        <header class="fb-chart-head">
+                                            <span class="fb-chart-label">Calories</span>
+                                            <span class="fb-chart-summary" id="fb-chart-cal-summary"></span>
+                                        </header>
+                                        <div class="fb-chart-svg" id="fb-chart-cal"></div>
+                                    </div>
+                                </div>
+                                <p class="fb-history-empty hidden" id="fb-history-empty">No history yet — finalized data will appear here after midnight in your timezone.</p>
+                            </section>
+                        </div>
                     </main>
                     <!-- Bookmarks page -->
                     <main id="page-bookmarks" class="hidden">
@@ -7087,9 +8762,20 @@
                             <input type="date" id="task-due" />
                         </div>
                         <div class="field">
-                            <label for="task-folder">Folder</label>
-                            <select id="task-folder"></select>
+                            <label for="task-duration">Estimated time (minutes)</label>
+                            <input type="number"
+                                   id="task-duration"
+                                   min="15"
+                                   max="480"
+                                   step="15"
+                                   placeholder="60" />
                         </div>
+                    </div>
+                    <div class="field">
+                        <label for="task-tags">Tags</label>
+                        <input type="text"
+                               id="task-tags"
+                               placeholder="comma-separated, e.g. work, urgent" />
                     </div>
                     <!-- Notifications (only shown when ntfy is configured) -->
                     <div id="notif-section"
@@ -7277,14 +8963,21 @@
     updateTask(id, body)           { return api.call("PUT",    `/tasks/${id}`, body); },
     deleteTask(id)                 { return api.call("DELETE", `/tasks/${id}`); },
     autoScheduleTasks(body)        { return api.call("POST",   "/tasks/auto-schedule", body || {}); },
-    listTaskFolders()              { return api.call("GET",    "/tasks/folders"); },
-    createTaskFolder(body)         { return api.call("POST",   "/tasks/folders", body); },
-    updateTaskFolder(id, body)     { return api.call("PUT",    `/tasks/folders/${id}`, body); },
-    deleteTaskFolder(id)           { return api.call("DELETE", `/tasks/folders/${id}`); },
 
     getSettings()              { return api.call("GET",  "/settings"); },
     updateSettings(body)       { return api.call("PUT",  "/settings", body); },
     testNotification(url)      { return api.call("POST", "/settings/test-notification", { ntfy_url: url }); },
+
+    fitbitToday()              { return api.call("GET",  "/fitbit/today"); },
+    fitbitStatus()             { return api.call("GET",  "/fitbit/status"); },
+    fitbitAuthStart(redirect)  { return api.call("GET",  `/fitbit/auth/start?redirect_uri=${encodeURIComponent(redirect)}`); },
+    fitbitAuthCallback(body)   { return api.call("POST", "/fitbit/auth/callback", body); },
+    fitbitDisconnect()         { return api.call("POST", "/fitbit/disconnect"); },
+    fitbitSync()               { return api.call("POST", "/fitbit/sync"); },
+    fitbitLogFood(body)        { return api.call("POST", "/fitbit/food", body); },
+    fitbitSearchFoods(query)   { return api.call("GET",  `/fitbit/food/search?q=${encodeURIComponent(query)}`); },
+    fitbitHistory(days)        { return api.call("GET",  `/fitbit/history?days=${encodeURIComponent(days)}`); },
+    healthHistory(days)        { return api.call("GET",  `/health/history?days=${encodeURIComponent(days)}`); },
 
     listDiagrams()              { return api.call("GET",    "/diagrams"); },
     getDiagram(id)              { return api.call("GET",    `/diagrams/${id}`); },
@@ -7311,13 +9004,11 @@
 
   const state = {
     tasks: [],
-    currentFolderID: null,
+    currentTag: null,
     filter: "all",
     editingId: null,
     settings: {},
     taskView: "list",
-    taskCalMonth: null,
-    taskCalSelectedDate: null,
     taskSort: "smart",
     taskGroup: true,
   };
@@ -7346,6 +9037,48 @@
     return dueDate === todayStr();
   }
 
+  function scheduledDateKey(iso) {
+    // YYYY-MM-DD in the user's configured app timezone (or browser local
+    // when none is set). Used so scheduled-task day buckets line up with
+    // the calendar view regardless of where the browser physically is.
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    const tz = state.settings?.timezone;
+    return new Intl.DateTimeFormat("en-CA", {
+      ...(tz ? { timeZone: tz } : {}),
+      year:  "numeric",
+      month: "2-digit",
+      day:   "2-digit",
+    }).format(d);
+  }
+
+  function formatScheduledStart(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    const tz = state.settings?.timezone;
+    const todayKey = scheduledDateKey(new Date().toISOString());
+    const dayKey   = scheduledDateKey(iso);
+    if (!todayKey || !dayKey) return "";
+    const today    = new Date(todayKey + "T00:00:00");
+    const dayStart = new Date(dayKey   + "T00:00:00");
+    const diffDays = Math.round((dayStart - today) / 86400000);
+    const time = d.toLocaleTimeString(undefined, {
+      ...(tz ? { timeZone: tz } : {}),
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    if (diffDays === 0)  return `Today ${time}`;
+    if (diffDays === 1)  return `Tomorrow ${time}`;
+    if (diffDays === -1) return `Yesterday ${time}`;
+    const day = d.toLocaleDateString(undefined, {
+      ...(tz ? { timeZone: tz } : {}),
+      month: "short",
+      day:   "numeric",
+    });
+    return `${day} ${time}`;
+  }
+
   function formatDueDate(dueDate) {
     if (!dueDate) return "";
     const today  = todayStr();
@@ -7368,6 +9101,12 @@
     if (isOverdue(task.due_date)) return 0;
     if (isDueToday(task.due_date)) return 1;
     return 5;
+  }
+
+  function filterTasksByTag(tasks, tag) {
+    if (tag == null)            return tasks;
+    if (tag === "__untagged__") return tasks.filter(t => !((t.tags || []).filter(Boolean).length));
+    return tasks.filter(t => (t.tags || []).includes(tag));
   }
 
   function taskCardHtml(task) {
@@ -7393,6 +9132,8 @@
             </select>
             <span class="badge badge-${task.priority}">${task.priority}</span>
             ${task.due_date ? `<span class="${dateClass}">${formatDueDate(task.due_date)}</span>` : ""}
+            ${task.scheduled_start ? `<span class="scheduled-chip" title="Scheduled block">${formatScheduledStart(task.scheduled_start)}</span>` : ""}
+            ${(task.tags || []).map(tag => `<span class="task-tag-chip">${escHtml(tag)}</span>`).join("")}
           </div>
         </div>
         ${active ? `<button class="pomo-focus-btn${isFocus ? ' active' : ''}" title="Focus on this task" onclick="event.stopPropagation(); pomodoro.focusTask('${task.task_id}')">&#9654;</button>` : ""}
@@ -7442,37 +9183,24 @@
 
   function renderTasks() {
     const listEl = $("task-list");
-    const calEl  = $("task-calendar");
     const weekEl = $("task-week");
-    if (state.taskView === "calendar") {
-      listEl.classList.add("hidden");
-      calEl.classList.remove("hidden");
-      weekEl.classList.add("hidden");
-      renderTaskCalendar();
-      return;
-    }
     if (state.taskView === "week") {
       listEl.classList.add("hidden");
-      calEl.classList.add("hidden");
       weekEl.classList.remove("hidden");
       renderTaskWeek();
       return;
     }
     listEl.classList.remove("hidden");
-    calEl.classList.add("hidden");
     weekEl.classList.add("hidden");
 
     const list = $("task-list");
-    const isDefault   = taskFolders.data.length > 0 && taskFolders.data[0].folder_id === state.currentFolderID;
-    const folderTasks = state.currentFolderID
-      ? state.tasks.filter(t => t.folder_id === state.currentFolderID || (!t.folder_id && isDefault))
-      : state.tasks;
+    const tagTasks = filterTasksByTag(state.tasks, state.currentTag);
 
-    updateFilterCounts(folderTasks);
+    updateFilterCounts(tagTasks);
 
     const visibleUnsorted = state.filter === "all"
-      ? folderTasks
-      : folderTasks.filter(t => t.status === state.filter);
+      ? tagTasks
+      : tagTasks.filter(t => t.status === state.filter);
     const visible = sortTasks(visibleUnsorted);
 
     if (visible.length === 0) {
@@ -7508,131 +9236,6 @@
           ${groups[k].map(taskCardHtml).join("")}
         </section>`;
     }).join("");
-  }
-
-  function renderTaskCalendar() {
-    if (!state.taskCalMonth) {
-      const now = new Date();
-      state.taskCalMonth = { year: now.getFullYear(), month: now.getMonth() };
-    }
-    const { year, month } = state.taskCalMonth;
-    const today = todayStr();
-    const monthNames = ["January","February","March","April","May","June",
-                        "July","August","September","October","November","December"];
-
-    // Group filtered tasks by due date
-    const isDefault    = taskFolders.data.length > 0 && taskFolders.data[0].folder_id === state.currentFolderID;
-    const folderTasks  = state.currentFolderID
-      ? state.tasks.filter(t => t.folder_id === state.currentFolderID || (!t.folder_id && isDefault))
-      : state.tasks;
-    const filtered = state.filter === "all"
-      ? folderTasks
-      : folderTasks.filter(t => t.status === state.filter);
-    const byDate = {};
-    filtered.forEach(t => {
-      if (!t.due_date) return;
-      if (!(t.due_date in byDate)) byDate[t.due_date] = [];
-      byDate[t.due_date].push(t);
-    });
-
-    const firstDay  = new Date(year, month, 1).getDay();
-    const daysInMon = new Date(year, month + 1, 0).getDate();
-    const startPad  = (firstDay + 6) % 7;
-
-    const dotClass = { high: "cal-dot-high", medium: "cal-dot-medium", low: "cal-dot-low" };
-
-    let cells = "";
-    for (let i = 0; i < startPad; i++) cells += `<div class="cal-day cal-empty"></div>`;
-    for (let d = 1; d <= daysInMon; d++) {
-      const dateStr    = `${year}-${String(month + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-      const isToday    = dateStr === today;
-      const isSelected = dateStr === state.taskCalSelectedDate;
-      const dayTasks   = byDate[dateStr] || [];
-      const hasTasks   = dayTasks.length > 0;
-      const dotsToShow = dayTasks.slice(0, 3);
-      const overflow   = dayTasks.length > 3 ? dayTasks.length - 3 : 0;
-      const dots = dotsToShow.map(t =>
-        `<span class="cal-dot ${dotClass[t.priority] || "cal-dot-low"}"></span>`
-      ).join("");
-
-      cells += `
-        <div class="cal-day ${isToday ? "cal-today" : ""} ${hasTasks ? "cal-has-entry" : ""} ${isSelected ? "cal-selected" : ""}" onclick="taskCalSelectDay('${dateStr}')">
-          <span>${d}</span>
-          ${hasTasks ? `<div class="cal-day-dots">${dots}${overflow ? `<span class="cal-day-overflow">+${overflow}</span>` : ""}</div>` : ""}
-        </div>`;
-    }
-
-    let panel = "";
-    if (state.taskCalSelectedDate) {
-      const selTasks = byDate[state.taskCalSelectedDate] || [];
-      const labelDate = new Date(state.taskCalSelectedDate + "T12:00:00").toLocaleDateString(
-        undefined, { weekday: "long", month: "long", day: "numeric" }
-      );
-      if (selTasks.length === 0) {
-        panel = `
-          <div class="task-cal-panel">
-            <div class="task-cal-panel-title">${labelDate}</div>
-            <div class="empty-state" style="padding:20px 0">
-              <p>No tasks due on this day.</p>
-              <button class="btn btn-primary" onclick="modal.open()">+ New task</button>
-            </div>
-          </div>`;
-      } else {
-        const items = selTasks.map(t => {
-          const overdue = t.status !== "done" && isOverdue(t.due_date);
-          const dueToday = t.status !== "done" && isDueToday(t.due_date);
-          return `
-            <div class="task-cal-item ${overdue ? "is-overdue" : dueToday ? "is-due-today" : ""}" onclick="modal.open('${t.task_id}')">
-              <span class="badge badge-${t.priority}">${t.priority}</span>
-              <span class="task-cal-item-title ${t.status === "done" ? "done-title" : ""}">${escHtml(t.title)}</span>
-              <span class="badge badge-${t.status}">${statusLabel(t.status)}</span>
-            </div>`;
-        }).join("");
-        panel = `
-          <div class="task-cal-panel">
-            <div class="task-cal-panel-title">${labelDate} &mdash; ${selTasks.length} task${selTasks.length !== 1 ? "s" : ""}</div>
-            ${items}
-          </div>`;
-      }
-    }
-
-    $("task-calendar").innerHTML = `
-      <div class="calendar">
-        <div class="calendar-nav">
-          <button class="cal-nav-btn" onclick="taskCalPrevMonth()">&#8592;</button>
-          <h3>${monthNames[month]} ${year}</h3>
-          <button class="cal-nav-btn" onclick="taskCalNextMonth()">&#8594;</button>
-        </div>
-        <div class="calendar-grid">
-          <div class="cal-header">Mon</div><div class="cal-header">Tue</div>
-          <div class="cal-header">Wed</div><div class="cal-header">Thu</div>
-          <div class="cal-header">Fri</div><div class="cal-header">Sat</div>
-          <div class="cal-header">Sun</div>
-          ${cells}
-        </div>
-      </div>
-      ${panel}`;
-  }
-
-  function taskCalPrevMonth() {
-    let { year, month } = state.taskCalMonth;
-    month--;
-    if (month < 0) { month = 11; year--; }
-    state.taskCalMonth = { year, month };
-    renderTaskCalendar();
-  }
-
-  function taskCalNextMonth() {
-    let { year, month } = state.taskCalMonth;
-    month++;
-    if (month > 11) { month = 0; year++; }
-    state.taskCalMonth = { year, month };
-    renderTaskCalendar();
-  }
-
-  function taskCalSelectDay(dateStr) {
-    state.taskCalSelectedDate = state.taskCalSelectedDate === dateStr ? null : dateStr;
-    renderTaskCalendar();
   }
 
   function escHtml(str) {
@@ -7741,6 +9344,9 @@
         ? (state.tasks.find(t => t.task_id === taskId) || {}).notifications || {}
         : {};
 
+      const cal = (state.settings && state.settings.calendar) || {};
+      const defaultDuration = cal.default_duration_minutes || 60;
+
       if (taskId) {
         const task = state.tasks.find(t => t.task_id === taskId);
         if (!task) return;
@@ -7750,6 +9356,8 @@
         $("task-status").value   = task.status;
         $("task-priority").value = task.priority;
         $("task-due").value      = task.due_date || "";
+        $("task-duration").value = task.duration_minutes ?? "";
+        $("task-tags").value     = (task.tags || []).join(", ");
         $("delete-btn").classList.remove("hidden");
       } else {
         $("modal-title").textContent = "New task";
@@ -7758,6 +9366,8 @@
         $("task-status").value   = "todo";
         $("task-priority").value = "medium";
         $("task-due").value      = "";
+        $("task-duration").value = defaultDuration;
+        $("task-tags").value     = state.currentTag && state.currentTag !== "__untagged__" ? state.currentTag : "";
         $("delete-btn").classList.add("hidden");
       }
 
@@ -7773,16 +9383,6 @@
         $("notif-section").classList.add("hidden");
       }
 
-      // Populate folder dropdown
-      const folderSel = $("task-folder");
-      folderSel.innerHTML = taskFolders.data.map(f =>
-        `<option value="${f.folder_id}">${escHtml(f.name)}</option>`
-      ).join("");
-      const taskFolderId = taskId
-        ? (state.tasks.find(t => t.task_id === taskId) || {}).folder_id
-        : state.currentFolderID;
-      folderSel.value = taskFolderId || (taskFolders.data[0]?.folder_id ?? "");
-
       renderBacklinksPanel("task-backlinks", "task", taskId);
 
       $("modal-overlay").classList.remove("hidden");
@@ -7795,123 +9395,74 @@
     },
   };
 
-  // ── Task folders ─────────────────────────────────────────────────────────────
+  // ── Task tags (rendered as chip row inside the tasks page body) ──────────────
 
-  const taskFolders = {
-    data: [],
-
-    async load() {
-      try {
-        taskFolders.data = await api.listTaskFolders() || [];
-      } catch (e) {
-        console.error("Failed to load task folders:", e);
-        return;
-      }
-      if (!state.currentFolderID && taskFolders.data.length > 0) {
-        state.currentFolderID = taskFolders.data[0].folder_id;
-      }
-      taskFolders.renderTree();
-      renderTasks();
+  const taskTags = {
+    distinct() {
+      const counts = new Map();
+      let untagged = 0;
+      (state.tasks || []).forEach(t => {
+        const tags = (t.tags || []).filter(Boolean);
+        if (!tags.length) { untagged++; return; }
+        tags.forEach(tag => counts.set(tag, (counts.get(tag) || 0) + 1));
+      });
+      return {
+        tags: [...counts.entries()].sort((a, b) => a[0].toLowerCase().localeCompare(b[0].toLowerCase())),
+        untagged,
+      };
     },
 
-    renderTree() {
-      const container = $("task-folders-tree");
+    renderChips() {
+      const container = $("task-tags-chips");
       if (!container) return;
-      if (!taskFolders.data.length) {
-        container.innerHTML = `<div style="padding:8px 12px;font-size:13px;color:var(--muted);">No folders yet.</div>`;
-        return;
+      const { tags, untagged } = taskTags.distinct();
+      const chips = [];
+      const totalCount = (state.tasks || []).length;
+      const allActive  = !state.currentTag ? "active" : "";
+      chips.push(`<button type="button" class="task-tag-chip-btn ${allActive}" onclick="taskTags.select(null)">All <span class="task-tag-chip-count">${totalCount}</span></button>`);
+      if (untagged > 0) {
+        const untaggedActive = state.currentTag === "__untagged__" ? "active" : "";
+        chips.push(`<button type="button" class="task-tag-chip-btn ${untaggedActive}" onclick="taskTags.select('__untagged__')">Untagged <span class="task-tag-chip-count">${untagged}</span></button>`);
       }
-      container.innerHTML = taskFolders.data.map(f => `
-        <div class="tree-folder-row ${f.folder_id === state.currentFolderID ? "active" : ""}" data-folder-id="${f.folder_id}" onclick="taskFolders.select('${f.folder_id}')">
-          <span class="tree-arrow"><svg viewBox="0 0 10 10" fill="currentColor" style="opacity:0.35"><circle cx="5" cy="5" r="2.5" /></svg></span>
-          <span class="tree-folder-name">${escHtml(f.name)}</span>
-          <div class="tree-actions">
-            <button class="tree-action-btn" title="Rename" onclick="event.stopPropagation(); taskFolders.rename('${f.folder_id}')">&#9998;</button>
-            <button class="tree-action-btn danger" title="Delete" onclick="event.stopPropagation(); taskFolders.deleteFolder('${f.folder_id}')">&#x2715;</button>
-          </div>
-        </div>`).join("");
+      tags.forEach(([tag, count]) => {
+        const active = state.currentTag === tag ? "active" : "";
+        const safe = escHtml(JSON.stringify(tag));
+        chips.push(`<button type="button" class="task-tag-chip-btn ${active}" onclick="taskTags.select(${safe})">${escHtml(tag)} <span class="task-tag-chip-count">${count}</span></button>`);
+      });
+      container.innerHTML = chips.join("");
+      container.style.display = state.taskView === "list" ? "" : "none";
     },
 
-    select(folderId) {
-      state.currentFolderID = folderId;
-      taskFolders.renderTree();
+    updateSidebarHighlight() {
+      const listLink = $("task-list-link");
+      const calLink  = $("task-calendar-link");
+      if (listLink) listLink.classList.toggle("active", state.taskView === "list");
+      if (calLink)  calLink.classList.toggle("active",  state.taskView === "week");
+    },
+
+    select(tag) {
+      state.currentTag = tag;
+      state.taskView = "list";
+      taskTags.renderChips();
+      taskTags.updateSidebarHighlight();
       if (pages.current !== "tasks") pages.show("tasks");
       else renderTasks();
     },
 
-    async promptNew() {
-      const name = prompt("Folder name:");
-      if (!name || !name.trim()) return;
-      try {
-        const folder = await api.createTaskFolder({ name: name.trim() });
-        taskFolders.data.push(folder);
-        state.currentFolderID = folder.folder_id;
-        taskFolders.renderTree();
-        if (pages.current !== "tasks") pages.show("tasks");
-        else renderTasks();
-      } catch (e) {
-        console.error("Failed to create task folder:", e);
-      }
+    showList() {
+      state.taskView = "list";
+      taskTags.renderChips();
+      taskTags.updateSidebarHighlight();
+      if (pages.current !== "tasks") pages.show("tasks");
+      else renderTasks();
     },
 
-    rename(folderId) {
-      const folder = taskFolders.data.find(f => f.folder_id === folderId);
-      if (!folder) return;
-      const row    = document.querySelector(`#task-folders-tree [data-folder-id="${folderId}"]`);
-      const nameEl = row?.querySelector(".tree-folder-name");
-      if (!nameEl) return;
-      const input  = document.createElement("input");
-      input.value  = folder.name;
-      input.className = "tree-rename-input";
-      nameEl.replaceWith(input);
-      input.focus();
-      input.select();
-
-      const save = async () => {
-        const name    = input.value.trim();
-        const changed = name && name !== folder.name;
-        input.replaceWith(nameEl);
-        if (!changed) return;
-        try {
-          const updated = await api.updateTaskFolder(folderId, { name });
-          const idx = taskFolders.data.findIndex(f => f.folder_id === folderId);
-          if (idx >= 0) taskFolders.data[idx] = { ...taskFolders.data[idx], name: updated.name || name };
-          taskFolders.renderTree();
-        } catch (e) {
-          console.error("Rename failed:", e);
-          taskFolders.renderTree();
-        }
-      };
-
-      input.addEventListener("blur", save);
-      input.addEventListener("keydown", e => {
-        if (e.key === "Enter")  { e.preventDefault(); input.blur(); }
-        if (e.key === "Escape") { input.replaceWith(nameEl); }
-      });
-    },
-
-    async deleteFolder(folderId) {
-      const folder = taskFolders.data.find(f => f.folder_id === folderId);
-      if (!folder) return;
-      const isDefault   = taskFolders.data.length > 0 && taskFolders.data[0].folder_id === folderId;
-      const taskCount   = state.tasks.filter(t =>
-        t.folder_id === folderId || (!t.folder_id && isDefault)
-      ).length;
-      const msg = taskCount > 0
-        ? `Delete "${folder.name}"? This will also delete ${taskCount} task${taskCount !== 1 ? "s" : ""}.`
-        : `Delete "${folder.name}"?`;
-      if (!await confirmDialog(msg)) return;
-      try {
-        await api.deleteTaskFolder(folderId);
-        taskFolders.data = taskFolders.data.filter(f => f.folder_id !== folderId);
-        if (state.currentFolderID === folderId) {
-          state.currentFolderID = taskFolders.data.length > 0 ? taskFolders.data[0].folder_id : null;
-        }
-        await app.loadTasks();
-        taskFolders.renderTree();
-      } catch (e) {
-        console.error("Failed to delete folder:", e);
-      }
+    openCalendar() {
+      state.taskView = "week";
+      taskTags.renderChips();
+      taskTags.updateSidebarHighlight();
+      if (pages.current !== "tasks") pages.show("tasks");
+      else renderTasks();
     },
   };
 
@@ -7940,7 +9491,10 @@
   const app = {
     async init() {
       const code = new URLSearchParams(window.location.search).get("code");
-      if (code) {
+      // The Fitbit OAuth flow lands on the same redirect URL with ?code=&state=.
+      // Distinguish from the Cognito auth callback by the per-flow PKCE marker.
+      const isFitbitCallback = !!sessionStorage.getItem("fitbit_code_verifier");
+      if (code && !isFitbitCallback) {
         await auth.handleCallback(code);
       }
       if (auth.isLoggedIn()) {
@@ -7965,16 +9519,23 @@
       document.dispatchEvent(new Event("pal:show"));
       await app.loadSettings();
       app.loadTasks();   // preload so [[task: references work from any page
-      taskFolders.load(); // preload sidebar folder list
       notesApp.load();   // preload so global search finds notes immediately
       journal.load();    // preload so global search finds journal entries immediately
       habits.load();     // preload so home dashboard shows habit status
       goals.load();      // preload so home dashboard shows active goals
-      health.load();     // preload so journal calendar shows exercise dots
-      nutrition.load();  // preload so journal calendar shows nutrition dots
+      health.load();     // preload so journal calendar shows exercise + nutrition dots
       favs.load();       // preload so heart buttons show correct state on feeds page
       if (state.settings?.home_finances_widget) finances.load(); // preload for home widget if enabled
-      pages.show("home");
+      if (state.settings?.browser_notifications_enabled) browserNotifier.start();
+      const handledFitbit = await fitbit.handleOAuthCallback();
+      if (handledFitbit) {
+        await app.loadSettings();
+      }
+      pages.show(pages.fromHash() || "home");
+      window.addEventListener("hashchange", () => {
+        const next = pages.fromHash();
+        if (next && next !== pages.current) pages.show(next);
+      });
     },
 
     async loadSettings() {
@@ -8002,6 +9563,7 @@
           const supToggle = $("supervisor-enabled-toggle");
           if (supToggle) supToggle.checked = settings.supervisor_enabled !== false;
           calendarSettings.populate(settings.calendar);
+          fitbit.applyNavVisibility();
           refreshAvatarInitials();
         }
       } catch (e) {
@@ -8013,9 +9575,12 @@
       showLoader("tasks-loader");
       try {
         state.tasks = await api.listTasks() || [];
+        taskTags.renderChips();
+        taskTags.updateSidebarHighlight();
         renderTasks();
         if (pages.current === "home") renderHomeDashboard();
         if ($("journal-calendar") && journal.calMonth) journal.renderCalendar();
+        if (typeof browserNotifier !== "undefined") browserNotifier.check();
       } catch (e) {
         console.error("Failed to load tasks:", e);
       } finally {
@@ -8035,7 +9600,6 @@
   $("logout-btn").addEventListener("click", () => app.logout());
 
   $("new-task-btn").addEventListener("click", () => modal.open());
-  $("new-task-folder-btn").addEventListener("click", () => taskFolders.promptNew());
 
   $("modal-close").addEventListener("click", () => modal.close());
   $("cancel-btn").addEventListener("click", () => modal.close());
@@ -8068,15 +9632,6 @@
     });
   }
 
-  $("task-view-btn").addEventListener("click", () => {
-    state.taskView = state.taskView === "calendar" ? "list" : "calendar";
-    renderTasks();
-  });
-
-  $("task-week-btn").addEventListener("click", () => {
-    state.taskView = state.taskView === "week" ? "list" : "week";
-    renderTasks();
-  });
 
   $("auto-schedule-btn").addEventListener("click", async () => {
     const btn = $("auto-schedule-btn");
@@ -8085,11 +9640,12 @@
     btn.textContent = "Scheduling...";
     try {
       const result = await api.autoScheduleTasks({});
-      const n = (result && result.scheduled) ? result.scheduled.length : 0;
-      const skipped = (result && result.skipped) ? result.skipped.length : 0;
-      btn.textContent = n
-        ? `Scheduled ${n}${skipped ? ` (${skipped} skipped)` : ""}`
-        : "Nothing to schedule";
+      const scheduled = (result && result.scheduled) || [];
+      const skipped   = (result && result.skipped)   || [];
+      btn.textContent = scheduled.length
+        ? `Scheduled ${scheduled.length}${skipped.length ? ` (${skipped.length} skipped)` : ""}`
+        : (skipped.length ? `Skipped ${skipped.length}` : "Nothing to schedule");
+      autoScheduleResult.show(scheduled, skipped);
       await app.loadTasks();
     } catch (e) {
       btn.textContent = "Error";
@@ -8098,6 +9654,40 @@
       setTimeout(() => { btn.disabled = false; btn.textContent = orig; }, 2400);
     }
   });
+
+  const autoScheduleResult = {
+    show(scheduled, skipped) {
+      let banner = $("auto-schedule-banner");
+      if (!banner) {
+        banner = document.createElement("div");
+        banner.id = "auto-schedule-banner";
+        banner.className = "auto-schedule-banner";
+        const tasksPage = $("page-tasks");
+        const filters = tasksPage && tasksPage.querySelector(".filters");
+        if (filters && filters.parentNode) filters.parentNode.insertBefore(banner, filters.nextSibling);
+        else if (tasksPage) tasksPage.prepend(banner);
+      }
+
+      const reasons = {};
+      skipped.forEach(s => { reasons[s.reason] = (reasons[s.reason] || 0) + 1; });
+      const reasonText = Object.entries(reasons)
+        .map(([r, n]) => `${n} ${r}`)
+        .join(", ");
+
+      const parts = [];
+      if (scheduled.length) parts.push(`<strong>Scheduled ${scheduled.length}</strong> task${scheduled.length === 1 ? "" : "s"}.`);
+      if (skipped.length)   parts.push(`<strong>Skipped ${skipped.length}</strong> (${reasonText}).`);
+      if (!scheduled.length && !skipped.length) parts.push("No eligible tasks to schedule.");
+
+      banner.innerHTML = `
+        <div class="auto-schedule-banner-body">
+          ${parts.join(" ")}
+        </div>
+        <button class="auto-schedule-banner-close" type="button" aria-label="Dismiss">&times;</button>`;
+      banner.classList.add("is-visible");
+      banner.querySelector(".auto-schedule-banner-close").onclick = () => banner.classList.remove("is-visible");
+    },
+  };
 
   function renderTaskWeek() {
     const cal = (state.settings && state.settings.calendar) || {};
@@ -8109,8 +9699,11 @@
 
     if (!state.taskWeekStart) {
       const d = new Date();
-      const dow = d.getDay() || 7; // Sun=0 → 7
-      d.setDate(d.getDate() - (dow - 1));
+      const dow = d.getDay() || 7; // Sun=0 → 7, Mon=1, ..., Sat=6
+      // Weekend → jump to upcoming Monday so the user sees the working week ahead.
+      // Weekday → snap back to this week's Monday.
+      if (dow >= 6) d.setDate(d.getDate() + (8 - dow));
+      else          d.setDate(d.getDate() - (dow - 1));
       d.setHours(0, 0, 0, 0);
       state.taskWeekStart = d.toISOString().slice(0, 10);
     }
@@ -8278,6 +9871,14 @@
       recurring:  $("notif-recurring").value || null,
     } : null;
 
+    const tags = ($("task-tags").value || "")
+      .split(",")
+      .map(t => t.trim())
+      .filter(Boolean);
+
+    const durationRaw = ($("task-duration").value || "").trim();
+    const duration = durationRaw === "" ? null : parseInt(durationRaw, 10);
+
     const body = {
       title,
       description:   $("task-desc").value.trim(),
@@ -8285,9 +9886,9 @@
       priority:      $("task-priority").value,
       due_date:      $("task-due").value || undefined,
       notifications,
+      tags,
     };
-    const selectedFolder = $("task-folder").value;
-    if (selectedFolder) body.folder_id = selectedFolder;
+    if (duration && !Number.isNaN(duration)) body.duration_minutes = duration;
 
     // If the modal was opened from a week-grid slot, attach the schedule
     if (!state.editingId && state.pendingScheduledStart) {
@@ -8354,6 +9955,7 @@
       horizon_days: 14,
       reschedule_min_gap_days: 2,
       max_reschedules: 3,
+      default_duration_minutes: 60,
     },
     populate(cal) {
       const c = { ...this.DEFAULTS, ...(cal || {}) };
@@ -8361,6 +9963,7 @@
       $("cal-hours-start").value      = c.working_hours_start;
       $("cal-hours-end").value        = c.working_hours_end;
       $("cal-slot-minutes").value     = c.slot_minutes;
+      $("cal-default-duration").value = c.default_duration_minutes;
       $("cal-min-gap").value          = c.reschedule_min_gap_days;
       $("cal-max-reschedules").value  = c.max_reschedules;
       const wrap = $("cal-working-days");
@@ -8377,14 +9980,15 @@
         .filter(cb => cb.checked)
         .map(cb => parseInt(cb.dataset.day, 10));
       return {
-        timezone:                $("cal-timezone").value.trim() || "America/New_York",
-        working_hours_start:     $("cal-hours-start").value || "09:00",
-        working_hours_end:       $("cal-hours-end").value   || "17:00",
-        working_days:            days.length ? days : [1,2,3,4,5],
-        slot_minutes:            parseInt($("cal-slot-minutes").value, 10) || 30,
-        horizon_days:            14,
-        reschedule_min_gap_days: parseInt($("cal-min-gap").value, 10) || 2,
-        max_reschedules:         parseInt($("cal-max-reschedules").value, 10) || 3,
+        timezone:                 $("cal-timezone").value.trim() || "America/New_York",
+        working_hours_start:      $("cal-hours-start").value || "09:00",
+        working_hours_end:        $("cal-hours-end").value   || "17:00",
+        working_days:             days.length ? days : [1,2,3,4,5],
+        slot_minutes:             parseInt($("cal-slot-minutes").value, 10) || 30,
+        horizon_days:             14,
+        reschedule_min_gap_days:  parseInt($("cal-min-gap").value, 10) || 2,
+        max_reschedules:          parseInt($("cal-max-reschedules").value, 10) || 3,
+        default_duration_minutes: parseInt($("cal-default-duration").value, 10) || 60,
       };
     },
   };
@@ -8681,6 +10285,756 @@
     } finally {
       this.disabled = false;
     }
+  });
+
+  // ── Browser notifications (local, one per task on its due date) ─────────────
+
+  const browserNotifier = {
+    STORAGE_KEY: "memoire_notified_due_tasks",
+    _interval: null,
+
+    notifiedSet() {
+      try {
+        const raw = localStorage.getItem(browserNotifier.STORAGE_KEY);
+        return new Set(raw ? JSON.parse(raw) : []);
+      } catch (e) {
+        return new Set();
+      }
+    },
+
+    markNotified(taskId) {
+      const set = browserNotifier.notifiedSet();
+      set.add(taskId);
+      try {
+        localStorage.setItem(browserNotifier.STORAGE_KEY, JSON.stringify([...set]));
+      } catch (e) { /* quota exceeded — ignore */ }
+    },
+
+    isSupported() {
+      return typeof Notification !== "undefined";
+    },
+
+    renderStatus() {
+      const el = $("browser-notify-status");
+      if (!el) return;
+      if (!browserNotifier.isSupported()) {
+        el.textContent = "This browser does not support notifications.";
+        return;
+      }
+      const perm = Notification.permission;
+      if (perm === "granted") el.textContent = "Permission granted.";
+      else if (perm === "denied") el.textContent = "Permission denied. Re-enable in browser settings.";
+      else el.textContent = "Permission will be requested when you turn this on.";
+    },
+
+    start() {
+      if (browserNotifier._interval) return;
+      browserNotifier.check();
+      browserNotifier._interval = setInterval(browserNotifier.check, 60_000);
+    },
+
+    stop() {
+      if (browserNotifier._interval) {
+        clearInterval(browserNotifier._interval);
+        browserNotifier._interval = null;
+      }
+    },
+
+    async ensurePermission() {
+      if (!browserNotifier.isSupported()) return false;
+      if (Notification.permission === "granted") return true;
+      if (Notification.permission === "denied")  return false;
+      const result = await Notification.requestPermission();
+      return result === "granted";
+    },
+
+    check() {
+      if (!state.settings?.browser_notifications_enabled) return;
+      if (!browserNotifier.isSupported() || Notification.permission !== "granted") return;
+      const today = todayStr();
+      const notified = browserNotifier.notifiedSet();
+      (state.tasks || []).forEach(task => {
+        if (task.status === "done") return;
+        if (task.due_date !== today) return;
+        // Key by task_id + due_date so that edits or recurring instances
+        // that move the date later still produce a fresh notification on
+        // the new due day.
+        const key = `${task.task_id}:${task.due_date}`;
+        if (notified.has(key)) return;
+        try {
+          new Notification("Task due today", {
+            body: task.title,
+            tag:  key,
+          });
+          browserNotifier.markNotified(key);
+        } catch (e) {
+          console.error("Notification failed:", e);
+        }
+      });
+    },
+  };
+
+  $("browser-notify-toggle").addEventListener("change", async function() {
+    const enabled = this.checked;
+    this.disabled = true;
+    try {
+      if (enabled) {
+        const ok = await browserNotifier.ensurePermission();
+        if (!ok) {
+          this.checked = false;
+          browserNotifier.renderStatus();
+          return;
+        }
+      }
+      const updated = await api.updateSettings({ browser_notifications_enabled: enabled });
+      state.settings = { ...state.settings, ...updated };
+      if (enabled) browserNotifier.start();
+      else         browserNotifier.stop();
+      browserNotifier.renderStatus();
+    } catch (e) {
+      this.checked = !enabled;
+    } finally {
+      this.disabled = false;
+    }
+  });
+
+  // ── Fitbit integration ───────────────────────────────────────────────────────
+
+  const fitbit = {
+    redirectUri() {
+      // Fitbit rejects URL fragments in redirect URIs, so we use the app
+      // origin and pick the OAuth response off the query string on load.
+      return `${location.origin}${location.pathname}`;
+    },
+
+    isEnabled() {
+      return !!(state.settings?.fitbit && state.settings.fitbit.enabled);
+    },
+
+    applyNavVisibility() {
+      const show = fitbit.isEnabled();
+      const sect = $("sb-fitbit");
+      const lbl  = $("sb-group-custom");
+      if (sect) sect.classList.toggle("hidden", !show);
+      if (lbl)  lbl.classList.toggle("hidden", !show);
+    },
+
+    setSettingsMsg(text, kind = "info") {
+      const el = $("fitbit-msg");
+      if (!el) return;
+      el.textContent = text || "";
+      el.classList.toggle("hidden", !text);
+      el.style.color = kind === "error" ? "var(--color-error, #c0392b)" : "var(--color-text-muted)";
+    },
+
+    async refreshStatus() {
+      const enabled = fitbit.isEnabled();
+      $("fitbit-toggle").checked = enabled;
+      $("fitbit-actions-row").style.display = enabled ? "flex" : "none";
+      if (!enabled) {
+        $("fitbit-status-line").textContent = "";
+        return;
+      }
+      try {
+        const status = await api.fitbitStatus();
+        const connected = !!status?.connected;
+        $("fitbit-connect-btn").style.display    = connected ? "none"  : "inline-block";
+        $("fitbit-disconnect-btn").style.display = connected ? "inline-block" : "none";
+        $("fitbit-status-line").textContent = connected
+          ? `Connected${status.connected_at ? ` since ${new Date(status.connected_at).toLocaleDateString()}` : ""}.`
+          : "Not connected.";
+      } catch (e) {
+        $("fitbit-status-line").textContent = "Could not check connection status.";
+      }
+    },
+
+    async toggle(checked) {
+      try {
+        const updated = await api.updateSettings({ fitbit: { enabled: checked } });
+        state.settings = { ...state.settings, ...updated };
+        fitbit.applyNavVisibility();
+        await fitbit.refreshStatus();
+      } catch (e) {
+        $("fitbit-toggle").checked = !checked;
+        fitbit.setSettingsMsg(e.message || "Failed to update setting", "error");
+      }
+    },
+
+    async connect() {
+      fitbit.setSettingsMsg("Redirecting to Fitbit...");
+      try {
+        const data = await api.fitbitAuthStart(fitbit.redirectUri());
+        if (!data?.authorize_url || !data?.code_verifier) {
+          fitbit.setSettingsMsg("Fitbit integration is not configured on the server.", "error");
+          return;
+        }
+        sessionStorage.setItem("fitbit_code_verifier", data.code_verifier);
+        sessionStorage.setItem("fitbit_state",         data.state || "");
+        location.href = data.authorize_url;
+      } catch (e) {
+        fitbit.setSettingsMsg(e.message || "Could not start Fitbit auth", "error");
+      }
+    },
+
+    async disconnect() {
+      if (!confirm("Disconnect Fitbit? Cached data will be removed on the next sync.")) return;
+      try {
+        await api.fitbitDisconnect();
+        fitbit.setSettingsMsg("Disconnected.");
+        await fitbit.refreshStatus();
+      } catch (e) {
+        fitbit.setSettingsMsg(e.message || "Disconnect failed", "error");
+      }
+    },
+
+    async handleOAuthCallback() {
+      const params = new URLSearchParams(location.search || "");
+      const code  = params.get("code");
+      const state = params.get("state");
+      const verifier = sessionStorage.getItem("fitbit_code_verifier") || "";
+      if (!code || !verifier) return false;
+      const expected = sessionStorage.getItem("fitbit_state") || "";
+      sessionStorage.removeItem("fitbit_code_verifier");
+      sessionStorage.removeItem("fitbit_state");
+      if (expected && state && expected !== state) {
+        history.replaceState(null, "", `${location.pathname}#settings`);
+        alert("Fitbit connection failed: state mismatch.");
+        return true;
+      }
+      try {
+        await api.fitbitAuthCallback({
+          code,
+          redirect_uri:  fitbit.redirectUri(),
+          code_verifier: verifier,
+        });
+        await api.fitbitSync().catch(() => {});
+        history.replaceState(null, "", `${location.pathname}#fitbit`);
+        return true;
+      } catch (e) {
+        alert(`Fitbit connection failed: ${e.message || "unknown error"}`);
+        history.replaceState(null, "", `${location.pathname}#settings`);
+        return true;
+      }
+    },
+
+    fmt: {
+      num(n) { return (n == null) ? "—" : Number(n).toLocaleString(); },
+      sleep(min) {
+        if (!min) return "—";
+        const h = Math.floor(min / 60);
+        const m = min % 60;
+        return `${h}h ${m}m`;
+      },
+    },
+
+    async load() {
+      const cards   = $("fitbit-cards");
+      const loader  = $("fitbit-loader");
+      const empty   = $("fitbit-empty");
+      const disconn = $("fitbit-disconnected");
+      cards.classList.add("hidden");
+      empty.classList.add("hidden");
+      disconn.classList.add("hidden");
+      loader.classList.remove("hidden");
+      try {
+        const status = await api.fitbitStatus();
+        if (!status?.connected) {
+          loader.classList.add("hidden");
+          disconn.classList.remove("hidden");
+          return;
+        }
+        const data = await api.fitbitToday();
+        loader.classList.add("hidden");
+        if (!data || data.synced === false) {
+          empty.classList.remove("hidden");
+          return;
+        }
+        cards.classList.remove("hidden");
+
+        // Date eyebrow (use the data's log_date if present, else today)
+        const dateLabel = (() => {
+          const iso = data.log_date || new Date().toISOString().slice(0, 10);
+          const d = new Date(iso + "T00:00:00");
+          return isNaN(d) ? iso : d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+        })();
+        const dateEl = $("fb-today-date");
+        if (dateEl) dateEl.textContent = dateLabel;
+
+        // Steps + ring
+        const steps = Number(data.steps || 0);
+        $("fitbit-steps").textContent = fitbit.fmt.num(steps);
+        $("fitbit-steps-sub").textContent = data.distance_mi || data.active_minutes
+          ? `${Number(data.distance_mi || 0).toFixed(2)} mi · ${data.active_minutes || 0} active min`
+          : "";
+        fitbit.setRing("fb-steps-ring-fill", steps / 10000);
+
+        // Sleep + ring
+        const sleepMin = Number(data.sleep?.minutes_asleep || 0);
+        $("fitbit-sleep").textContent = fitbit.fmt.sleep(data.sleep?.minutes_asleep);
+        $("fitbit-sleep-sub").textContent = data.sleep?.efficiency
+          ? `Efficiency ${data.sleep.efficiency}%`
+          : "";
+        fitbit.setRing("fb-sleep-ring-fill", sleepMin / 480);
+
+        // Food + bar (calories in vs calories out as ratio)
+        $("fitbit-calories-in").textContent  = data.calories_in != null ? fitbit.fmt.num(data.calories_in) : "—";
+        $("fitbit-calories-sub").textContent = data.calories_out
+          ? `Burned ${fitbit.fmt.num(data.calories_out)} kcal`
+          : "";
+        const ratio = data.calories_out > 0 ? Math.min(1, (data.calories_in || 0) / data.calories_out) : 0;
+        const barFill = $("fb-food-bar-fill");
+        if (barFill) barFill.style.setProperty("--fb-pct", ratio.toFixed(3));
+
+        // Weight
+        $("fitbit-weight").textContent = data.weight ? Number(data.weight).toFixed(1) : "—";
+        $("fitbit-weight-sub").textContent = data.weight_date && data.weight_date !== data.log_date
+          ? `as of ${data.weight_date}`
+          : "";
+
+        fitbit.renderFoodList(data.foods || []);
+        if (data.synced_at) {
+          $("fitbit-last-sync").textContent = `Synced ${new Date(data.synced_at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+        }
+
+        // Load history charts (best-effort, doesn't block today's render)
+        fitbit.history.load();
+      } catch (e) {
+        loader.classList.add("hidden");
+        empty.classList.remove("hidden");
+        console.error("Fitbit load failed:", e);
+      }
+    },
+
+    setRing(id, pct) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const clamped = Math.max(0, Math.min(1, Number.isFinite(pct) ? pct : 0));
+      requestAnimationFrame(() => {
+        el.style.setProperty("--fb-pct", clamped.toFixed(3));
+      });
+    },
+
+    async syncNow() {
+      const btn = $("fitbit-sync-btn");
+      btn.disabled = true;
+      try {
+        await api.fitbitSync();
+        setTimeout(() => fitbit.load(), 4000);
+      } catch (e) {
+        alert(e.message || "Sync failed");
+      } finally {
+        btn.disabled = false;
+      }
+    },
+
+    MEAL_LABELS: { 1: "Breakfast", 2: "Morning Snack", 3: "Lunch", 4: "Afternoon Snack", 5: "Dinner", 7: "Anytime" },
+
+    renderFoodList(items) {
+      const ul    = $("fitbit-food-list");
+      const empty = $("fitbit-food-list-empty");
+      if (!items.length) {
+        ul.classList.add("hidden");
+        empty.classList.remove("hidden");
+        ul.innerHTML = "";
+        return;
+      }
+      empty.classList.add("hidden");
+      ul.classList.remove("hidden");
+      // Group by meal type for a more scannable feed
+      const order = [1, 2, 3, 4, 5, 7];
+      const sorted = [...items].sort((a, b) => {
+        const ai = order.indexOf(Number(a.meal_type_id) || 7);
+        const bi = order.indexOf(Number(b.meal_type_id) || 7);
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      });
+      ul.innerHTML = sorted.map(f => {
+        const mealId = Number(f.meal_type_id) || 7;
+        const meal   = fitbit.MEAL_LABELS[mealId] || "Anytime";
+        const qty    = f.amount && f.unit ? `${Number(f.amount).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${f.unit}` : "";
+        const meta   = [f.brand, qty].filter(Boolean).join(" · ");
+        return `<li class="fb-feed-item" data-meal="${mealId}">
+          <span class="fb-meal-chip">${escHtml(meal)}</span>
+          <div>
+            <div class="fb-feed-name">${escHtml(f.name || "Untitled")}</div>
+            ${meta ? `<div class="fb-feed-meta">${escHtml(meta)}</div>` : ""}
+          </div>
+          <div>
+            <span class="fb-feed-cal">${fitbit.fmt.num(f.calories || 0)}</span><span class="fb-feed-cal-unit">kcal</span>
+          </div>
+        </li>`;
+      }).join("");
+    },
+
+    setFoodMsg(text, kind = "info") {
+      const el = $("fitbit-food-msg");
+      if (!el) return;
+      el.textContent = text || "";
+      el.classList.toggle("hidden", !text);
+      el.style.color = kind === "error" ? "var(--color-error, #c0392b)" : "var(--color-text-muted)";
+    },
+
+    async addFood() {
+      const name     = $("fitbit-food-name").value.trim();
+      const calories = parseInt($("fitbit-food-calories").value, 10);
+      const meal     = parseInt($("fitbit-food-meal").value, 10);
+      const picked   = fitbit.search.picked;
+
+      if (!picked && !name) { fitbit.setFoodMsg("Enter a food name", "error"); return; }
+      if (!picked && (!Number.isFinite(calories) || calories < 0)) {
+        fitbit.setFoodMsg("Enter calories", "error");
+        return;
+      }
+
+      const body = picked
+        ? { food_id: picked.food_id, unit_id: picked.unit_id, amount: picked.amount, meal_type_id: meal }
+        : { name, calories, meal_type_id: meal };
+
+      const btn = $("fitbit-food-add-btn");
+      btn.disabled = true;
+      fitbit.setFoodMsg("Logging...");
+      try {
+        await api.fitbitLogFood(body);
+        fitbit.search.clearPicked();
+        $("fitbit-food-name").value = "";
+        $("fitbit-food-calories").value = "";
+        fitbit.setFoodMsg("Logged.");
+        await fitbit.load();
+        fitbit.setFoodMsg("");
+      } catch (e) {
+        fitbit.setFoodMsg(e.message || "Failed to log food", "error");
+      } finally {
+        btn.disabled = false;
+      }
+    },
+
+    history: {
+      range: 30,
+      rows: [],
+
+      async load(range) {
+        if (range != null) fitbit.history.range = range;
+        try {
+          const data = await api.fitbitHistory(fitbit.history.range);
+          fitbit.history.rows = (data && data.rows) || [];
+        } catch (e) {
+          fitbit.history.rows = [];
+          console.error("Fitbit history load failed:", e);
+        }
+        fitbit.history.render();
+      },
+
+      render() {
+        const rows = fitbit.history.rows;
+        const empty = $("fb-history-empty");
+        const sections = ["fb-chart-steps", "fb-chart-weight", "fb-chart-sleep", "fb-chart-cal"];
+        if (!rows.length) {
+          if (empty) empty.classList.remove("hidden");
+          sections.forEach(id => { const el = $(id); if (el) el.innerHTML = `<div class="fb-chart-empty">No data yet</div>`; });
+          $("fb-chart-steps-summary").textContent  = "";
+          $("fb-chart-weight-summary").textContent = "";
+          $("fb-chart-sleep-summary").textContent  = "";
+          $("fb-chart-cal-summary").textContent    = "";
+          return;
+        }
+        if (empty) empty.classList.add("hidden");
+
+        const stepsData  = rows.map(r => ({ x: r.log_date, y: r.steps,        raw: r }));
+        const weightData = rows.filter(r => r.weight != null && r.weight > 0).map(r => ({ x: r.log_date, y: r.weight, raw: r }));
+        const sleepData  = rows.map(r => ({ x: r.log_date, y: r.sleep_minutes, raw: r }));
+        const calData    = rows.map(r => ({ x: r.log_date, y: r.calories_in,  raw: r }));
+
+        fitbit.chart.draw("fb-chart-steps",  stepsData,  v => fitbit.fmt.num(v) + " steps");
+        fitbit.chart.draw("fb-chart-weight", weightData, v => v.toFixed(1) + " lb");
+        fitbit.chart.draw("fb-chart-sleep",  sleepData,  v => fitbit.fmt.sleep(v));
+        fitbit.chart.draw("fb-chart-cal",    calData,    v => fitbit.fmt.num(v) + " kcal");
+
+        // Summaries: avg / latest
+        const avg = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b.y, 0) / arr.length) : 0;
+        $("fb-chart-steps-summary").textContent  = stepsData.length  ? `avg ${fitbit.fmt.num(avg(stepsData))}`         : "";
+        $("fb-chart-cal-summary").textContent    = calData.filter(d => d.y > 0).length ? `avg ${fitbit.fmt.num(avg(calData.filter(d => d.y > 0)))} kcal` : "";
+        $("fb-chart-sleep-summary").textContent  = sleepData.filter(d => d.y > 0).length ? `avg ${fitbit.fmt.sleep(avg(sleepData.filter(d => d.y > 0)))}` : "";
+        if (weightData.length) {
+          const first = weightData[0].y, last = weightData[weightData.length - 1].y;
+          const delta = last - first;
+          const sign  = delta > 0 ? "+" : "";
+          $("fb-chart-weight-summary").textContent = `${last.toFixed(1)} lb (${sign}${delta.toFixed(1)})`;
+        } else {
+          $("fb-chart-weight-summary").textContent = "";
+        }
+      },
+
+      setRange(range) {
+        fitbit.history.range = range;
+        document.querySelectorAll(".fb-range-btn").forEach(btn => {
+          btn.classList.toggle("is-active", parseInt(btn.dataset.range, 10) === range);
+        });
+        fitbit.history.load(range);
+      },
+    },
+
+    chart: {
+      W: 320, H: 130,
+      PAD_L: 32, PAD_R: 8, PAD_T: 8, PAD_B: 18,
+
+      draw(containerId, data, formatter) {
+        const el = $(containerId);
+        if (!el) return;
+        if (!data.length) {
+          el.innerHTML = `<div class="fb-chart-empty">No data in this range</div>`;
+          return;
+        }
+        const W = fitbit.chart.W, H = fitbit.chart.H;
+        const innerW = W - fitbit.chart.PAD_L - fitbit.chart.PAD_R;
+        const innerH = H - fitbit.chart.PAD_T - fitbit.chart.PAD_B;
+        const ys = data.map(d => d.y);
+        let minY = Math.min(...ys);
+        let maxY = Math.max(...ys);
+        // Always anchor non-weight charts at zero for honest comparison.
+        // Weight charts (Fitbit + Health trends) auto-fit to the value range.
+        const isWeight = containerId === "fb-chart-weight" || containerId === "hl-trend-weight";
+        if (!isWeight) minY = Math.min(0, minY);
+        if (minY === maxY) maxY = minY + 1;
+        const sx = i => fitbit.chart.PAD_L + (data.length === 1 ? innerW / 2 : (i / (data.length - 1)) * innerW);
+        const sy = v => fitbit.chart.PAD_T + innerH - ((v - minY) / (maxY - minY)) * innerH;
+
+        const linePts  = data.map((d, i) => `${sx(i).toFixed(2)},${sy(d.y).toFixed(2)}`).join(" ");
+        const areaPts  = `${sx(0).toFixed(2)},${sy(minY).toFixed(2)} ${linePts} ${sx(data.length - 1).toFixed(2)},${sy(minY).toFixed(2)}`;
+
+        // Y-axis labels: 3 ticks
+        const tickCount = 3;
+        const ticks = Array.from({ length: tickCount }, (_, i) => minY + ((maxY - minY) * i) / (tickCount - 1));
+        const yTicks = ticks.map(t => {
+          const y = sy(t);
+          const label = isWeight ? t.toFixed(0) : fitbit.fmt.num(Math.round(t));
+          return `<line class="fb-chart-grid-line" x1="${fitbit.chart.PAD_L}" x2="${W - fitbit.chart.PAD_R}" y1="${y.toFixed(2)}" y2="${y.toFixed(2)}" stroke="currentColor" stroke-opacity=".15" stroke-dasharray="2 4"></line>
+                  <text class="fb-chart-axis-label" x="${fitbit.chart.PAD_L - 6}" y="${(y + 3).toFixed(2)}" text-anchor="end">${label}</text>`;
+        }).join("");
+
+        // X-axis labels: first + last + middle
+        const xLabel = idx => {
+          const d = new Date(data[idx].x + "T00:00:00");
+          return isNaN(d) ? data[idx].x.slice(5) : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+        };
+        const xLabels = data.length >= 2
+          ? [
+              `<text class="fb-chart-axis-label" x="${sx(0)}"                   y="${H - 4}" text-anchor="start">${xLabel(0)}</text>`,
+              `<text class="fb-chart-axis-label" x="${sx(data.length - 1)}"     y="${H - 4}" text-anchor="end">${xLabel(data.length - 1)}</text>`,
+            ].join("")
+          : "";
+
+        const dot = data.length === 1
+          ? `<circle class="fb-chart-dot" cx="${sx(0)}" cy="${sy(data[0].y)}" r="4"></circle>`
+          : "";
+
+        el.innerHTML = `
+          <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+            ${yTicks}
+            <polygon class="fb-chart-area" points="${areaPts}"></polygon>
+            <polyline class="fb-chart-line" points="${linePts}"></polyline>
+            ${dot}
+            <line class="fb-chart-hover-line" x1="0" y1="${fitbit.chart.PAD_T}" x2="0" y2="${H - fitbit.chart.PAD_B}"></line>
+            <circle class="fb-chart-hover-dot" cx="0" cy="0"></circle>
+            ${xLabels}
+          </svg>
+          <div class="fb-chart-tooltip"></div>
+        `;
+
+        const svg = el.querySelector("svg");
+        const hLine = el.querySelector(".fb-chart-hover-line");
+        const hDot  = el.querySelector(".fb-chart-hover-dot");
+        const tip   = el.querySelector(".fb-chart-tooltip");
+
+        el.onmousemove = ev => {
+          const rect = svg.getBoundingClientRect();
+          const xPx  = ev.clientX - rect.left;
+          const xViewbox = (xPx / rect.width) * W;
+          // Find nearest data index
+          let bestI = 0, bestDist = Infinity;
+          for (let i = 0; i < data.length; i++) {
+            const dist = Math.abs(sx(i) - xViewbox);
+            if (dist < bestDist) { bestDist = dist; bestI = i; }
+          }
+          const cx = sx(bestI), cy = sy(data[bestI].y);
+          hLine.setAttribute("x1", cx);
+          hLine.setAttribute("x2", cx);
+          hDot.setAttribute("cx", cx);
+          hDot.setAttribute("cy", cy);
+          const px = (cx / W) * rect.width;
+          const py = (cy / H) * rect.height;
+          const d  = new Date(data[bestI].x + "T00:00:00");
+          const dateStr = isNaN(d) ? data[bestI].x : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+          tip.innerHTML = `<span class="fb-chart-tooltip-date">${escHtml(dateStr)}</span>${escHtml(formatter(data[bestI].y))}`;
+          tip.style.left = px + "px";
+          tip.style.top  = py + "px";
+          el.classList.add("is-hover");
+        };
+        el.onmouseleave = () => el.classList.remove("is-hover");
+      },
+    },
+
+    search: {
+      DEBOUNCE_MS: 250,
+      _timer:  null,
+      _seq:    0,
+      picked:  null,
+      results: [],
+      activeIndex: -1,
+
+      input()  { return $("fitbit-food-name"); },
+      panel()  { return $("fb-food-results"); },
+      calInput() { return $("fitbit-food-calories"); },
+
+      onInput() {
+        // User typed — invalidate previous selection
+        if (fitbit.search.picked) {
+          fitbit.search.picked = null;
+          fitbit.search.calInput().value = "";
+        }
+        const q = fitbit.search.input().value.trim();
+        clearTimeout(fitbit.search._timer);
+        if (q.length < 2) {
+          fitbit.search.close();
+          return;
+        }
+        fitbit.search._timer = setTimeout(() => fitbit.search.run(q), fitbit.search.DEBOUNCE_MS);
+      },
+
+      async run(query) {
+        const seq = ++fitbit.search._seq;
+        fitbit.search.showLoading();
+        try {
+          const data = await api.fitbitSearchFoods(query);
+          if (seq !== fitbit.search._seq) return;
+          fitbit.search.results = (data && data.foods) || [];
+          fitbit.search.activeIndex = fitbit.search.results.length ? 0 : -1;
+          fitbit.search.render();
+        } catch (e) {
+          if (seq !== fitbit.search._seq) return;
+          fitbit.search.results = [];
+          fitbit.search.activeIndex = -1;
+          fitbit.search.renderEmpty(e.message || "Search failed");
+        }
+      },
+
+      open() {
+        fitbit.search.panel().classList.remove("hidden");
+        fitbit.search.input().setAttribute("aria-expanded", "true");
+      },
+      close() {
+        fitbit.search.panel().classList.add("hidden");
+        fitbit.search.input().setAttribute("aria-expanded", "false");
+      },
+      showLoading() {
+        const p = fitbit.search.panel();
+        p.innerHTML = `<div class="fb-combobox-loading">Searching Fitbit foods...</div>`;
+        fitbit.search.open();
+      },
+      renderEmpty(text) {
+        const p = fitbit.search.panel();
+        p.innerHTML = `<div class="fb-combobox-empty">${escHtml(text)}</div>`;
+        fitbit.search.open();
+      },
+      render() {
+        const p = fitbit.search.panel();
+        if (!fitbit.search.results.length) {
+          fitbit.search.renderEmpty("No matches.");
+          return;
+        }
+        p.innerHTML = fitbit.search.results.map((f, i) => {
+          const meta = [f.brand, f.amount && f.unit ? `${Number(f.amount).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${f.unit}` : ""].filter(Boolean).join(" · ");
+          return `<div class="fb-combobox-option ${i === fitbit.search.activeIndex ? "is-active" : ""}" role="option" data-idx="${i}" aria-selected="${i === fitbit.search.activeIndex}">
+            <div class="fb-combobox-option-main">
+              <div class="fb-combobox-option-name">${escHtml(f.name || "")}</div>
+              ${meta ? `<div class="fb-combobox-option-meta">${escHtml(meta)}</div>` : ""}
+            </div>
+            <div><span class="fb-combobox-option-cal">${fitbit.fmt.num(f.calories || 0)}</span><span class="fb-combobox-option-cal-unit">kcal</span></div>
+          </div>`;
+        }).join("");
+        p.querySelectorAll(".fb-combobox-option").forEach(el => {
+          el.addEventListener("mousedown", ev => {
+            ev.preventDefault(); // keep input focus
+            fitbit.search.pick(parseInt(el.dataset.idx, 10));
+          });
+          el.addEventListener("mouseenter", () => {
+            fitbit.search.activeIndex = parseInt(el.dataset.idx, 10);
+            fitbit.search.refreshActive();
+          });
+        });
+        fitbit.search.open();
+      },
+      refreshActive() {
+        const p = fitbit.search.panel();
+        p.querySelectorAll(".fb-combobox-option").forEach((el, i) => {
+          el.classList.toggle("is-active", i === fitbit.search.activeIndex);
+          el.setAttribute("aria-selected", i === fitbit.search.activeIndex);
+        });
+      },
+      move(delta) {
+        if (!fitbit.search.results.length) return;
+        const next = (fitbit.search.activeIndex + delta + fitbit.search.results.length) % fitbit.search.results.length;
+        fitbit.search.activeIndex = next;
+        fitbit.search.refreshActive();
+        const el = fitbit.search.panel().querySelector(`.fb-combobox-option[data-idx="${next}"]`);
+        if (el) el.scrollIntoView({ block: "nearest" });
+      },
+      pick(idx) {
+        const food = fitbit.search.results[idx];
+        if (!food) return;
+        fitbit.search.picked = food;
+        fitbit.search.input().value     = food.name || "";
+        fitbit.search.calInput().value  = food.calories || "";
+        fitbit.search.close();
+        fitbit.setFoodMsg("");
+      },
+      clearPicked() {
+        fitbit.search.picked = null;
+        fitbit.search.results = [];
+        fitbit.search.activeIndex = -1;
+        fitbit.search.close();
+      },
+      onKey(e) {
+        const open = !fitbit.search.panel().classList.contains("hidden");
+        if (e.key === "ArrowDown") { e.preventDefault(); if (open) fitbit.search.move(1); }
+        else if (e.key === "ArrowUp")   { e.preventDefault(); if (open) fitbit.search.move(-1); }
+        else if (e.key === "Enter") {
+          if (open && fitbit.search.activeIndex >= 0) {
+            e.preventDefault();
+            fitbit.search.pick(fitbit.search.activeIndex);
+          } else {
+            e.preventDefault();
+            fitbit.addFood();
+          }
+        } else if (e.key === "Escape") {
+          fitbit.search.close();
+        }
+      },
+    },
+  };
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const tg = $("fitbit-toggle");
+    if (tg) tg.addEventListener("change", function() { fitbit.toggle(this.checked); });
+    $("fitbit-connect-btn")?.addEventListener("click", () => fitbit.connect());
+    $("fitbit-disconnect-btn")?.addEventListener("click", () => fitbit.disconnect());
+    $("fitbit-sync-btn")?.addEventListener("click", () => fitbit.syncNow());
+    $("fitbit-food-add-btn")?.addEventListener("click", () => fitbit.addFood());
+
+    const foodNameInput = $("fitbit-food-name");
+    if (foodNameInput) {
+      foodNameInput.addEventListener("input",   () => fitbit.search.onInput());
+      foodNameInput.addEventListener("keydown", e  => fitbit.search.onKey(e));
+      foodNameInput.addEventListener("focus", () => {
+        if (fitbit.search.results.length) fitbit.search.open();
+      });
+      foodNameInput.addEventListener("blur", () => {
+        // Slight delay so a click on a result still registers
+        setTimeout(() => fitbit.search.close(), 120);
+      });
+    }
+
+    document.querySelectorAll(".fb-range-btn").forEach(btn => {
+      btn.addEventListener("click", () => fitbit.history.setRange(parseInt(btn.dataset.range, 10)));
+    });
   });
 
   // ── Color themes ─────────────────────────────────────────────────────────────
@@ -9914,8 +12268,9 @@
       const { year, month } = journal.calMonth;
       const today          = todayStr();
       const dates          = journal.entryDates();
-      const healthDates    = new Set((health.logs    || []).map(l => l.log_date));
-      const nutritionDates = new Set((nutrition.logs || []).map(l => l.log_date));
+      const healthLogs     = health.logs || [];
+      const healthDates    = new Set(healthLogs.filter(l => (l.exercise_count || 0) > 0).map(l => l.log_date));
+      const nutritionDates = new Set(healthLogs.filter(l => (l.food_count || 0) > 0 || (l.calories_in || 0) > 0).map(l => l.log_date));
       const monthNames     = ["January","February","March","April","May","June",
                               "July","August","September","October","November","December"];
 
@@ -10069,14 +12424,14 @@
       Promise.allSettled([
         api.call("GET", `/journal/${dateStr}`).catch(() => null),
         api.call("GET", `/health/${dateStr}`).catch(() => null),
-        api.call("GET", `/nutrition/${dateStr}`).catch(() => null),
-      ]).then(([jRes, hRes, nRes]) => {
+      ]).then(([jRes, hRes]) => {
         const sections = $("day-view-sections");
         if (!sections) return;
 
         const entry    = jRes.status === "fulfilled" ? jRes.value : null;
         const workout  = hRes.status === "fulfilled" ? hRes.value : null;
-        const nutLog   = nRes.status === "fulfilled" ? nRes.value : null;
+        // Health and nutrition share one row now; foods live on the same record.
+        const nutLog   = workout && (workout.foods || []).length > 0 ? workout : null;
 
         // Journal
         let journalBody;
@@ -10144,7 +12499,7 @@
         // Nutrition
         let nutritionBody;
         if (nutLog) {
-          const meals = nutLog.meals || [];
+          const meals = nutLog.foods || [];
           const mealItems = meals.map(m => `
             <div class="day-view-meal">
               <span>${escHtml(m.name || "Unnamed meal")}</span>
@@ -10194,7 +12549,7 @@
           <div class="day-section">
             <div class="day-section-header">
               <span>Nutrition</span>
-              <button class="btn btn-secondary btn-sm" onclick="pages.show('nutrition'); nutrition.openLog('${dateStr}')">
+              <button class="btn btn-secondary btn-sm" onclick="pages.show('health'); health.openLog('${dateStr}')">
                 ${nutLog ? "Edit" : "Log"}
               </button>
             </div>
@@ -10464,30 +12819,206 @@
     async openLog(dateStr) {
       health.currentDate = dateStr;
       health.exercises   = [];
-      $("health-date-label").textContent = new Date(dateStr + "T12:00:00").toLocaleDateString(undefined, { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+      health.foods       = [];
+      health.totals      = {};
+      const today = todayStr();
+      const dateLabel = (dateStr === today)
+        ? `Today · ${new Date(dateStr + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+        : new Date(dateStr + "T12:00:00").toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+      $("health-date-label").textContent = dateLabel;
+      const picker = $("health-date-picker");
+      if (picker) picker.value = dateStr;
       $("health-notes").value = "";
       $("health-save-status").textContent = "";
       $("health-delete-btn").classList.add("hidden");
-      $("health-empty-state").classList.add("hidden");
-      $("health-editor").classList.remove("hidden");
       $("health-repeat-picker").classList.add("hidden");
       health.renderExercises();
-      health.renderCalendar();
-      health.renderLogList();
+      health.renderActivityTotals();
+      health.renderFoods();
 
       try {
         const log = await api.call("GET", `/health/${dateStr}`);
         if (log) {
           health.exercises = log.exercises || [];
+          health.foods     = log.foods     || [];
+          health.totals    = {
+            steps:          log.steps,
+            distance_mi:    log.distance_mi,
+            active_minutes: log.active_minutes,
+            calories_out:   log.calories_out,
+            weight:         log.weight,
+            weight_unit:    log.weight_unit,
+            weight_date:    log.weight_date,
+            sleep:          log.sleep,
+          };
           $("health-notes").value = log.notes || "";
           $("health-delete-btn").classList.remove("hidden");
           health.renderExercises();
+          health.renderActivityTotals();
+          health.renderFoods();
         }
       } catch (e) {
         if (!e.message?.includes("not found") && !e.message?.includes("404")) {
           console.error("Failed to load health log:", e);
         }
       }
+    },
+
+    renderActivityTotals() {
+      const t = health.totals || {};
+      const fmt = n => (n == null || n === "") ? "—" : Number(n).toLocaleString();
+      $("hl-stat-steps").textContent    = fmt(t.steps);
+      $("hl-stat-distance").textContent = (t.distance_mi != null && t.distance_mi !== "")
+        ? `${Number(t.distance_mi).toFixed(2)} mi` : "—";
+      $("hl-stat-active").textContent   = fmt(t.active_minutes);
+      $("hl-stat-burned").textContent   = t.calories_out ? `${fmt(t.calories_out)} kcal` : "—";
+      const sleepMin = t.sleep && t.sleep.minutes_asleep ? Number(t.sleep.minutes_asleep) : 0;
+      $("hl-stat-sleep").textContent    = sleepMin
+        ? `${Math.floor(sleepMin / 60)}h ${sleepMin % 60}m` : "—";
+      $("hl-stat-weight").textContent   = t.weight
+        ? `${Number(t.weight).toFixed(1)} ${t.weight_unit || "lb"}` : "—";
+    },
+
+    renderFoods() {
+      const ul       = $("hl-food-list");
+      const empty    = $("hl-food-empty");
+      const totalsEl = $("hl-food-totals");
+      const aside    = $("hl-food-aside-totals");
+      const foods    = health.foods || [];
+      if (!foods.length) {
+        ul.innerHTML = "";
+        empty.classList.remove("hidden");
+        totalsEl.textContent = "";
+        if (aside) aside.textContent = "";
+        return;
+      }
+      empty.classList.add("hidden");
+      const meals = { 1: "Breakfast", 2: "Morning Snack", 3: "Lunch", 4: "Afternoon Snack", 5: "Dinner", 7: "Anytime" };
+      const order = [1, 2, 3, 4, 5, 7];
+      const sorted = [...foods].sort((a, b) => {
+        const ai = order.indexOf(Number(a.meal_type_id) || 7);
+        const bi = order.indexOf(Number(b.meal_type_id) || 7);
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      });
+      ul.innerHTML = sorted.map(f => {
+        const mealId = Number(f.meal_type_id) || 7;
+        const meal   = meals[mealId] || "Anytime";
+        const calNum = f.calories ? Number(f.calories).toLocaleString() : "—";
+        const id     = escHtml(f.id || "");
+        return `<li class="hl-food-item" data-meal="${mealId}">
+          <span class="hl-food-meal">${escHtml(meal)}</span>
+          <span class="hl-food-name">${escHtml(f.name || "")}</span>
+          <span><span class="hl-food-cal">${escHtml(calNum)}</span><span class="hl-food-cal-unit">kcal</span></span>
+          <button class="hl-food-del" type="button" title="Remove" onclick="health.deleteFood('${id}')" aria-label="Remove">&times;</button>
+        </li>`;
+      }).join("");
+      const totalCal = foods.reduce((s, f) => s + (Number(f.calories) || 0), 0);
+      totalsEl.innerHTML = `<strong>${totalCal.toLocaleString()}</strong>kcal · ${foods.length} item${foods.length === 1 ? "" : "s"}`;
+      if (aside) aside.textContent = `${totalCal.toLocaleString()} kcal`;
+    },
+
+    async addFood() {
+      if (!health.currentDate) return;
+      const name = $("hl-food-name").value.trim();
+      const cal  = parseInt($("hl-food-cal").value, 10);
+      const meal = parseInt($("hl-food-meal").value, 10) || 7;
+      if (!name) { $("hl-food-name").focus(); return; }
+      if (!Number.isFinite(cal) || cal < 0) { $("hl-food-cal").focus(); return; }
+      const btn = $("hl-food-add");
+      btn.disabled = true;
+      try {
+        const r = await api.call("POST", `/health/${health.currentDate}/foods`, {
+          name, calories: cal, meal_type_id: meal, source: "manual",
+        });
+        $("hl-food-name").value = "";
+        $("hl-food-cal").value  = "";
+        if (r && r.log) {
+          health.foods = r.log.foods || [];
+          health.renderFoods();
+        }
+      } catch (e) {
+        alert(e.message || "Failed to add food");
+      } finally {
+        btn.disabled = false;
+      }
+    },
+
+    async deleteFood(foodId) {
+      if (!health.currentDate || !foodId) return;
+      try {
+        await api.call("DELETE", `/health/${health.currentDate}/foods/${encodeURIComponent(foodId)}`);
+        health.foods = (health.foods || []).filter(f => f.id !== foodId);
+        health.renderFoods();
+      } catch (e) {
+        alert(e.message || "Failed to remove food");
+      }
+    },
+
+    trends: {
+      range: 30,
+      rows: [],
+
+      async load(range) {
+        if (range != null) health.trends.range = range;
+        try {
+          const data = await api.healthHistory(health.trends.range);
+          health.trends.rows = (data && data.rows) || [];
+        } catch (e) {
+          health.trends.rows = [];
+          console.error("Health history load failed:", e);
+        }
+        health.trends.render();
+      },
+
+      setRange(range) {
+        health.trends.range = range;
+        document.querySelectorAll("[data-hl-range]").forEach(btn => {
+          btn.classList.toggle("is-active", parseInt(btn.dataset.hlRange, 10) === range);
+        });
+        health.trends.load(range);
+      },
+
+      render() {
+        const rows = health.trends.rows;
+        const empty = $("hl-trend-empty");
+        const ids = ["hl-trend-steps", "hl-trend-weight", "hl-trend-sleep", "hl-trend-cal"];
+        if (!rows.length) {
+          if (empty) empty.style.display = "";
+          ids.forEach(id => { const el = $(id); if (el) el.innerHTML = `<div class="fb-chart-empty">No data yet</div>`; });
+          ["hl-trend-steps-summary","hl-trend-weight-summary","hl-trend-sleep-summary","hl-trend-cal-summary"]
+            .forEach(id => { const el = $(id); if (el) el.textContent = ""; });
+          return;
+        }
+        if (empty) empty.style.display = "none";
+        const stepsData  = rows.map(r => ({ x: r.log_date, y: r.steps,         raw: r }));
+        const weightData = rows.filter(r => r.weight != null && r.weight > 0).map(r => ({ x: r.log_date, y: r.weight, raw: r }));
+        const sleepData  = rows.map(r => ({ x: r.log_date, y: r.sleep_minutes, raw: r }));
+        const calData    = rows.map(r => ({ x: r.log_date, y: r.calories_in,   raw: r }));
+
+        // Patch chart's container-id detection so the weight chart skips zero-anchor
+        const origDraw = fitbit.chart.draw;
+        fitbit.chart.draw("hl-trend-steps",  stepsData,  v => fitbit.fmt.num(v) + " steps");
+        fitbit.chart.draw("hl-trend-weight", weightData, v => v.toFixed(1) + " lb");
+        fitbit.chart.draw("hl-trend-sleep",  sleepData,  v => fitbit.fmt.sleep(v));
+        fitbit.chart.draw("hl-trend-cal",    calData,    v => fitbit.fmt.num(v) + " kcal");
+
+        const avg = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b.y, 0) / arr.length) : 0;
+        $("hl-trend-steps-summary").textContent  = stepsData.length ? `avg ${fitbit.fmt.num(avg(stepsData))}` : "";
+        const calNonZero = calData.filter(d => d.y > 0);
+        $("hl-trend-cal-summary").textContent    = calNonZero.length ? `avg ${fitbit.fmt.num(avg(calNonZero))} kcal` : "";
+        const sleepNonZero = sleepData.filter(d => d.y > 0);
+        $("hl-trend-sleep-summary").textContent  = sleepNonZero.length ? `avg ${fitbit.fmt.sleep(avg(sleepNonZero))}` : "";
+        if (weightData.length) {
+          const first = weightData[0].y, last = weightData[weightData.length - 1].y;
+          const delta = last - first;
+          const sign  = delta > 0 ? "+" : "";
+          $("hl-trend-weight-summary").textContent = `${last.toFixed(1)} lb (${sign}${delta.toFixed(1)})`;
+        } else {
+          $("hl-trend-weight-summary").textContent = "";
+        }
+        // suppress unused warning; origDraw was a no-op safeguard if patch was needed
+        void origDraw;
+      },
     },
 
     addExercise() {
@@ -10720,7 +13251,26 @@
   $("health-repeat-btn").addEventListener("click", () => health.openRepeat());
   $("health-repeat-search").addEventListener("input", (e) => health.renderRepeatResults(e.target.value));
 
-  // ── Nutrition ─────────────────────────────────────────────────────────────────
+  $("hl-food-add")?.addEventListener("click", () => health.addFood());
+
+  $("health-date-picker")?.addEventListener("change", e => {
+    const v = e.target.value;
+    if (v) health.openLog(v);
+  });
+
+  document.querySelectorAll("[data-hl-range]").forEach(btn => {
+    btn.addEventListener("click", () => health.trends.setRange(parseInt(btn.dataset.hlRange, 10)));
+  });
+  ["hl-food-name", "hl-food-cal"].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); health.addFood(); }
+    });
+  });
+
+  // ── Nutrition (legacy module, retained for journal-calendar callsites; ──
+  // ── nutrition is now a section inside the Health page and is fed by the
+  // ── unified /health table. The module here is a no-op shell.) ──────────
 
   const nutrition = {
     logs: [],
@@ -10729,16 +13279,12 @@
     calMonth: null,
 
     async load() {
-      showLoader("nutrition-loader");
+      // Data now lives in the unified health table; nothing to fetch here.
+      nutrition.logs = [];
+      return;
+      // eslint-disable-next-line no-unreachable
       try {
-        nutrition.logs = await api.call("GET", "/nutrition") || [];
-        const nToday = todayStr();
-        nutrition.logs.sort((a, b) => {
-          const aFuture = (a.log_date || "") > nToday;
-          const bFuture = (b.log_date || "") > nToday;
-          if (aFuture !== bFuture) return aFuture ? 1 : -1;
-          return (b.log_date || "").localeCompare(a.log_date || "");
-        });
+        nutrition.logs = [];
       } catch (e) {
         console.error("Failed to load nutrition logs:", e);
       } finally {
@@ -12482,6 +15028,9 @@
     $("display-name-input").value = state.settings?.display_name || "";
     $("pal-name-input").value = state.settings?.pal_name || "";
     $("home-finances-toggle").checked = !!(state.settings?.home_finances_widget);
+    $("browser-notify-toggle").checked = !!(state.settings?.browser_notifications_enabled);
+    browserNotifier.renderStatus();
+    fitbit.refreshStatus();
     loadPatList();
   }
 
@@ -13198,7 +15747,7 @@
     },
 
     expand(name) {
-      const sections = ["home", "tasks", "notes", "journal", "habits", "goals", "health", "nutrition", "finances", "feeds", "bookmarks", "diagrams", "settings", "admin", "profile"];
+      const sections = ["home", "tasks", "notes", "journal", "habits", "goals", "health", "finances", "feeds", "bookmarks", "diagrams", "fitbit", "settings", "admin", "profile"];
       sections.forEach(s => {
         const sect = $(`sb-${s}`);
         const body = $(`sb-${s}-body`);
@@ -13226,7 +15775,21 @@
 
   const pages = {
     current: "home",
-    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "nutrition", "feeds", "favorites", "bookmarks", "diagrams", "finances", "settings", "admin", "profile", "pal-chats"],
+    all: ["home", "tasks", "habits", "goals", "notes", "journal", "health", "feeds", "favorites", "bookmarks", "diagrams", "finances", "fitbit", "settings", "admin", "profile", "pal-chats"],
+
+    fromHash() {
+      const raw = (location.hash || "").replace(/^#\/?/, "");
+      const name = raw.split(/[/?]/)[0];
+      return pages.all.includes(name) ? name : null;
+    },
+
+    syncHash(name) {
+      const target = `#${name}`;
+      if (location.hash !== target) {
+        // replaceState avoids flooding history when called from hash listener
+        history.replaceState(null, "", target);
+      }
+    },
 
     show(name) {
       // Auto-close any open journal entry overlay so sidebar navigation works
@@ -13239,6 +15802,7 @@
         journal.closeEntry();
       }
       pages.current = name;
+      pages.syncHash(name);
       // habits, goals, health, nutrition, finances are now top-level sections; favorites is a sub-section of feeds
       const sbSection = name === "favorites" ? "feeds" : name;
       sidebar.expand(sbSection);
@@ -13263,14 +15827,8 @@
       if (name === "admin")    { if (!admin.loaded) admin.load(); }
       if (name === "settings") { renderSettings(); if (!feeds.loaded) feeds.loadFeeds(); }
       if (name === "tasks") {
-        if (taskFolders.data.length === 0) taskFolders.load();
-        else {
-          if (!state.currentFolderID && taskFolders.data.length > 0)
-            state.currentFolderID = taskFolders.data[0].folder_id;
-          taskFolders.renderTree();
-        }
         if (state.tasks.length === 0) app.loadTasks();
-        else renderTasks();
+        else { taskTags.renderChips(); taskTags.updateSidebarHighlight(); renderTasks(); }
       }
       if (name === "habits"  && habits.data.length === 0) habits.load();
       if (name === "goals"   && goals.data.length === 0) goals.load();
@@ -13281,13 +15839,19 @@
         if (state.tasks.length === 0) app.loadTasks();
         if (habits.data.length === 0) habits.load();
       }
-      if (name === "health"    && health.logs.length === 0)     health.load();
+      if (name === "health") {
+        if (health.logs.length === 0) health.load();
+        // Always open today on entry so stats render without a click
+        health.openLog(todayStr());
+        health.trends.load();
+      }
       if (name === "nutrition" && nutrition.logs.length === 0) nutrition.load();
       if (name === "feeds")     feeds.refresh();
       if (name === "favorites") { if (!favs.loaded) favs.load(); else favs.render(); }
       if (name === "bookmarks") { bookmarks.load(); }
       if (name === "diagrams")  { if (!diagrams.loaded) diagrams.load(); else diagrams.render(); }
       if (name === "finances")  { finances.load(); }
+      if (name === "fitbit")    { fitbit.load(); }
       if (name === "profile")   { profilePage.load(); }
       if (name === "pal-chats") { palChats.loadPage(); }
     },

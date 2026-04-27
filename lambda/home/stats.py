@@ -12,7 +12,6 @@ TABLES = {
     "folders":   os.environ.get("FOLDERS_TABLE", ""),
     "habits":    os.environ.get("HABITS_TABLE", ""),
     "health":    os.environ.get("HEALTH_TABLE", ""),
-    "nutrition": os.environ.get("NUTRITION_TABLE", ""),
     "settings":  os.environ.get("SETTINGS_TABLE", ""),
 }
 FRONTEND_BUCKET       = os.environ.get("FRONTEND_BUCKET", "")

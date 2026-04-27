@@ -22,14 +22,15 @@ logger = logging.getLogger(__name__)
 
 
 CALENDAR_DEFAULTS = {
-    "timezone":                "America/New_York",
-    "working_hours_start":     "09:00",
-    "working_hours_end":       "17:00",
-    "working_days":            [1, 2, 3, 4, 5],
-    "slot_minutes":            30,
-    "horizon_days":            14,
-    "reschedule_min_gap_days": 2,
-    "max_reschedules":         3,
+    "timezone":                 "America/New_York",
+    "working_hours_start":      "09:00",
+    "working_hours_end":        "17:00",
+    "working_days":             [1, 2, 3, 4, 5],
+    "slot_minutes":             30,
+    "horizon_days":             14,
+    "reschedule_min_gap_days":  2,
+    "max_reschedules":          3,
+    "default_duration_minutes": 60,
 }
 
 
@@ -48,7 +49,8 @@ def _coerce_calendar(settings_item: dict) -> dict:
         cal = {}
     merged = {**CALENDAR_DEFAULTS, **cal}
     # Cast int-like values that may come back from DDB as Decimal
-    for k in ("slot_minutes", "horizon_days", "reschedule_min_gap_days", "max_reschedules"):
+    for k in ("slot_minutes", "horizon_days", "reschedule_min_gap_days",
+              "max_reschedules", "default_duration_minutes"):
         merged[k] = int(merged[k])
     if isinstance(merged.get("working_days"), Iterable):
         merged["working_days"] = sorted({int(d) for d in merged["working_days"]})

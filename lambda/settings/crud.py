@@ -14,28 +14,35 @@ from utils import build_update_expression
 TABLE_NAME = os.environ["TABLE_NAME"]
 
 CALENDAR_DEFAULTS = {
-    "timezone":                "America/New_York",
-    "working_hours_start":     "09:00",
-    "working_hours_end":       "17:00",
-    "working_days":            [1, 2, 3, 4, 5],
-    "slot_minutes":            30,
-    "horizon_days":            14,
-    "reschedule_min_gap_days": 2,
-    "max_reschedules":         3,
+    "timezone":                 "America/New_York",
+    "working_hours_start":      "09:00",
+    "working_hours_end":        "17:00",
+    "working_days":             [1, 2, 3, 4, 5],
+    "slot_minutes":             30,
+    "horizon_days":             14,
+    "reschedule_min_gap_days":  2,
+    "max_reschedules":          3,
+    "default_duration_minutes": 60,
+}
+
+FITBIT_DEFAULTS = {
+    "enabled": False,
 }
 
 DEFAULTS = {
-    "dark_mode":               False,
-    "ntfy_url":                "",
-    "autosave_seconds":        300,
-    "timezone":                "",
-    "display_name":            "",
-    "pal_name":                "",
-    "profile_inference_hours": 24,
-    "home_finances_widget":    False,
-    "chat_retention_days":     30,
-    "supervisor_enabled":      True,
-    "calendar":                CALENDAR_DEFAULTS,
+    "dark_mode":                    False,
+    "ntfy_url":                     "",
+    "autosave_seconds":             300,
+    "timezone":                     "",
+    "display_name":                 "",
+    "pal_name":                     "",
+    "profile_inference_hours":      24,
+    "home_finances_widget":         False,
+    "chat_retention_days":          30,
+    "supervisor_enabled":           True,
+    "browser_notifications_enabled": False,
+    "calendar":                     CALENDAR_DEFAULTS,
+    "fitbit":                       FITBIT_DEFAULTS,
 }
 
 ALLOWED_KEYS = set(DEFAULTS.keys())
@@ -105,6 +112,7 @@ def _validate_calendar(cal: dict) -> tuple[str | None, dict | None]:
         ("horizon_days", 1, 60),
         ("reschedule_min_gap_days", 0, 30),
         ("max_reschedules", 0, 50),
+        ("default_duration_minutes", 5, 480),
     ):
         try:
             v = int(out[key])
@@ -113,6 +121,9 @@ def _validate_calendar(cal: dict) -> tuple[str | None, dict | None]:
         if v < lo or v > hi:
             return f"calendar.{key} must be between {lo} and {hi}", None
         out[key] = v
+
+    if out["default_duration_minutes"] % out["slot_minutes"] != 0:
+        return "calendar.default_duration_minutes must be a multiple of slot_minutes", None
 
     return None, out
 
@@ -123,7 +134,21 @@ def _merge_calendar(item: dict) -> dict:
     if not isinstance(cal, dict):
         cal = {}
     item["calendar"] = {**CALENDAR_DEFAULTS, **cal}
+
+    fitbit = item.get("fitbit") or {}
+    if not isinstance(fitbit, dict):
+        fitbit = {}
+    item["fitbit"] = {**FITBIT_DEFAULTS, **fitbit}
     return item
+
+
+def _validate_fitbit(val: dict) -> tuple[str | None, dict | None]:
+    if not isinstance(val, dict):
+        return "fitbit must be an object", None
+    out = dict(FITBIT_DEFAULTS)
+    if "enabled" in val:
+        out["enabled"] = bool(val["enabled"])
+    return None, out
 
 
 def get_settings(user_id: str) -> dict:
@@ -159,6 +184,12 @@ def update_settings(user_id: str, body: dict) -> dict:
         if err:
             return error(err)
         fields["calendar"] = normalized
+
+    if "fitbit" in fields:
+        err, normalized = _validate_fitbit(fields["fitbit"])
+        if err:
+            return error(err)
+        fields["fitbit"] = normalized
 
     update_expr, names, values = build_update_expression(fields)
 

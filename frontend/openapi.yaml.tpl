@@ -177,6 +177,31 @@ components:
           nullable: true
           description: Recurring reminder interval
 
+    RecurrenceRule:
+      type: object
+      description: Repeat template for recurring tasks. Children inherit the parent's local time-of-day.
+      required: [freq]
+      properties:
+        freq:
+          type: string
+          enum: [daily, weekly, weekdays]
+        interval:
+          type: integer
+          minimum: 1
+          maximum: 365
+          default: 1
+        by_weekday:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 7
+          description: ISO weekday numbers (1=Mon..7=Sun). Optional refinement for weekly freq.
+        until:
+          type: string
+          format: date
+          nullable: true
+
     Task:
       type: object
       properties:
@@ -199,10 +224,35 @@ components:
           type: string
           format: date
           nullable: true
-        folder_id:
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 50
+        scheduled_start:
+          type: string
+          format: date-time
+          nullable: true
+          description: ISO 8601 UTC datetime aligned to a 15-minute slot.
+        duration_minutes:
+          type: integer
+          nullable: true
+          description: Estimated/scheduled block length in minutes. Multiple of 15, max 480.
+        recurrence_rule:
+          $ref: '#/components/schemas/RecurrenceRule'
+        recurrence_parent_id:
           type: string
           format: uuid
           nullable: true
+          description: Set on auto-materialised child instances of a recurring task.
+        reschedule_count:
+          type: integer
+          description: Number of times the watcher has bumped this task after a missed slot.
+        blocked_reason:
+          type: string
+          nullable: true
+          description: Set to "max_reschedules" when the watcher gives up bumping the task.
         notifications:
           $ref: '#/components/schemas/TaskNotifications'
         created_at:
@@ -230,38 +280,73 @@ components:
           type: string
           format: date
           nullable: true
-        folder_id:
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 50
+        scheduled_start:
           type: string
-          format: uuid
+          format: date-time
           nullable: true
+        duration_minutes:
+          type: integer
+          minimum: 15
+          maximum: 480
+          multipleOf: 15
+          nullable: true
+        recurrence_rule:
+          $ref: '#/components/schemas/RecurrenceRule'
         notifications:
           $ref: '#/components/schemas/TaskNotifications'
 
-    TaskFolder:
+    AutoScheduleRequest:
       type: object
       properties:
-        user_id:
-          type: string
-        folder_id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        parent_id:
-          type: string
-          format: uuid
-          nullable: true
+        task_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: |
+            Limit scheduling to these task ids. Default is all eligible
+            (todo/in_progress, no schedule, no recurrence rule). When
+            supplied, the listed tasks are *force-rescheduled* even if
+            they already have a `scheduled_start` value — overriding the
+            "skip already-scheduled" default.
+        horizon_days:
+          type: integer
+          minimum: 1
+          maximum: 60
+          default: 0
+          description: |
+            Days into the future to consider when placing tasks. The
+            backend treats omitted/zero as "default horizon" and caps
+            the effective value at 60.
+        respect_priority:
+          type: boolean
+          default: true
 
-    TaskFolderWrite:
+    AutoScheduleResponse:
       type: object
-      required: [name]
       properties:
-        name:
-          type: string
-        parent_id:
-          type: string
-          format: uuid
-          nullable: true
+        scheduled:
+          type: array
+          items:
+            type: object
+            properties:
+              task_id:           { type: string, format: uuid }
+              title:             { type: string }
+              scheduled_start:   { type: string, format: date-time }
+              duration_minutes:  { type: integer }
+        skipped:
+          type: array
+          items:
+            type: object
+            properties:
+              task_id: { type: string, format: uuid }
+              reason:  { type: string, enum: [no free slot, past due date] }
 
     # ── Notes ─────────────────────────────────────────────────────────────────
 
@@ -1684,66 +1769,57 @@ paths:
         "204":
           description: Deleted
 
-  /tasks/folders:
+  /tasks/calendar:
     get:
       tags: [Tasks]
-      summary: List all task folders
+      summary: List scheduled tasks within a date range
+      description: Returns tasks whose `scheduled_start` falls in `[from, to]`. Used to keep week-view payloads small.
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
       responses:
         "200":
-          description: Array of folders
+          description: Scheduled tasks in range
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/TaskFolder'
+                  $ref: '#/components/schemas/Task'
+        "400":
+          description: Missing or malformed range
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tasks/auto-schedule:
     post:
       tags: [Tasks]
-      summary: Create a task folder
+      summary: Greedily fit unscheduled tasks into free working-hour slots
+      description: |
+        Sorts targets by (priority desc, due date asc, created_at asc) and walks
+        the user's working-hour slots until each fits. Skips tasks that already
+        have a `scheduled_start` unless requested explicitly via `task_ids`.
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TaskFolderWrite'
-      responses:
-        "201":
-          description: Created folder
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TaskFolder'
-
-  /tasks/folders/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    put:
-      tags: [Tasks]
-      summary: Update a task folder
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TaskFolderWrite'
+              $ref: '#/components/schemas/AutoScheduleRequest'
       responses:
         "200":
-          description: Updated folder
+          description: Scheduling result
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TaskFolder'
-    delete:
-      tags: [Tasks]
-      summary: Delete a task folder
-      responses:
-        "204":
-          description: Deleted
+                $ref: '#/components/schemas/AutoScheduleResponse'
 
   # ── Notes ────────────────────────────────────────────────────────────────────
 

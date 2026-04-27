@@ -25,7 +25,6 @@ resource "aws_lambda_function" "tasks" {
   environment {
     variables = {
       TABLE_NAME     = aws_dynamodb_table.tasks.name
-      FOLDERS_TABLE  = aws_dynamodb_table.task_folders.name
       LINKS_TABLE    = aws_dynamodb_table.links.name
       SETTINGS_TABLE = aws_dynamodb_table.settings.name
     }
@@ -56,7 +55,6 @@ resource "aws_iam_role_policy" "tasks_dynamodb" {
         ]
         Resource = [
           aws_dynamodb_table.tasks.arn,
-          aws_dynamodb_table.task_folders.arn,
         ]
       },
       {
@@ -107,10 +105,6 @@ locals {
     "DELETE /tasks/{id}",
     "GET /tasks/calendar",
     "POST /tasks/auto-schedule",
-    "GET /tasks/folders",
-    "POST /tasks/folders",
-    "PUT /tasks/folders/{id}",
-    "DELETE /tasks/folders/{id}",
   ]
 }
 

@@ -55,10 +55,6 @@ run "all_tables_have_pitr_enabled" {
     error_message = "health: PITR must be enabled"
   }
   assert {
-    condition     = aws_dynamodb_table.nutrition.point_in_time_recovery[0].enabled
-    error_message = "nutrition: PITR must be enabled"
-  }
-  assert {
     condition     = aws_dynamodb_table.goals.point_in_time_recovery[0].enabled
     error_message = "goals: PITR must be enabled"
   }
@@ -73,10 +69,6 @@ run "all_tables_have_pitr_enabled" {
   assert {
     condition     = aws_dynamodb_table.assistant_memory.point_in_time_recovery[0].enabled
     error_message = "assistant_memory: PITR must be enabled"
-  }
-  assert {
-    condition     = aws_dynamodb_table.task_folders.point_in_time_recovery[0].enabled
-    error_message = "task_folders: PITR must be enabled"
   }
   assert {
     condition     = aws_dynamodb_table.links.point_in_time_recovery[0].enabled

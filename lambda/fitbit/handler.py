@@ -1,4 +1,8 @@
-"""Nutrition Lambda entry point."""
+"""Fitbit Lambda entry point.
+
+Handles OAuth2 connect/callback/disconnect plus the read endpoint
+for today's cached Fitbit data.
+"""
 
 import json
 import logging
@@ -13,17 +17,18 @@ def lambda_handler(event: dict, context) -> dict:
     from auth import sanitize_event
     logger.info("Event: %s", json.dumps(sanitize_event(event)))
     try:
-
         from auth import get_user_id
         user_id = get_user_id(event)
 
         body = {}
         if event.get("body"):
+            from response import error
             try:
                 body = json.loads(event["body"])
             except (json.JSONDecodeError, TypeError):
-                from response import error
                 return error("Invalid JSON body")
+            if not isinstance(body, dict):
+                return error("Request body must be a JSON object")
 
         path_params  = event.get("pathParameters") or {}
         query_params = event.get("queryStringParameters") or {}

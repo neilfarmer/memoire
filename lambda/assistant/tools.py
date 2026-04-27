@@ -54,7 +54,6 @@ NOTE_FOLDERS_TABLE = os.environ["NOTE_FOLDERS_TABLE"]
 HABITS_TABLE       = os.environ["HABITS_TABLE"]
 GOALS_TABLE        = os.environ["GOALS_TABLE"]
 JOURNAL_TABLE      = os.environ["JOURNAL_TABLE"]
-NUTRITION_TABLE    = os.environ["NUTRITION_TABLE"]
 HEALTH_TABLE       = os.environ["HEALTH_TABLE"]
 DEBTS_TABLE        = os.environ.get("DEBTS_TABLE", "")
 INCOME_TABLE       = os.environ.get("INCOME_TABLE", "")
@@ -86,6 +85,7 @@ TOOL_SPECS = [
                         "description": {"type": "string", "description": "Optional details"},
                         "due_date":    {"type": "string", "description": "Due date in YYYY-MM-DD format"},
                         "priority":    {"type": "string", "enum": ["low", "medium", "high"]},
+                        "tags":        {"type": "array", "items": {"type": "string"}, "description": "Optional tag list for grouping/filtering"},
                     },
                     "required": ["title"],
                 }
@@ -97,8 +97,8 @@ TOOL_SPECS = [
             "name": "update_task",
             "description": (
                 "Update an EXISTING task — use this to change the title, due date, priority, "
-                "status, description, or folder of a task that already exists. If the user says "
-                "'change', 'rename', 'reschedule', 'move to', 'update', 'set due to', etc. about "
+                "status, description, or tags of a task that already exists. If the user says "
+                "'change', 'rename', 'reschedule', 'tag as', 'update', 'set due to', etc. about "
                 "a task from this session OR a task they can see in their list, ALWAYS use "
                 "update_task, NEVER create_task. If you don't know the task_id, call list_tasks "
                 "first to find it."
@@ -113,6 +113,7 @@ TOOL_SPECS = [
                         "due_date":    {"type": "string", "description": "New due date YYYY-MM-DD (optional)"},
                         "priority":    {"type": "string", "enum": ["low", "medium", "high"]},
                         "status":      {"type": "string", "enum": ["todo", "in_progress", "done"]},
+                        "tags":        {"type": "array", "items": {"type": "string"}, "description": "Replace tag list. Use [] to clear."},
                     },
                     "required": ["task_id"],
                 }
@@ -1063,6 +1064,7 @@ def _create_task(user_id: str, inputs: dict) -> str:
         "description": inputs.get("description", ""),
         "status":     "todo",
         "priority":   inputs.get("priority", "medium"),
+        "tags":       _normalize_tag_input(inputs.get("tags")),
         "created_at": now,
         "updated_at": now,
     }
@@ -1071,6 +1073,25 @@ def _create_task(user_id: str, inputs: dict) -> str:
     task = {k: v for k, v in task.items() if v is not None and v != ""}
     table.put_item(Item=task)
     return f"Created task: {task['title']} [pal-link:task:{task['task_id']}:Open task →]"
+
+
+def _normalize_tag_input(raw) -> list[str]:
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        raw = [t for t in raw.split(",")]
+    if not isinstance(raw, list):
+        return []
+    seen, out = set(), []
+    for tag in raw:
+        if not isinstance(tag, str):
+            continue
+        norm = tag.strip()
+        if not norm or norm.lower() in seen:
+            continue
+        seen.add(norm.lower())
+        out.append(norm)
+    return out
 
 
 def _schedule_tasks(user_id: str, inputs: dict) -> str:
@@ -1337,6 +1358,8 @@ def _update_task(user_id: str, inputs: dict) -> str:
     for k in ("title", "description", "due_date", "priority", "status"):
         if k in inputs and inputs[k] is not None and inputs[k] != "":
             fields[k] = inputs[k]
+    if "tags" in inputs and inputs["tags"] is not None:
+        fields["tags"] = _normalize_tag_input(inputs["tags"])
     if not fields:
         return "No fields supplied to update."
 
@@ -1554,10 +1577,10 @@ def _create_journal_entry(user_id: str, inputs: dict) -> str:
 
 
 def _log_meal(user_id: str, inputs: dict) -> str:
-    table    = db.get_table(NUTRITION_TABLE)
+    table    = db.get_table(HEALTH_TABLE)
     log_date = inputs.get("date") or inputs.get("_today") or date.today().isoformat()
-    existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
-    meals    = list(existing.get("meals", [])) if existing else []
+    existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item") or {}
+    foods    = list(existing.get("foods", []))
 
     raw_items = inputs.get("items")
     if raw_items and isinstance(raw_items, list):
@@ -1573,47 +1596,49 @@ def _log_meal(user_id: str, inputs: dict) -> str:
         name = (src.get("name") or "").strip()
         if not name:
             continue
-        meal = {"id": str(uuid.uuid4()), "name": name}
+        food = {"id": str(uuid.uuid4()), "name": name, "source": "assistant"}
         for field in ("calories", "protein_g", "carbs_g", "fat_g"):
             if src.get(field) is not None:
-                meal[field] = Decimal(str(src[field]))
-        meals.append(meal)
+                food[field] = Decimal(str(src[field]))
+        foods.append(food)
         added_names.append(name)
-        if meal.get("calories"):
-            added_cals += int(meal["calories"])
+        if food.get("calories"):
+            added_cals += int(food["calories"])
 
     if not added_names:
         return "No valid items supplied to log_meal."
 
     table.put_item(Item={
+        **existing,
         "user_id":    user_id,
         "log_date":   log_date,
-        "meals":      meals,
-        "notes":      existing.get("notes", "") if existing else "",
-        "created_at": existing["created_at"] if existing else _now(),
+        "foods":      foods,
+        "exercises":  list(existing.get("exercises", [])),
+        "notes":      existing.get("notes", ""),
+        "created_at": existing.get("created_at") or _now(),
         "updated_at": _now(),
     })
 
     if len(added_names) == 1:
         cal_str = f" ({added_cals} cal)" if added_cals else ""
-        return f"Logged '{added_names[0]}'{cal_str} to nutrition log for {log_date}. {len(meals)} item(s) today."
+        return f"Logged '{added_names[0]}'{cal_str} to health log for {log_date}. {len(foods)} item(s) today."
     cal_str = f" ({added_cals} cal total)" if added_cals else ""
-    return f"Logged {len(added_names)} items{cal_str} to nutrition log for {log_date}: {', '.join(added_names)}. {len(meals)} item(s) today."
+    return f"Logged {len(added_names)} items{cal_str} to health log for {log_date}: {', '.join(added_names)}. {len(foods)} item(s) today."
 
 
 def _get_nutrition_log(user_id: str, inputs: dict) -> str:
-    table    = db.get_table(NUTRITION_TABLE)
+    table    = db.get_table(HEALTH_TABLE)
     log_date = inputs.get("date") or inputs.get("_today") or date.today().isoformat()
     existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
-    if not existing or not existing.get("meals"):
+    if not existing or not existing.get("foods"):
         return f"No nutrition log for {log_date}."
-    meals = existing["meals"]
-    total_cal   = sum(m.get("calories",  0) or 0 for m in meals)
-    total_prot  = sum(m.get("protein_g", 0) or 0 for m in meals)
-    total_carbs = sum(m.get("carbs_g",   0) or 0 for m in meals)
-    total_fat   = sum(m.get("fat_g",     0) or 0 for m in meals)
+    foods = existing["foods"]
+    total_cal   = sum(m.get("calories",  0) or 0 for m in foods)
+    total_prot  = sum(m.get("protein_g", 0) or 0 for m in foods)
+    total_carbs = sum(m.get("carbs_g",   0) or 0 for m in foods)
+    total_fat   = sum(m.get("fat_g",     0) or 0 for m in foods)
     lines = [f"Nutrition log for {log_date}:"]
-    for m in meals:
+    for m in foods:
         parts = []
         if m.get("calories"):  parts.append(f"{int(m['calories'])} cal")
         if m.get("protein_g"): parts.append(f"{m['protein_g']}g protein")
@@ -1647,10 +1672,12 @@ def _log_exercise(user_id: str, inputs: dict) -> str:
     exercises.append(exercise)
 
     table.put_item(Item={
+        **(existing or {}),
         "user_id":    user_id,
         "log_date":   log_date,
         "exercises":  exercises,
-        "notes":      existing.get("notes", "") if existing else "",
+        "foods":      list((existing or {}).get("foods", [])),
+        "notes":      (existing or {}).get("notes", ""),
         "created_at": (existing or {}).get("created_at") or _now(),
         "updated_at": _now(),
     })
@@ -1707,7 +1734,7 @@ def _search_recent_exercises(user_id: str, inputs: dict) -> str:
 
 def _search_recent_meals(user_id: str, inputs: dict) -> str:
     from datetime import timedelta
-    table   = db.get_table(NUTRITION_TABLE)
+    table   = db.get_table(HEALTH_TABLE)
     q       = (inputs.get("q") or "").strip().lower()
     days    = max(1, min(int(inputs.get("days") or 90), 365))
     limit   = max(1, min(int(inputs.get("limit") or 20), 100))
@@ -1717,7 +1744,7 @@ def _search_recent_meals(user_id: str, inputs: dict) -> str:
 
     seen: dict[str, dict] = {}
     for item in items:
-        for m in item.get("meals") or []:
+        for m in item.get("foods") or []:
             name = (m.get("name") or "").strip()
             if not name:
                 continue
@@ -1785,7 +1812,7 @@ def _get_exercise_summary(user_id: str, inputs: dict) -> str:
 
 def _get_nutrition_summary(user_id: str, inputs: dict) -> str:
     from datetime import timedelta
-    table = db.get_table(NUTRITION_TABLE)
+    table = db.get_table(HEALTH_TABLE)
     today = date.today()
     d_to   = inputs.get("to")   or today.isoformat()
     d_from = inputs.get("from") or (today - timedelta(days=29)).isoformat()
@@ -1795,12 +1822,12 @@ def _get_nutrition_summary(user_id: str, inputs: dict) -> str:
     logged_days = 0
     meal_count = 0
     for item in items:
-        meals = item.get("meals") or []
-        if not meals:
+        foods = item.get("foods") or []
+        if not foods:
             continue
         logged_days += 1
-        meal_count += len(meals)
-        for m in meals:
+        meal_count += len(foods)
+        for m in foods:
             for f in totals:
                 if m.get(f) is not None:
                     totals[f] += Decimal(str(m[f]))
@@ -2006,38 +2033,41 @@ def _update_goal(user_id: str, inputs: dict) -> str:
 # ── Nutrition delete ──────────────────────────────────────────────────────────
 
 def _delete_meal(user_id: str, inputs: dict) -> str:
-    table = db.get_table(NUTRITION_TABLE)
+    table = db.get_table(HEALTH_TABLE)
     log_date = inputs.get("date") or inputs.get("_today") or date.today().isoformat()
     item = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
-    if not item or not item.get("meals"):
-        return f"No meals on {log_date}."
-    meals = list(item["meals"])
-    target_id   = inputs.get("meal_id")
+    if not item or not item.get("foods"):
+        return f"No foods on {log_date}."
+    foods = list(item["foods"])
+    target_id   = inputs.get("meal_id") or inputs.get("food_id")
     target_name = (inputs.get("name") or "").strip().lower()
     removed = None
-    for i, m in enumerate(meals):
+    for i, m in enumerate(foods):
         if target_id and m.get("id") == target_id:
-            removed = meals.pop(i)
+            removed = foods.pop(i)
             break
         if target_name and (m.get("name") or "").strip().lower() == target_name:
-            removed = meals.pop(i)
+            removed = foods.pop(i)
             break
     if removed is None:
-        return "No matching meal found."
-    item["meals"]      = meals
+        return "No matching food found."
+    item["foods"]      = foods
     item["updated_at"] = _now()
     table.put_item(Item=item)
-    return f"Removed '{removed.get('name')}' from nutrition log for {log_date}. {len(meals)} item(s) remaining."
+    return f"Removed '{removed.get('name')}' from health log for {log_date}. {len(foods)} item(s) remaining."
 
 
 def _clear_nutrition_log(user_id: str, inputs: dict) -> str:
-    table = db.get_table(NUTRITION_TABLE)
+    """Clear only the foods array on the day, keep exercises and totals."""
+    table = db.get_table(HEALTH_TABLE)
     log_date = inputs.get("date") or inputs.get("_today") or date.today().isoformat()
     item = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item")
-    if not item:
+    if not item or not item.get("foods"):
         return f"No nutrition log for {log_date}."
-    table.delete_item(Key={"user_id": user_id, "log_date": log_date})
-    return f"Cleared nutrition log for {log_date}."
+    item["foods"]      = []
+    item["updated_at"] = _now()
+    table.put_item(Item=item)
+    return f"Cleared nutrition portion of health log for {log_date}."
 
 
 # ── Exercise extras ───────────────────────────────────────────────────────────
@@ -2090,9 +2120,10 @@ def _log_health(user_id: str, inputs: dict) -> str:
     log_date = inputs.get("date") or inputs.get("_today") or date.today().isoformat()
     existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item") or {}
     item = {
+        **existing,
         "user_id":    user_id,
         "log_date":   log_date,
-        "meals":      existing.get("meals", []),
+        "foods":      existing.get("foods", []),
         "exercises":  existing.get("exercises", []),
         "notes":      existing.get("notes", ""),
         "created_at": existing.get("created_at") or _now(),
@@ -2156,12 +2187,12 @@ def _delete_health_log(user_id: str, inputs: dict) -> str:
     if not item:
         return f"No health log for {d}."
     # Only null out health-specific fields; keep meals/exercises if present
-    if item.get("meals") or item.get("exercises"):
+    if item.get("foods") or item.get("exercises"):
         for k in ("weight", "sleep_hours", "mood"):
             item.pop(k, None)
         item["updated_at"] = _now()
         table.put_item(Item=item)
-        return f"Cleared health metrics for {d} (kept meals/exercises)."
+        return f"Cleared health metrics for {d} (kept foods/exercises)."
     table.delete_item(Key={"user_id": user_id, "log_date": d})
     return f"Deleted health log for {d}."
 

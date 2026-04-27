@@ -42,6 +42,7 @@ class TestGetSettings:
         assert body["ntfy_url"] == ""
         assert body["autosave_seconds"] == 300
         assert body["timezone"] == ""
+        assert body["browser_notifications_enabled"] is False
 
     def test_returns_merged_defaults_after_partial_update(self, tbl):
         crud.update_settings(USER, {"dark_mode": True})
@@ -125,6 +126,19 @@ class TestUpdateSettings:
         body = json.loads(crud.get_settings(USER)["body"])
         assert "user_id" not in body
 
+    def test_fitbit_default_disabled(self, tbl):
+        body = json.loads(crud.get_settings(USER)["body"])
+        assert body["fitbit"] == {"enabled": False}
+
+    def test_fitbit_enable_persists(self, tbl):
+        crud.update_settings(USER, {"fitbit": {"enabled": True}})
+        body = json.loads(crud.get_settings(USER)["body"])
+        assert body["fitbit"]["enabled"] is True
+
+    def test_fitbit_invalid_type_rejected(self, tbl):
+        r = crud.update_settings(USER, {"fitbit": "yes"})
+        assert r["statusCode"] == 400
+
 
 # ── calendar settings ─────────────────────────────────────────────────────────
 
@@ -139,6 +153,18 @@ class TestCalendarSettings:
         assert cal["slot_minutes"] == 30
         assert cal["reschedule_min_gap_days"] == 2
         assert cal["max_reschedules"] == 3
+        assert cal["default_duration_minutes"] == 60
+
+    def test_calendar_default_duration_validated(self, tbl):
+        r = crud.update_settings(USER, {"calendar": {"default_duration_minutes": 0}})
+        assert r["statusCode"] == 400
+
+    def test_calendar_default_duration_must_be_slot_multiple(self, tbl):
+        r = crud.update_settings(USER, {"calendar": {
+            "slot_minutes": 30,
+            "default_duration_minutes": 35,
+        }})
+        assert r["statusCode"] == 400
 
     def test_calendar_partial_update_fills_defaults(self, tbl):
         r = crud.update_settings(USER, {

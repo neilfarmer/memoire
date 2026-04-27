@@ -169,3 +169,16 @@ variable "usda_api_key" {
   sensitive   = true
 }
 
+variable "fitbit_client_id" {
+  description = "Fitbit OAuth2 client ID. Leave empty to disable the Fitbit integration."
+  type        = string
+  default     = ""
+}
+
+variable "fitbit_client_secret" {
+  description = "Fitbit OAuth2 client secret. Required when fitbit_client_id is set."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+

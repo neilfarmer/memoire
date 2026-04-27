@@ -124,12 +124,6 @@ data "archive_file" "lambda_health" {
   output_path = "${path.module}/../build/health.zip"
 }
 
-data "archive_file" "lambda_nutrition" {
-  type        = "zip"
-  source_dir  = "${path.module}/../lambda/nutrition"
-  output_path = "${path.module}/../build/nutrition.zip"
-}
-
 data "archive_file" "lambda_goals" {
   type        = "zip"
   source_dir  = "${path.module}/../lambda/goals"
@@ -188,4 +182,16 @@ data "archive_file" "lambda_links" {
   type        = "zip"
   source_dir  = "${path.module}/../lambda/links"
   output_path = "${path.module}/../build/links.zip"
+}
+
+data "archive_file" "lambda_fitbit" {
+  type        = "zip"
+  source_dir  = "${path.module}/../lambda/fitbit"
+  output_path = "${path.module}/../build/fitbit.zip"
+}
+
+data "archive_file" "lambda_fitbit_sync" {
+  type        = "zip"
+  source_dir  = "${path.module}/../lambda/fitbit_sync"
+  output_path = "${path.module}/../build/fitbit_sync.zip"
 }

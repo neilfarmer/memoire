@@ -84,7 +84,7 @@ async def create_task(
     status: str = "todo",
     priority: str = "medium",
     due_date: str | None = None,
-    folder_id: str | None = None,
+    tags: list[str] | None = None,
     notifications: dict | None = None,
     scheduled_start: str | None = None,
     duration_minutes: int | None = None,
@@ -98,20 +98,20 @@ async def create_task(
         status: todo, in_progress, or done.
         priority: low, medium, or high.
         due_date: Optional due date (YYYY-MM-DD).
-        folder_id: Optional folder UUID.
+        tags: Optional list of tag strings used for grouping/filtering.
         notifications: Optional reminder config. Shape: {"before_due": [...], "recurring": "1h"|"1d"|"1w"}.
             before_due values must be from: "1h", "1d", "3d".
         scheduled_start: ISO 8601 UTC datetime aligned to a 30-minute slot
             (e.g. "2026-04-28T13:00:00Z").
-        duration_minutes: Block length, multiple of 30, max 480.
+        duration_minutes: Estimated/scheduled block length in minutes. Multiple of 30, max 480. Falls back to the user's calendar.default_duration_minutes setting (60 by default) when unset.
         recurrence_rule: {"freq":"daily|weekly|weekdays","interval":int,
             "by_weekday":[1..7],"until":"YYYY-MM-DD"}.
     """
     body: dict = {"title": title, "description": description, "status": status, "priority": priority}
     if due_date:
         body["due_date"] = due_date
-    if folder_id:
-        body["folder_id"] = folder_id
+    if tags is not None:
+        body["tags"] = tags
     if notifications is not None:
         body["notifications"] = notifications
     if scheduled_start:
@@ -131,7 +131,7 @@ async def update_task(
     status: str | None = None,
     priority: str | None = None,
     due_date: str | None = None,
-    folder_id: str | None = None,
+    tags: list[str] | None = None,
     notifications: dict | None = None,
     scheduled_start: str | None = None,
     duration_minutes: int | None = None,
@@ -146,11 +146,11 @@ async def update_task(
         status: todo, in_progress, or done.
         priority: low, medium, or high.
         due_date: Due date (YYYY-MM-DD) or empty string to clear.
-        folder_id: Folder UUID or empty string to clear.
+        tags: Replace the task's tag list. Pass [] to clear.
         notifications: Reminder config {"before_due": [...], "recurring": "1h"|"1d"|"1w"}. Pass {} to clear.
             before_due values must be from: "1h", "1d", "3d".
         scheduled_start: ISO 8601 UTC datetime aligned to a 30-minute slot.
-        duration_minutes: Block length, multiple of 30, max 480.
+        duration_minutes: Estimated/scheduled block length in minutes. Multiple of 30, max 480. Falls back to the user's calendar.default_duration_minutes setting (60 by default) when unset.
         recurrence_rule: Recurrence template; see create_task for shape.
     """
     body: dict = {}
@@ -164,8 +164,8 @@ async def update_task(
         body["priority"] = priority
     if due_date is not None:
         body["due_date"] = due_date if due_date else None
-    if folder_id is not None:
-        body["folder_id"] = folder_id if folder_id else None
+    if tags is not None:
+        body["tags"] = tags
     if notifications is not None:
         body["notifications"] = notifications or None
     if scheduled_start is not None:
@@ -210,6 +210,34 @@ async def list_tasks_calendar(from_date: str, to_date: str) -> str:
 
 
 @mcp.tool()
+async def auto_schedule_tasks(
+    task_ids: list[str] | None = None,
+    horizon_days: int | None = None,
+    respect_priority: bool = True,
+) -> str:
+    """Greedily fit unscheduled tasks into the user's free working-hour slots.
+
+    Returns {"scheduled": [...], "skipped": [{"task_id":..., "reason": ...}]}.
+
+    Args:
+        task_ids: Optional list of task UUIDs to limit scheduling. Defaults to
+            every eligible task (todo/in_progress, no scheduled_start, no
+            recurrence_rule). Past-due tasks are still scheduled into the next
+            free slot rather than skipped.
+        horizon_days: Override the search horizon (1..60). Defaults to the
+            user's calendar setting (14).
+        respect_priority: When true (default), targets are sorted high → low
+            priority and then by due date. When false, ordered by created_at.
+    """
+    body: dict = {"respect_priority": respect_priority}
+    if task_ids:
+        body["task_ids"] = task_ids
+    if horizon_days is not None:
+        body["horizon_days"] = horizon_days
+    return json.dumps(await _request("POST", "/tasks/auto-schedule", body=body))
+
+
+@mcp.tool()
 async def delete_task(task_id: str) -> str:
     """Delete a task.
 
@@ -217,51 +245,6 @@ async def delete_task(task_id: str) -> str:
         task_id: Task UUID.
     """
     return json.dumps(await _request("DELETE", f"/tasks/{task_id}"))
-
-
-@mcp.tool()
-async def list_task_folders() -> str:
-    """List all task folders."""
-    return json.dumps(await _request("GET", "/tasks/folders"))
-
-
-@mcp.tool()
-async def create_task_folder(name: str, parent_id: str | None = None) -> str:
-    """Create a task folder.
-
-    Args:
-        name: Folder name.
-        parent_id: Optional parent folder UUID.
-    """
-    body: dict = {"name": name}
-    if parent_id:
-        body["parent_id"] = parent_id
-    return json.dumps(await _request("POST", "/tasks/folders", body=body))
-
-
-@mcp.tool()
-async def update_task_folder(folder_id: str, name: str, parent_id: str | None = None) -> str:
-    """Update a task folder.
-
-    Args:
-        folder_id: Folder UUID.
-        name: New folder name.
-        parent_id: New parent folder UUID or empty string to clear.
-    """
-    body: dict = {"name": name}
-    if parent_id is not None:
-        body["parent_id"] = parent_id if parent_id else None
-    return json.dumps(await _request("PUT", f"/tasks/folders/{folder_id}", body=body))
-
-
-@mcp.tool()
-async def delete_task_folder(folder_id: str) -> str:
-    """Delete a task folder.
-
-    Args:
-        folder_id: Folder UUID.
-    """
-    return json.dumps(await _request("DELETE", f"/tasks/folders/{folder_id}"))
 
 
 # ---------------------------------------------------------------------------

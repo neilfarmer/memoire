@@ -33,7 +33,6 @@ resource "aws_lambda_function" "assistant" {
       HABITS_TABLE            = aws_dynamodb_table.habits.name
       GOALS_TABLE             = aws_dynamodb_table.goals.name
       JOURNAL_TABLE           = aws_dynamodb_table.journal.name
-      NUTRITION_TABLE         = aws_dynamodb_table.nutrition.name
       HEALTH_TABLE            = aws_dynamodb_table.health.name
       SETTINGS_TABLE          = aws_dynamodb_table.settings.name
       DEBTS_TABLE             = aws_dynamodb_table.debts.name
@@ -82,7 +81,6 @@ resource "aws_iam_role_policy" "assistant_dynamodb" {
         aws_dynamodb_table.habits.arn,
         aws_dynamodb_table.goals.arn,
         aws_dynamodb_table.journal.arn,
-        aws_dynamodb_table.nutrition.arn,
         aws_dynamodb_table.health.arn,
         aws_dynamodb_table.debts.arn,
         aws_dynamodb_table.income.arn,

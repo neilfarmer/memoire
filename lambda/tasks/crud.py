@@ -25,8 +25,11 @@ VALID_RECURRENCE_FREQ = {"daily", "weekly", "weekdays"}
 
 MAX_TITLE_LEN       = 500
 MAX_DESCRIPTION_LEN = 10_000
+MAX_TAG_LEN         = 50
+MAX_TAGS_PER_TASK   = 20
 
-SLOT_MINUTES        = 30
+SLOT_MINUTES        = 30  # default duration grain when no explicit duration is set
+DURATION_GRAIN_MIN  = 15  # smallest scheduled_start / duration alignment grain
 MAX_DURATION_MIN    = 8 * 60
 
 _ISO_WEEKDAY_RANGE  = range(1, 8)
@@ -55,17 +58,20 @@ def _validate_scheduling(body: dict) -> str | None:
         dt = _parse_scheduled_start(body["scheduled_start"])
         if dt is None:
             return "scheduled_start must be an ISO 8601 datetime"
-        if dt.minute % SLOT_MINUTES != 0 or dt.second != 0 or dt.microsecond != 0:
-            return f"scheduled_start must align to a {SLOT_MINUTES}-minute slot"
+        # Accept any user-grid alignment as small as DURATION_GRAIN_MIN so we
+        # don't reject :15/:45 starts that the auto-scheduler can produce
+        # when calendar.slot_minutes is 15.
+        if dt.minute % DURATION_GRAIN_MIN != 0 or dt.second != 0 or dt.microsecond != 0:
+            return f"scheduled_start must align to a {DURATION_GRAIN_MIN}-minute slot"
 
     if "duration_minutes" in body and body["duration_minutes"] is not None:
         try:
             dur = int(body["duration_minutes"])
         except (TypeError, ValueError):
             return "duration_minutes must be an integer"
-        if dur <= 0 or dur % SLOT_MINUTES != 0 or dur > MAX_DURATION_MIN:
+        if dur <= 0 or dur % DURATION_GRAIN_MIN != 0 or dur > MAX_DURATION_MIN:
             return (
-                f"duration_minutes must be a positive multiple of {SLOT_MINUTES} "
+                f"duration_minutes must be a positive multiple of {DURATION_GRAIN_MIN} "
                 f"and at most {MAX_DURATION_MIN}"
             )
 
@@ -95,6 +101,31 @@ def _validate_scheduling(body: dict) -> str | None:
     return None
 
 
+def _normalize_tags(raw) -> list[str] | None:
+    """Return a sanitized tag list, or None if input is missing.
+
+    Accepts a list of strings or a comma-separated string. Strips whitespace,
+    drops empties, deduplicates while preserving order.
+    """
+    if raw is None:
+        return None
+    if isinstance(raw, str):
+        raw = [t for t in raw.split(",")]
+    if not isinstance(raw, list):
+        return []
+    seen = set()
+    out: list[str] = []
+    for tag in raw:
+        if not isinstance(tag, str):
+            continue
+        norm = tag.strip()
+        if not norm or norm.lower() in seen:
+            continue
+        seen.add(norm.lower())
+        out.append(norm)
+    return out
+
+
 def _validate_fields(body: dict) -> str | None:
     """Return an error message if any provided fields are invalid, else None."""
     if "status" in body and body["status"] not in VALID_STATUSES:
@@ -111,6 +142,13 @@ def _validate_fields(body: dict) -> str | None:
         recurring = n.get("recurring")
         if recurring and recurring not in VALID_RECURRING:
             return f"notifications.recurring must be one of: {', '.join(sorted(VALID_RECURRING))}"
+    if "tags" in body and body["tags"] is not None:
+        tags = _normalize_tags(body["tags"])
+        if len(tags) > MAX_TAGS_PER_TASK:
+            return f"tags must contain no more than {MAX_TAGS_PER_TASK} entries"
+        if any(len(t) > MAX_TAG_LEN for t in tags):
+            return f"each tag must be at most {MAX_TAG_LEN} characters"
+        body["tags"] = tags
     return _validate_scheduling(body)
 
 
@@ -187,6 +225,7 @@ def create_task(user_id: str, body: dict) -> dict:
         return error("scheduled_start overlaps an existing block", status=409)
 
     now = now_iso()
+    tags = _normalize_tags(body.get("tags")) if body.get("tags") is not None else []
     task = {
         "user_id": user_id,
         "task_id": str(uuid.uuid4()),
@@ -196,7 +235,7 @@ def create_task(user_id: str, body: dict) -> dict:
         "priority": body.get("priority", "medium"),
         "due_date": body.get("due_date"),
         "notifications": body.get("notifications"),
-        "folder_id": body.get("folder_id"),
+        "tags": tags,
         "scheduled_start": sched.isoformat() if sched else None,
         "duration_minutes": duration,
         "recurrence_rule": body.get("recurrence_rule"),
@@ -227,7 +266,7 @@ def get_task(user_id: str, task_id: str) -> dict:
 def update_task(user_id: str, task_id: str, body: dict) -> dict:
     updatable = {
         "title", "description", "status", "priority", "due_date", "notifications",
-        "folder_id", "scheduled_start", "duration_minutes",
+        "tags", "scheduled_start", "duration_minutes",
         "recurrence_rule", "recurrence_parent_id",
     }
     fields = {k: v for k, v in body.items() if k in updatable}
