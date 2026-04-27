@@ -99,7 +99,8 @@ def _sync_user(user_id: str) -> bool:
     # Today: write fitbit_data and live-push to health on every run so the
     # Health page reflects the most recent steps/sleep/weight/foods.
     today_summary = _write_day(user_id, access_token, log_date, finalized=False)
-    _push_to_health(user_id, log_date, today_summary)
+    if today_summary:
+        _push_to_health(user_id, log_date, today_summary)
 
     # End-of-day finalize: if yesterday's row exists and isn't finalized,
     # do one last pull and freeze it (also re-pushed to health). Runs at
@@ -115,13 +116,19 @@ def _sync_user(user_id: str) -> bool:
         ).get("Item")
         if existing and not existing.get("finalized"):
             summary = _write_day(user_id, access_token, yesterday, finalized=True)
-            _push_to_health(user_id, yesterday, summary)
-            logger.info("Finalized end-of-day row for %s on %s", user_id, yesterday)
+            if summary:
+                _push_to_health(user_id, yesterday, summary)
+                logger.info("Finalized end-of-day row for %s on %s", user_id, yesterday)
     return True
 
 
 def _write_day(user_id: str, access_token: str, log_date: str, finalized: bool) -> dict:
     summary = _fetch_summary(access_token, log_date)
+    # Skip writes when Fitbit returned nothing — overwriting an existing,
+    # complete row with a stub on a transient outage would degrade history.
+    if not summary:
+        logger.warning("Empty Fitbit summary for %s on %s — skipping write", user_id, log_date)
+        return {}
     summary = _to_dynamo_safe(summary)
     summary.update({
         "user_id":   user_id,

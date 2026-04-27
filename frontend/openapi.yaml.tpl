@@ -226,17 +226,19 @@ components:
           nullable: true
         tags:
           type: array
+          maxItems: 20
           items:
             type: string
+            maxLength: 50
         scheduled_start:
           type: string
           format: date-time
           nullable: true
-          description: ISO 8601 UTC datetime aligned to a 30-minute slot.
+          description: ISO 8601 UTC datetime aligned to a 15-minute slot.
         duration_minutes:
           type: integer
           nullable: true
-          description: Estimated/scheduled block length in minutes. Multiple of 30, max 480.
+          description: Estimated/scheduled block length in minutes. Multiple of 15, max 480.
         recurrence_rule:
           $ref: '#/components/schemas/RecurrenceRule'
         recurrence_parent_id:
@@ -280,16 +282,19 @@ components:
           nullable: true
         tags:
           type: array
+          maxItems: 20
           items:
             type: string
+            maxLength: 50
         scheduled_start:
           type: string
           format: date-time
           nullable: true
         duration_minutes:
           type: integer
-          minimum: 5
+          minimum: 15
           maximum: 480
+          multipleOf: 15
           nullable: true
         recurrence_rule:
           $ref: '#/components/schemas/RecurrenceRule'
@@ -304,11 +309,21 @@ components:
           items:
             type: string
             format: uuid
-          description: Limit scheduling to these task ids. Default is all eligible (todo/in_progress, no schedule, no recurrence rule).
+          description: |
+            Limit scheduling to these task ids. Default is all eligible
+            (todo/in_progress, no schedule, no recurrence rule). When
+            supplied, the listed tasks are *force-rescheduled* even if
+            they already have a `scheduled_start` value — overriding the
+            "skip already-scheduled" default.
         horizon_days:
           type: integer
           minimum: 1
           maximum: 60
+          default: 0
+          description: |
+            Days into the future to consider when placing tasks. The
+            backend treats omitted/zero as "default horizon" and caps
+            the effective value at 60.
         respect_priority:
           type: boolean
           default: true

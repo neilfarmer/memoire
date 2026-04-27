@@ -59,18 +59,21 @@ def _fetch_s3(key: str) -> bytes | None:
 
 # ── Tasks ─────────────────────────────────────────────────────────────────────
 
-def _tasks_section(tasks: list[dict]) -> str:
-    """Render a list of tasks grouped by status."""
+def _tasks_section(tasks: list[dict], heading_level: int = 2) -> str:
+    """Render a list of tasks grouped by status. heading_level is the level
+    used for status sub-headings (H2 by default; H3 when nested under tag
+    sections so the document outline stays clean)."""
     grouped: dict[str, list] = {"todo": [], "in_progress": [], "done": []}
     for t in tasks:
         grouped.setdefault(t.get("status", "todo"), []).append(t)
 
+    hashes = "#" * max(1, min(heading_level, 6))
     lines: list[str] = []
     for status in ("todo", "in_progress", "done"):
         bucket = grouped.get(status, [])
         if not bucket:
             continue
-        lines.append(f"## {STATUS_LABEL[status]}\n")
+        lines.append(f"{hashes} {STATUS_LABEL[status]}\n")
         for t in sorted(bucket, key=lambda x: x.get("created_at", "")):
             cb       = CHECKBOX[status]
             priority = PRIORITY_SYMBOL.get(t.get("priority", "medium"), "!!")
@@ -108,11 +111,11 @@ def _tasks_markdown(tasks: list[dict]) -> str:
 
     lines = ["# Tasks\n"]
     for tag in sorted(by_tag.keys(), key=str.lower):
-        lines.append(f"# {tag}\n")
-        lines.append(_tasks_section(by_tag[tag]))
+        lines.append(f"## {tag}\n")
+        lines.append(_tasks_section(by_tag[tag], heading_level=3))
     if untagged:
-        lines.append("# Untagged\n")
-        lines.append(_tasks_section(untagged))
+        lines.append("## Untagged\n")
+        lines.append(_tasks_section(untagged, heading_level=3))
     return "\n".join(lines)
 
 

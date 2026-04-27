@@ -17,16 +17,21 @@ resource "aws_iam_role_policy_attachment" "fitbit_sync_basic" {
 }
 
 resource "aws_lambda_function" "fitbit_sync" {
-  function_name                  = "${local.name_prefix}-fitbit-sync"
-  runtime                        = var.lambda_runtime
-  handler                        = "handler.lambda_handler"
-  role                           = aws_iam_role.fitbit_sync.arn
-  filename                       = data.archive_file.lambda_fitbit_sync.output_path
-  source_code_hash               = data.archive_file.lambda_fitbit_sync.output_base64sha256
-  layers                         = [aws_lambda_layer_version.shared.arn]
-  timeout                        = 300
-  memory_size                    = var.lambda_memory_mb
-  reserved_concurrent_executions = 1
+  function_name    = "${local.name_prefix}-fitbit-sync"
+  runtime          = var.lambda_runtime
+  handler          = "handler.lambda_handler"
+  role             = aws_iam_role.fitbit_sync.arn
+  filename         = data.archive_file.lambda_fitbit_sync.output_path
+  source_code_hash = data.archive_file.lambda_fitbit_sync.output_base64sha256
+  layers           = [aws_lambda_layer_version.shared.arn]
+  timeout          = 300
+  memory_size      = var.lambda_memory_mb
+  # Allow a couple of overlapping invocations: the EventBridge schedule
+  # iterates all enabled users, while user "Sync now" + post-food-log async
+  # invokes can land mid-flight. A cap of 1 throttles those with
+  # TooManyRequestsException; 3 leaves a generous buffer without
+  # uncapped concurrency.
+  reserved_concurrent_executions = 3
 
   environment {
     variables = {

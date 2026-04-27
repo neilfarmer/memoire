@@ -28,8 +28,8 @@ MAX_DESCRIPTION_LEN = 10_000
 MAX_TAG_LEN         = 50
 MAX_TAGS_PER_TASK   = 20
 
-SLOT_MINUTES        = 30  # alignment grain for scheduled_start (matches calendar grid)
-DURATION_GRAIN_MIN  = 15  # allowed grain for duration_minutes (15-minute increments)
+SLOT_MINUTES        = 30  # default duration grain when no explicit duration is set
+DURATION_GRAIN_MIN  = 15  # smallest scheduled_start / duration alignment grain
 MAX_DURATION_MIN    = 8 * 60
 
 _ISO_WEEKDAY_RANGE  = range(1, 8)
@@ -58,8 +58,11 @@ def _validate_scheduling(body: dict) -> str | None:
         dt = _parse_scheduled_start(body["scheduled_start"])
         if dt is None:
             return "scheduled_start must be an ISO 8601 datetime"
-        if dt.minute % SLOT_MINUTES != 0 or dt.second != 0 or dt.microsecond != 0:
-            return f"scheduled_start must align to a {SLOT_MINUTES}-minute slot"
+        # Accept any user-grid alignment as small as DURATION_GRAIN_MIN so we
+        # don't reject :15/:45 starts that the auto-scheduler can produce
+        # when calendar.slot_minutes is 15.
+        if dt.minute % DURATION_GRAIN_MIN != 0 or dt.second != 0 or dt.microsecond != 0:
+            return f"scheduled_start must align to a {DURATION_GRAIN_MIN}-minute slot"
 
     if "duration_minutes" in body and body["duration_minutes"] is not None:
         try:

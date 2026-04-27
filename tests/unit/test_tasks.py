@@ -75,8 +75,15 @@ class TestValidateFields:
         assert "scheduled_start" in err
 
     def test_scheduled_start_must_align_to_slot(self):
-        err = crud._validate_fields({"scheduled_start": "2026-04-26T09:15:00Z"})
-        assert err is not None and "30-minute slot" in err
+        # 09:07 is not a 15-minute multiple, so it's rejected.
+        err = crud._validate_fields({"scheduled_start": "2026-04-26T09:07:00Z"})
+        assert err is not None and "15-minute slot" in err
+
+    def test_scheduled_start_15_minute_slots_ok(self):
+        # Now that the validator aligns to DURATION_GRAIN_MIN (15) instead of
+        # SLOT_MINUTES (30), :15 and :45 are also valid starts.
+        for ts in ("2026-04-26T09:15:00Z", "2026-04-26T09:45:00Z"):
+            assert crud._validate_fields({"scheduled_start": ts}) is None
 
     def test_scheduled_start_z_suffix_ok(self):
         assert crud._validate_fields({"scheduled_start": "2026-04-26T09:30:00Z"}) is None

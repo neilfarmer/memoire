@@ -166,21 +166,23 @@ def log_food(user_id: str, body: dict) -> dict:
         logger.error("Fitbit food log error: %s", exc)
         return error("Could not reach Fitbit", status=502)
 
-    # Run the sync synchronously so the next GET /fitbit/today reflects the
-    # new entry. Fire-and-forget would beat the page's reload timer.
+    # Fire-and-forget the sync so we don't risk an API Gateway 29s timeout.
+    # The frontend optimistically appends the newly-logged food to its local
+    # state from the response below — Fitbit's authoritative copy lands a
+    # few seconds later via the next GET /fitbit/today.
     if SYNC_FUNCTION:
         try:
             _lambda.invoke(
                 FunctionName=SYNC_FUNCTION,
-                InvocationType="RequestResponse",
+                InvocationType="Event",
                 Payload=json.dumps({"user_ids": [user_id]}).encode(),
             )
         except Exception as exc:
-            logger.warning("Synchronous sync invoke failed: %s", exc)
+            logger.warning("Async sync invoke failed: %s", exc)
 
     return ok({
         "logged": True,
-        "food":   data.get("foodLog") or data,
+        "food":   data.get("foodLog") or {},
     })
 
 

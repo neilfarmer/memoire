@@ -511,7 +511,14 @@ class TestSync:
         assert unchanged["steps"] == 5000
 
     def test_sync_user_without_tokens(self, tables):
-        assert sync_handler._sync_user(USER) is False
+        # Patch _user_today defensively so an unintended network call (real
+        # urlopen against api.fitbit.com) would surface immediately rather
+        # than silently waiting on DNS/TLS or falling back to UTC.
+        def _fail_user_today(_):
+            raise AssertionError("_user_today should not be called when no tokens exist")
+
+        with patch.object(sync_handler, "_user_today", side_effect=_fail_user_today):
+            assert sync_handler._sync_user(USER) is False
 
     def test_refresh_when_expired(self, tables):
         self._seed_tokens(tables, expires_in=-100)

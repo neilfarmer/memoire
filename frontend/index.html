@@ -9037,18 +9037,45 @@
     return dueDate === todayStr();
   }
 
+  function scheduledDateKey(iso) {
+    // YYYY-MM-DD in the user's configured app timezone (or browser local
+    // when none is set). Used so scheduled-task day buckets line up with
+    // the calendar view regardless of where the browser physically is.
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    const tz = state.settings?.timezone;
+    return new Intl.DateTimeFormat("en-CA", {
+      ...(tz ? { timeZone: tz } : {}),
+      year:  "numeric",
+      month: "2-digit",
+      day:   "2-digit",
+    }).format(d);
+  }
+
   function formatScheduledStart(iso) {
     if (!iso) return "";
     const d = new Date(iso);
     if (isNaN(d.getTime())) return "";
-    const today = new Date(); today.setHours(0,0,0,0);
-    const dayStart = new Date(d); dayStart.setHours(0,0,0,0);
+    const tz = state.settings?.timezone;
+    const todayKey = scheduledDateKey(new Date().toISOString());
+    const dayKey   = scheduledDateKey(iso);
+    if (!todayKey || !dayKey) return "";
+    const today    = new Date(todayKey + "T00:00:00");
+    const dayStart = new Date(dayKey   + "T00:00:00");
     const diffDays = Math.round((dayStart - today) / 86400000);
-    const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    const time = d.toLocaleTimeString(undefined, {
+      ...(tz ? { timeZone: tz } : {}),
+      hour: "numeric",
+      minute: "2-digit",
+    });
     if (diffDays === 0)  return `Today ${time}`;
     if (diffDays === 1)  return `Tomorrow ${time}`;
     if (diffDays === -1) return `Yesterday ${time}`;
-    const day = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const day = d.toLocaleDateString(undefined, {
+      ...(tz ? { timeZone: tz } : {}),
+      month: "short",
+      day:   "numeric",
+    });
     return `${day} ${time}`;
   }
 
@@ -10329,13 +10356,17 @@
       (state.tasks || []).forEach(task => {
         if (task.status === "done") return;
         if (task.due_date !== today) return;
-        if (notified.has(task.task_id)) return;
+        // Key by task_id + due_date so that edits or recurring instances
+        // that move the date later still produce a fresh notification on
+        // the new due day.
+        const key = `${task.task_id}:${task.due_date}`;
+        if (notified.has(key)) return;
         try {
           new Notification("Task due today", {
             body: task.title,
-            tag:  task.task_id,
+            tag:  key,
           });
-          browserNotifier.markNotified(task.task_id);
+          browserNotifier.markNotified(key);
         } catch (e) {
           console.error("Notification failed:", e);
         }

@@ -2,11 +2,21 @@
 
 Frontend flow:
   1. GET /fitbit/auth/start?redirect_uri=...
-       Returns {authorize_url, code_verifier}. Frontend stores the verifier
-       in sessionStorage and redirects the browser to authorize_url.
-  2. Fitbit redirects back to redirect_uri?code=...
+       Returns {authorize_url, code_verifier, state}. Frontend stores
+       the verifier AND state in sessionStorage and redirects the browser
+       to authorize_url.
+  2. Fitbit redirects back to redirect_uri?code=...&state=...
   3. Frontend POSTs /fitbit/auth/callback with {code, redirect_uri, code_verifier}.
        We exchange the code for tokens and persist them under the user_id.
+
+CSRF / state validation contract: PKCE prevents auth-code injection on its
+own, but `state` is the standard OAuth CSRF defense. The backend is
+intentionally stateless — it generates `state` and returns it but does not
+re-check it on callback. The **frontend is responsible for** comparing
+the `state` returned in the redirect URL against the value it stashed in
+sessionStorage before posting to /fitbit/auth/callback. See
+`fitbit.handleOAuthCallback()` in frontend/index.html for the active
+implementation of that check; do not remove it.
 """
 
 import base64
@@ -131,18 +141,30 @@ def delete_tokens(user_id: str) -> None:
 
 
 def _store_tokens(user_id: str, data: dict) -> dict:
-    expires_in = int(data.get("expires_in", 28800))
+    """Persist OAuth tokens.
+
+    Refresh-token grants from Fitbit don't always include `user_id` or rotate
+    the refresh_token, so we merge with the existing row to preserve
+    fitbit_user_id, connected_at, and the prior refresh_token when the
+    response omits them.
+    """
+    table       = db.get_table(TOKENS_TABLE)
+    existing    = table.get_item(Key={"user_id": user_id}).get("Item") or {}
+    expires_in  = int(data.get("expires_in", 28800))
+    now         = now_iso()
+    refresh_tok = data.get("refresh_token") or existing.get("refresh_token", "")
     item = {
+        **existing,
         "user_id":         user_id,
         "access_token":    data.get("access_token", ""),
-        "refresh_token":   data.get("refresh_token", ""),
+        "refresh_token":   refresh_tok,
         "expires_at":      int(time.time()) + expires_in,
-        "scope":           data.get("scope", ""),
-        "fitbit_user_id":  data.get("user_id", ""),
-        "connected_at":    now_iso(),
-        "updated_at":      now_iso(),
+        "scope":           data.get("scope") or existing.get("scope", ""),
+        "fitbit_user_id":  data.get("user_id") or existing.get("fitbit_user_id", ""),
+        "connected_at":    existing.get("connected_at") or now,
+        "updated_at":      now,
     }
-    db.get_table(TOKENS_TABLE).put_item(Item=item)
+    table.put_item(Item=item)
     return item
 
 

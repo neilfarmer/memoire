@@ -22,9 +22,11 @@ resource "aws_lambda_function" "fitbit" {
   filename         = data.archive_file.lambda_fitbit.output_path
   source_code_hash = data.archive_file.lambda_fitbit.output_base64sha256
   layers           = [aws_lambda_layer_version.shared.arn]
-  # 30s — log_food synchronously invokes the sync Lambda, which itself
-  # makes 5+ outbound Fitbit API calls. Default 10s is too tight.
-  timeout                        = 30
+  # 60s — `log_food` invokes the sync Lambda asynchronously now, but other
+  # routes (search, status, today) make outbound Fitbit API calls (each up
+  # to 10s) and need headroom. Stay under API Gateway's 29s read timeout
+  # for synchronous routes; longer ops should fire-and-forget instead.
+  timeout                        = 60
   memory_size                    = var.lambda_memory_mb
   reserved_concurrent_executions = var.lambda_max_concurrency
 

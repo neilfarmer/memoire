@@ -22,11 +22,13 @@ def lambda_handler(event: dict, context) -> dict:
 
         body = {}
         if event.get("body"):
+            from response import error
             try:
                 body = json.loads(event["body"])
             except (json.JSONDecodeError, TypeError):
-                from response import error
                 return error("Invalid JSON body")
+            if not isinstance(body, dict):
+                return error("Request body must be a JSON object")
 
         path_params  = event.get("pathParameters") or {}
         query_params = event.get("queryStringParameters") or {}
