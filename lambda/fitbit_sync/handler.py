@@ -185,28 +185,46 @@ def _fetch_summary(access_token: str, log_date: str) -> dict:
     else:
         logger.warning("Fitbit activity endpoint returned no data")
 
-    food = _fitbit_get(access_token, f"/1/user/-/foods/log/date/{log_date}.json")
-    if food:
-        food_summary = food.get("summary") or {}
-        out["calories_in"]    = int(food_summary.get("calories", 0) or 0)
-        out["food_water_oz"]  = float(food_summary.get("water", 0) or 0)
+    # Query food for both the user's local "today" and the next day. Fitbit's
+    # mobile app sometimes files entries under the UTC date instead of the
+    # user-timezone date, so we union both responses and dedupe by logId.
+    items: dict[str, dict] = {}
+    calories_in_total = 0
+    water_total       = 0.0
+    try:
+        next_day = (datetime.fromisoformat(log_date).date() + timedelta(days=1)).isoformat()
+    except ValueError:
+        next_day = log_date
 
-        items: list[dict] = []
+    for date_str in (log_date, next_day):
+        food = _fitbit_get(access_token, f"/1/user/-/foods/log/date/{date_str}.json")
+        if not food:
+            continue
+        food_summary = food.get("summary") or {}
+        calories_in_total += int(food_summary.get("calories", 0) or 0)
+        water_total       += float(food_summary.get("water", 0) or 0)
         for entry in food.get("foods") or []:
+            log_id = str(entry.get("logId") or "")
+            if log_id and log_id in items:
+                continue
             logged = entry.get("loggedFood") or {}
             nutr   = entry.get("nutritionalValues") or {}
             unit   = logged.get("unit") or {}
-            items.append({
-                "log_id":    str(entry.get("logId") or ""),
-                "name":      logged.get("name") or "",
-                "brand":     logged.get("brand") or "",
-                "calories":  int(nutr.get("calories") or 0),
-                "amount":    float(logged.get("amount") or 0),
-                "unit":      unit.get("name") or "",
+            items[log_id or f"_{len(items)}"] = {
+                "log_id":       log_id,
+                "name":         logged.get("name") or "",
+                "brand":        logged.get("brand") or "",
+                "calories":     int(nutr.get("calories") or 0),
+                "amount":       float(logged.get("amount") or 0),
+                "unit":         unit.get("name") or "",
                 "meal_type_id": int(logged.get("mealTypeId") or 0),
-                "logged_at": logged.get("logDate") or "",
-            })
-        out["foods"] = items
+                "logged_at":    logged.get("logDate") or "",
+            }
+
+    if items or calories_in_total or water_total:
+        out["calories_in"]   = calories_in_total
+        out["food_water_oz"] = water_total
+        out["foods"]         = list(items.values())
 
     # Weight: a single date often has no entry. Pull the last 30 days, take latest.
     weight = _fitbit_get(access_token, f"/1/user/-/body/log/weight/date/{log_date}/30d.json")
