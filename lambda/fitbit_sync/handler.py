@@ -163,8 +163,8 @@ def _fetch_summary(access_token: str, log_date: str) -> dict:
     """Aggregate the four data points the Fitbit page shows. Each call is best-effort."""
     out: dict = {}
 
-    # Activities + food: Fitbit resolves "today" to the user's profile timezone.
-    activity = _fitbit_get(access_token, "/1/user/-/activities/date/today.json")
+    # log_date is already in the user's profile timezone, computed in _user_today.
+    activity = _fitbit_get(access_token, f"/1/user/-/activities/date/{log_date}.json")
     if activity:
         summary = activity.get("summary") or {}
         out["steps"]        = int(summary.get("steps", 0) or 0)
@@ -181,14 +181,14 @@ def _fetch_summary(access_token: str, log_date: str) -> dict:
     else:
         logger.warning("Fitbit activity endpoint returned no data")
 
-    food = _fitbit_get(access_token, "/1/user/-/foods/log/date/today.json")
+    food = _fitbit_get(access_token, f"/1/user/-/foods/log/date/{log_date}.json")
     if food:
         food_summary = food.get("summary") or {}
         out["calories_in"]    = int(food_summary.get("calories", 0) or 0)
         out["food_water_ml"]  = int(food_summary.get("water", 0) or 0)
 
     # Weight: a single date often has no entry. Pull the last 30 days, take latest.
-    weight = _fitbit_get(access_token, "/1/user/-/body/log/weight/date/today/30d.json")
+    weight = _fitbit_get(access_token, f"/1/user/-/body/log/weight/date/{log_date}/30d.json")
     if weight:
         entries = weight.get("weight") or []
         if entries:
