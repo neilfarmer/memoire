@@ -5908,64 +5908,72 @@
 
     /* ── Health page: unified activity + nutrition + exercise sections ── */
     .hl-section {
-      margin: 18px 0 12px;
+      margin: 0 0 18px;
     }
+    .hl-section + .hl-section { margin-top: 22px; }
     .hl-section-title {
-      font-family: var(--font-sans);
-      font-size: 11px;
-      font-weight: var(--weight-semibold);
-      letter-spacing: 1.4px;
-      text-transform: uppercase;
-      color: var(--muted);
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 12px;
-    }
-    .hl-activity-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-    }
-    @media (max-width: 600px) {
-      .hl-activity-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-    .hl-stat {
-      background: color-mix(in oklab, var(--primary) 5%, var(--surface));
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 10px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .hl-stat-label {
       font-family: var(--font-sans);
       font-size: 10px;
       font-weight: var(--weight-semibold);
-      letter-spacing: 1.2px;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 10px;
+    }
+    .hl-section-title--inline { margin-top: 22px; }
+
+    .hl-activity-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 8px;
+    }
+    .hl-stat {
+      background: color-mix(in oklab, var(--primary) 4%, var(--surface));
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+    }
+    .hl-stat-label {
+      font-family: var(--font-sans);
+      font-size: 9px;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 1.1px;
       text-transform: uppercase;
       color: var(--muted);
     }
     .hl-stat-value {
       font-family: var(--font-display);
-      font-size: 22px;
+      font-size: 18px;
       font-weight: 600;
-      letter-spacing: -.5px;
+      letter-spacing: -.4px;
       color: var(--text);
       font-variant-numeric: tabular-nums;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .hl-quickadd {
-      display: grid;
-      grid-template-columns: 1fr 80px 130px auto;
-      gap: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
       align-items: stretch;
       margin-bottom: 10px;
     }
-    @media (max-width: 600px) {
-      .hl-quickadd { grid-template-columns: 1fr 1fr; }
-      .hl-quickadd #hl-food-name { grid-column: 1 / -1; }
-      .hl-quickadd #hl-food-add  { grid-column: 1 / -1; }
+    .hl-quickadd .hl-input          { flex: 1 1 160px; min-width: 0; }
+    .hl-quickadd .hl-input--cal     { flex: 0 0 80px;  text-align: right; }
+    .hl-quickadd #hl-food-meal      { flex: 0 0 130px; }
+    .hl-quickadd #hl-food-add       { flex: 0 0 auto; }
+    @media (max-width: 720px) {
+      .hl-quickadd #hl-food-name { flex: 1 1 100%; }
+      .hl-quickadd #hl-food-add  { flex: 1 1 100%; }
     }
     .hl-input {
       height: 34px;
@@ -6002,11 +6010,16 @@
     .hl-food-list:empty { display: none; }
     .hl-food-item {
       display: grid;
-      grid-template-columns: auto 1fr auto auto;
+      grid-template-columns: minmax(0, auto) 1fr minmax(0, auto) minmax(0, auto);
       align-items: center;
       gap: 10px;
-      padding: 8px 6px;
+      padding: 8px 4px;
       border-bottom: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
+      min-width: 0;
+    }
+    @media (max-width: 520px) {
+      .hl-food-item { gap: 6px; padding: 8px 2px; }
+      .hl-food-meal { display: none; }
     }
     .hl-food-item:last-child { border-bottom: none; }
     .hl-food-meal {
@@ -6984,7 +6997,7 @@
                         <!-- Left: calendar + log list -->
                         <div class="health-left">
                             <div class="health-left-header">
-                                <h2>Exercise</h2>
+                                <h2>Health</h2>
                                 <button class="btn btn-primary btn-sm" id="health-today-btn">Log today</button>
                             </div>
                             <div class="health-list-scroll">
@@ -7063,9 +7076,7 @@
                                         <p class="hl-empty" id="hl-food-empty">No food logged yet.</p>
                                     </div>
 
-                                    <div class="hl-section">
-                                        <div class="hl-section-title">Exercise</div>
-                                    </div>
+                                    <div class="hl-section-title hl-section-title--inline">Exercise</div>
 
                                     <div id="health-repeat-picker" class="repeat-picker hidden">
                                         <input class="repeat-picker-search"
