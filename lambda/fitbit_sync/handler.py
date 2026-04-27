@@ -95,11 +95,16 @@ def _sync_user(user_id: str) -> bool:
         return False
 
     log_date = _user_today(access_token)
-    _write_day(user_id, access_token, log_date, finalized=False)
+
+    # Today: write fitbit_data and live-push to health on every run so the
+    # Health page reflects the most recent steps/sleep/weight/foods.
+    today_summary = _write_day(user_id, access_token, log_date, finalized=False)
+    _push_to_health(user_id, log_date, today_summary)
 
     # End-of-day finalize: if yesterday's row exists and isn't finalized,
-    # do one last pull and freeze it. This runs at most once per day, on
-    # the first sync after midnight in the user's local timezone.
+    # do one last pull and freeze it (also re-pushed to health). Runs at
+    # most once per day, on the first sync after midnight in the user's
+    # local timezone.
     try:
         yesterday = (datetime.fromisoformat(log_date).date() - timedelta(days=1)).isoformat()
     except ValueError:

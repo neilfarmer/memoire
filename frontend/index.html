@@ -3474,27 +3474,51 @@
     }
 
     /* ── Health two-pane layout ── */
+    /* ──────────────────────────────────────────────────────────────────────
+       Health page (.hl-page) — sibling of .fb-page. Same editorial-data
+       vocabulary: Fraunces display numerals, Sora uppercase tracked
+       eyebrows, soft accent washes via color-mix, gradient mesh backdrop.
+       ────────────────────────────────────────────────────────────────── */
+
     #page-health.hl-page {
-      max-width: 960px;
+      max-width: 1040px;
       margin: 0 auto;
-      padding: 24px 24px 48px;
+      padding: 28px 24px 56px;
       display: block;
       height: auto;
       overflow: visible;
+      position: relative;
+      isolation: isolate;
     }
+    #page-health.hl-page::before {
+      content: "";
+      position: absolute;
+      inset: -40px -20px auto -20px;
+      height: 380px;
+      background:
+        radial-gradient(ellipse 60% 60% at 12% 0%,  color-mix(in oklab, var(--positive) 18%, transparent) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 60% at 88% 5%,  color-mix(in oklab, #ec4899     16%, transparent)     0%, transparent 70%),
+        radial-gradient(ellipse 60% 60% at 50% 0%,  color-mix(in oklab, var(--accent) 12%, transparent)   0%, transparent 70%);
+      filter: blur(40px);
+      pointer-events: none;
+      opacity: .55;
+      z-index: -1;
+    }
+    html[data-theme="dark"] #page-health.hl-page::before { opacity: .35; }
+
     .hl-toolbar {
       display: flex;
       align-items: flex-end;
       justify-content: space-between;
       gap: 12px;
-      margin-bottom: 18px;
+      margin-bottom: 22px;
       flex-wrap: wrap;
     }
     .hl-toolbar h2 {
       font-family: var(--font-display);
-      font-size: 36px;
+      font-size: 40px;
       font-weight: 600;
-      letter-spacing: -1px;
+      letter-spacing: -1.2px;
       line-height: 1;
       margin: 0;
     }
@@ -3506,7 +3530,8 @@
       letter-spacing: 1.4px;
       text-transform: uppercase;
       color: var(--muted);
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+      font-variant-numeric: tabular-nums;
     }
     .hl-toolbar-actions {
       display: flex;
@@ -3515,16 +3540,19 @@
       flex-wrap: wrap;
     }
     .hl-date-picker {
-      height: 34px;
-      padding: 0 10px;
+      height: 36px;
+      padding: 0 12px;
       border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-md);
       background: var(--surface);
       color: var(--text);
       font-family: var(--font-sans);
       font-size: 13px;
       font-variant-numeric: tabular-nums;
+      transition: border-color .15s var(--ease), background .15s var(--ease);
     }
+    .hl-date-picker:hover { border-color: color-mix(in oklab, var(--primary) 35%, var(--border)); }
+    .hl-date-picker:focus { outline: none; border-color: var(--primary); background: color-mix(in oklab, var(--primary) 5%, var(--surface)); }
     .hl-save-status {
       display: block;
       font-family: var(--font-sans);
@@ -5958,100 +5986,211 @@
       .fb-ring { width: 124px; height: 124px; }
     }
 
-    /* ── Health page: unified activity + nutrition + exercise sections ── */
+    /* ── Health page: unified activity + nutrition + exercise + trends ─── */
+
     .hl-section {
-      margin: 0 0 18px;
+      --hl-accent: var(--primary);
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 22px 22px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      animation: hl-section-in .55s var(--ease) backwards;
+      overflow: hidden;
     }
-    .hl-section + .hl-section { margin-top: 22px; }
+    .hl-section::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--hl-accent);
+      opacity: .65;
+      border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    }
+    .hl-section--activity  { --hl-accent: var(--positive); animation-delay: 0ms; }
+    .hl-section--nutrition { --hl-accent: var(--accent);   animation-delay: 70ms; }
+    .hl-section--exercise  { --hl-accent: var(--primary);  animation-delay: 140ms; }
+    .hl-section--trends    { --hl-accent: #ec4899;         animation-delay: 210ms; }
+    html[data-theme="dark"] .hl-section--trends { --hl-accent: #f472b6; }
+
+    @keyframes hl-section-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .hl-section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid color-mix(in oklab, var(--hl-accent) 18%, var(--border));
+    }
     .hl-section-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       font-family: var(--font-sans);
-      font-size: 10px;
+      font-size: 11px;
       font-weight: var(--weight-semibold);
       letter-spacing: 1.6px;
       text-transform: uppercase;
-      color: var(--muted);
-      padding-bottom: 6px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 10px;
+      color: color-mix(in oklab, var(--hl-accent) 80%, var(--text));
     }
-    .hl-section-title--inline { margin-top: 22px; }
+    .hl-section-title::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--hl-accent);
+      box-shadow: 0 0 0 3px color-mix(in oklab, var(--hl-accent) 18%, transparent);
+    }
+    .hl-section-aside {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      letter-spacing: .4px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
 
+    /* ─── Activity stat tiles ─────────────────────────────────────────── */
     .hl-activity-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-      gap: 8px;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
     }
+    @media (max-width: 920px) { .hl-activity-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 520px) { .hl-activity-grid { grid-template-columns: repeat(2, 1fr); } }
+
     .hl-stat {
-      background: color-mix(in oklab, var(--primary) 4%, var(--surface));
+      --hl-stat-accent: var(--primary);
+      position: relative;
+      background:
+        linear-gradient(140deg,
+          color-mix(in oklab, var(--hl-stat-accent) 8%, var(--surface)) 0%,
+          var(--surface) 70%);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
-      padding: 8px 10px;
+      padding: 12px 14px 14px;
       display: flex;
       flex-direction: column;
-      gap: 1px;
+      gap: 4px;
       min-width: 0;
+      overflow: hidden;
+      transition: transform .22s var(--ease), border-color .22s var(--ease);
     }
+    .hl-stat::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--hl-stat-accent);
+      opacity: .8;
+    }
+    .hl-stat:hover {
+      transform: translateY(-1px);
+      border-color: color-mix(in oklab, var(--hl-stat-accent) 30%, var(--border));
+    }
+    .hl-stat--steps    { --hl-stat-accent: var(--positive); }
+    .hl-stat--distance { --hl-stat-accent: #06b6d4; }
+    .hl-stat--active   { --hl-stat-accent: var(--accent); }
+    .hl-stat--burned   { --hl-stat-accent: #f97316; }
+    .hl-stat--sleep    { --hl-stat-accent: var(--primary); }
+    .hl-stat--weight   { --hl-stat-accent: #ec4899; }
+    html[data-theme="dark"] .hl-stat--weight   { --hl-stat-accent: #f472b6; }
+    html[data-theme="dark"] .hl-stat--burned   { --hl-stat-accent: #fb923c; }
+    html[data-theme="dark"] .hl-stat--distance { --hl-stat-accent: #22d3ee; }
+
     .hl-stat-label {
       font-family: var(--font-sans);
       font-size: 9px;
       font-weight: var(--weight-semibold);
-      letter-spacing: 1.1px;
+      letter-spacing: 1.4px;
       text-transform: uppercase;
-      color: var(--muted);
+      color: color-mix(in oklab, var(--hl-stat-accent) 70%, var(--text));
     }
     .hl-stat-value {
       font-family: var(--font-display);
-      font-size: 18px;
+      font-size: 26px;
       font-weight: 600;
-      letter-spacing: -.4px;
+      letter-spacing: -.7px;
       color: var(--text);
       font-variant-numeric: tabular-nums;
-      line-height: 1.15;
+      line-height: 1.05;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    @media (max-width: 520px) { .hl-stat-value { font-size: 22px; } }
 
+    /* ─── Nutrition fast capture + feed ───────────────────────────────── */
     .hl-quickadd {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 8px;
       align-items: stretch;
-      margin-bottom: 10px;
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      background: color-mix(in oklab, var(--accent) 6%, transparent);
+      border: 1px dashed color-mix(in oklab, var(--accent) 30%, var(--border));
     }
-    .hl-quickadd .hl-input          { flex: 1 1 160px; min-width: 0; }
-    .hl-quickadd .hl-input--cal     { flex: 0 0 80px;  text-align: right; }
-    .hl-quickadd #hl-food-meal      { flex: 0 0 130px; }
-    .hl-quickadd #hl-food-add       { flex: 0 0 auto; }
+    .hl-quickadd .hl-input          { flex: 1 1 200px; min-width: 0; }
+    .hl-quickadd .hl-input--cal     { flex: 0 0 90px;  text-align: right; }
+    .hl-quickadd #hl-food-meal      { flex: 0 0 150px; }
+    .hl-quickadd #hl-food-add       { flex: 0 0 auto;
+                                      box-shadow: 0 2px 8px color-mix(in oklab, var(--primary) 25%, transparent); }
+    .hl-quickadd #hl-food-add:hover:not(:disabled) {
+      box-shadow: 0 4px 14px color-mix(in oklab, var(--primary) 40%, transparent) !important;
+    }
     @media (max-width: 720px) {
       .hl-quickadd #hl-food-name { flex: 1 1 100%; }
       .hl-quickadd #hl-food-add  { flex: 1 1 100%; }
     }
     .hl-input {
-      height: 34px;
-      padding: 0 10px;
+      height: 36px;
+      padding: 0 12px;
       font-family: var(--font-sans);
       font-size: 13px;
-      background: transparent;
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       color: var(--text);
+      transition: border-color .15s var(--ease), background .15s var(--ease);
     }
-    .hl-input:focus { outline: none; border-color: var(--accent); background: color-mix(in oklab, var(--accent) 6%, transparent); }
-    .hl-input--cal { font-variant-numeric: tabular-nums; text-align: right; }
+    .hl-input:hover { border-color: color-mix(in oklab, var(--accent) 30%, var(--border)); }
+    .hl-input:focus { outline: none; border-color: var(--accent); background: color-mix(in oklab, var(--accent) 6%, var(--surface)); }
+    .hl-input--cal  { font-variant-numeric: tabular-nums; text-align: right; padding-right: 10px; }
+    #hl-food-name {
+      font-family: var(--font-display);
+      font-size: 15px;
+      letter-spacing: -.2px;
+    }
+
     .hl-totals {
       font-family: var(--font-sans);
       font-size: 12px;
       color: var(--muted);
       letter-spacing: .3px;
-      margin-bottom: 8px;
+      margin: 4px 4px 10px;
       font-variant-numeric: tabular-nums;
     }
     .hl-totals strong {
       font-family: var(--font-display);
       color: var(--text);
       font-weight: 600;
+      font-size: 16px;
+      letter-spacing: -.3px;
+      margin-right: 4px;
     }
+
     .hl-food-list {
       list-style: none;
       padding: 0;
@@ -6061,54 +6200,80 @@
     }
     .hl-food-list:empty { display: none; }
     .hl-food-item {
+      --hl-meal: var(--muted);
       display: grid;
-      grid-template-columns: minmax(0, auto) 1fr minmax(0, auto) minmax(0, auto);
+      grid-template-columns: auto 1fr auto auto;
       align-items: center;
-      gap: 10px;
-      padding: 8px 4px;
-      border-bottom: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
+      gap: 12px;
+      padding: 10px 8px;
+      border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
       min-width: 0;
-    }
-    @media (max-width: 520px) {
-      .hl-food-item { gap: 6px; padding: 8px 2px; }
-      .hl-food-meal { display: none; }
+      transition: background .15s var(--ease);
     }
     .hl-food-item:last-child { border-bottom: none; }
+    .hl-food-item:hover { background: var(--hover); }
+    .hl-food-item[data-meal="1"] { --hl-meal: #f59e0b; }
+    .hl-food-item[data-meal="2"] { --hl-meal: #84cc16; }
+    .hl-food-item[data-meal="3"] { --hl-meal: #06b6d4; }
+    .hl-food-item[data-meal="4"] { --hl-meal: #a855f7; }
+    .hl-food-item[data-meal="5"] { --hl-meal: #ec4899; }
+    .hl-food-item[data-meal="7"] { --hl-meal: var(--muted); }
+
     .hl-food-meal {
-      display: inline-block;
-      padding: 2px 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
       font-family: var(--font-sans);
       font-size: 9px;
       font-weight: var(--weight-semibold);
-      letter-spacing: 1.2px;
+      letter-spacing: 1.4px;
       text-transform: uppercase;
       border-radius: var(--radius-pill);
       white-space: nowrap;
-      background: color-mix(in oklab, var(--accent) 14%, transparent);
-      color: color-mix(in oklab, var(--accent) 90%, var(--text));
+      background: color-mix(in oklab, var(--hl-meal) 14%, transparent);
+      color: color-mix(in oklab, var(--hl-meal) 90%, var(--text));
+      border: 1px solid color-mix(in oklab, var(--hl-meal) 25%, transparent);
     }
-    .hl-food-meal[data-source="fitbit"] { background: color-mix(in oklab, var(--positive) 14%, transparent); color: color-mix(in oklab, var(--positive) 80%, var(--text)); }
+    .hl-food-meal::before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--hl-meal);
+    }
     .hl-food-name {
       font-family: var(--font-display);
-      font-size: 14px;
+      font-size: 16px;
       font-weight: 500;
-      letter-spacing: -.1px;
+      letter-spacing: -.2px;
       color: var(--text);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      line-height: 1.25;
     }
     .hl-food-cal {
       font-family: var(--font-display);
-      font-size: 14px;
+      font-size: 18px;
       font-weight: 600;
+      letter-spacing: -.3px;
       color: var(--text);
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
     }
+    .hl-food-cal-unit {
+      font-family: var(--font-sans);
+      font-size: 9px;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-left: 3px;
+      font-weight: var(--weight-medium);
+    }
     .hl-food-del {
-      width: 24px;
-      height: 24px;
+      width: 26px;
+      height: 26px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -6118,26 +6283,38 @@
       color: var(--muted);
       cursor: pointer;
       transition: color .15s, border-color .15s, background .15s;
+      font-size: 16px;
+      line-height: 1;
     }
-    .hl-food-del:hover { color: var(--danger); border-color: var(--danger); background: color-mix(in oklab, var(--danger) 8%, transparent); }
+    .hl-food-del:hover {
+      color: var(--danger);
+      border-color: var(--danger);
+      background: color-mix(in oklab, var(--danger) 8%, transparent);
+    }
+    @media (max-width: 520px) {
+      .hl-food-item { gap: 8px; padding: 10px 4px; }
+      .hl-food-meal { display: none; }
+    }
+
     .hl-empty {
       font-family: var(--font-sans);
-      font-size: 12px;
+      font-size: 13px;
       color: var(--muted);
       font-style: italic;
-      padding: 12px 6px;
+      padding: 18px 6px;
       text-align: center;
     }
     .hl-food-list:not(:empty) + .hl-empty { display: none; }
 
+    /* ─── Trends header range pills (mirrors .fb-range from Fitbit) ───── */
     .hl-trends-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid color-mix(in oklab, var(--hl-accent) 18%, var(--border));
     }
 
     /* History / trend charts */
@@ -7079,23 +7256,47 @@
                         <div id="health-log-list" class="hidden"></div>
 
                         <!-- Activity totals (top) -->
-                        <section class="hl-section">
-                            <div class="hl-section-title">Activity</div>
+                        <section class="hl-section hl-section--activity">
+                            <header class="hl-section-head">
+                                <span class="hl-section-title">Activity</span>
+                                <span class="hl-section-aside">Today's totals</span>
+                            </header>
                             <div id="hl-activity-grid" class="hl-activity-grid">
-                                <div class="hl-stat"><span class="hl-stat-label">Steps</span><span class="hl-stat-value" id="hl-stat-steps">—</span></div>
-                                <div class="hl-stat"><span class="hl-stat-label">Distance</span><span class="hl-stat-value" id="hl-stat-distance">—</span></div>
-                                <div class="hl-stat"><span class="hl-stat-label">Active min</span><span class="hl-stat-value" id="hl-stat-active">—</span></div>
-                                <div class="hl-stat"><span class="hl-stat-label">Burned</span><span class="hl-stat-value" id="hl-stat-burned">—</span></div>
-                                <div class="hl-stat"><span class="hl-stat-label">Sleep</span><span class="hl-stat-value" id="hl-stat-sleep">—</span></div>
-                                <div class="hl-stat"><span class="hl-stat-label">Weight</span><span class="hl-stat-value" id="hl-stat-weight">—</span></div>
+                                <div class="hl-stat hl-stat--steps">
+                                    <span class="hl-stat-label">Steps</span>
+                                    <span class="hl-stat-value" id="hl-stat-steps">—</span>
+                                </div>
+                                <div class="hl-stat hl-stat--distance">
+                                    <span class="hl-stat-label">Distance</span>
+                                    <span class="hl-stat-value" id="hl-stat-distance">—</span>
+                                </div>
+                                <div class="hl-stat hl-stat--active">
+                                    <span class="hl-stat-label">Active</span>
+                                    <span class="hl-stat-value" id="hl-stat-active">—</span>
+                                </div>
+                                <div class="hl-stat hl-stat--burned">
+                                    <span class="hl-stat-label">Burned</span>
+                                    <span class="hl-stat-value" id="hl-stat-burned">—</span>
+                                </div>
+                                <div class="hl-stat hl-stat--sleep">
+                                    <span class="hl-stat-label">Sleep</span>
+                                    <span class="hl-stat-value" id="hl-stat-sleep">—</span>
+                                </div>
+                                <div class="hl-stat hl-stat--weight">
+                                    <span class="hl-stat-label">Weight</span>
+                                    <span class="hl-stat-value" id="hl-stat-weight">—</span>
+                                </div>
                             </div>
                         </section>
 
                         <!-- Nutrition (middle) -->
-                        <section class="hl-section">
-                            <div class="hl-section-title">Nutrition</div>
+                        <section class="hl-section hl-section--nutrition">
+                            <header class="hl-section-head">
+                                <span class="hl-section-title">Nutrition</span>
+                                <span class="hl-section-aside" id="hl-food-aside-totals"></span>
+                            </header>
                             <div class="hl-quickadd">
-                                <input type="text" id="hl-food-name" class="hl-input" placeholder="Add food..." autocomplete="off" />
+                                <input type="text" id="hl-food-name" class="hl-input" placeholder="What did you eat?" autocomplete="off" />
                                 <input type="number" id="hl-food-cal" class="hl-input hl-input--cal" min="0" max="10000" placeholder="kcal" inputmode="numeric" />
                                 <select id="hl-food-meal" class="hl-input">
                                     <option value="1">Breakfast</option>
@@ -7105,16 +7306,18 @@
                                     <option value="5">Dinner</option>
                                     <option value="7" selected>Anytime</option>
                                 </select>
-                                <button class="btn btn-primary btn-sm" id="hl-food-add">+ Add</button>
+                                <button class="btn btn-primary" id="hl-food-add">Log</button>
                             </div>
                             <div class="hl-totals" id="hl-food-totals"></div>
                             <ul class="hl-food-list" id="hl-food-list"></ul>
-                            <p class="hl-empty" id="hl-food-empty">No food logged yet.</p>
+                            <p class="hl-empty" id="hl-food-empty">No food logged yet today.</p>
                         </section>
 
                         <!-- Exercise (bottom) -->
-                        <section class="hl-section">
-                            <div class="hl-section-title">Exercise</div>
+                        <section class="hl-section hl-section--exercise">
+                            <header class="hl-section-head">
+                                <span class="hl-section-title">Exercise</span>
+                            </header>
                             <div id="health-repeat-picker" class="repeat-picker hidden">
                                 <input class="repeat-picker-search"
                                        id="health-repeat-search"
@@ -7134,15 +7337,15 @@
                         </section>
 
                         <!-- Trends -->
-                        <section class="hl-section">
-                            <div class="hl-trends-head">
-                                <div class="hl-section-title" style="border:none; padding:0; margin:0;">Trends</div>
+                        <section class="hl-section hl-section--trends">
+                            <header class="hl-trends-head">
+                                <span class="hl-section-title">Trends</span>
                                 <div class="fb-range" role="tablist" aria-label="History range">
                                     <button type="button" class="fb-range-btn"           data-hl-range="7">7d</button>
                                     <button type="button" class="fb-range-btn is-active" data-hl-range="30">30d</button>
                                     <button type="button" class="fb-range-btn"           data-hl-range="90">90d</button>
                                 </div>
-                            </div>
+                            </header>
                             <div class="fb-charts">
                                 <div class="fb-chart fb-chart--steps">
                                     <header class="fb-chart-head">
@@ -12646,18 +12849,20 @@
     },
 
     renderFoods() {
-      const ul    = $("hl-food-list");
-      const empty = $("hl-food-empty");
+      const ul       = $("hl-food-list");
+      const empty    = $("hl-food-empty");
       const totalsEl = $("hl-food-totals");
-      const foods = health.foods || [];
+      const aside    = $("hl-food-aside-totals");
+      const foods    = health.foods || [];
       if (!foods.length) {
         ul.innerHTML = "";
         empty.classList.remove("hidden");
         totalsEl.textContent = "";
+        if (aside) aside.textContent = "";
         return;
       }
       empty.classList.add("hidden");
-      const meals = { 1: "Breakfast", 2: "Snack", 3: "Lunch", 4: "Snack", 5: "Dinner", 7: "Anytime" };
+      const meals = { 1: "Breakfast", 2: "Morning Snack", 3: "Lunch", 4: "Afternoon Snack", 5: "Dinner", 7: "Anytime" };
       const order = [1, 2, 3, 4, 5, 7];
       const sorted = [...foods].sort((a, b) => {
         const ai = order.indexOf(Number(a.meal_type_id) || 7);
@@ -12665,19 +12870,20 @@
         return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
       });
       ul.innerHTML = sorted.map(f => {
-        const meal = meals[Number(f.meal_type_id) || 7] || "Anytime";
-        const cal  = f.calories ? `${Number(f.calories).toLocaleString()} kcal` : "";
-        const src  = (f.source || "manual");
-        const id   = escHtml(f.id || "");
-        return `<li class="hl-food-item">
-          <span class="hl-food-meal" data-source="${escHtml(src)}">${escHtml(meal)}</span>
+        const mealId = Number(f.meal_type_id) || 7;
+        const meal   = meals[mealId] || "Anytime";
+        const calNum = f.calories ? Number(f.calories).toLocaleString() : "—";
+        const id     = escHtml(f.id || "");
+        return `<li class="hl-food-item" data-meal="${mealId}">
+          <span class="hl-food-meal">${escHtml(meal)}</span>
           <span class="hl-food-name">${escHtml(f.name || "")}</span>
-          <span class="hl-food-cal">${escHtml(cal)}</span>
+          <span><span class="hl-food-cal">${escHtml(calNum)}</span><span class="hl-food-cal-unit">kcal</span></span>
           <button class="hl-food-del" type="button" title="Remove" onclick="health.deleteFood('${id}')" aria-label="Remove">&times;</button>
         </li>`;
       }).join("");
       const totalCal = foods.reduce((s, f) => s + (Number(f.calories) || 0), 0);
-      totalsEl.innerHTML = `<strong>${totalCal.toLocaleString()}</strong> kcal · ${foods.length} item${foods.length === 1 ? "" : "s"}`;
+      totalsEl.innerHTML = `<strong>${totalCal.toLocaleString()}</strong>kcal · ${foods.length} item${foods.length === 1 ? "" : "s"}`;
+      if (aside) aside.textContent = `${totalCal.toLocaleString()} kcal`;
     },
 
     async addFood() {
