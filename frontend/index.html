@@ -7940,7 +7940,10 @@
   const app = {
     async init() {
       const code = new URLSearchParams(window.location.search).get("code");
-      if (code) {
+      // The Fitbit OAuth flow lands on the same redirect URL with ?code=&state=.
+      // Distinguish from the Cognito auth callback by the per-flow PKCE marker.
+      const isFitbitCallback = !!sessionStorage.getItem("fitbit_code_verifier");
+      if (code && !isFitbitCallback) {
         await auth.handleCallback(code);
       }
       if (auth.isLoggedIn()) {
