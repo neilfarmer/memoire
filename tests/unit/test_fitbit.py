@@ -157,25 +157,27 @@ class TestCrud:
         assert body["steps"] == 5000
         assert "user_id" not in body
 
-    def test_get_today_picks_most_recent_synced_at(self, tables):
-        # A stale row with a higher log_date but older synced_at should not
-        # win over the freshly-synced row from the prior day.
+    def test_get_today_prefers_latest_log_date(self, tables):
+        # The post-midnight sync run writes today's row first, then re-writes
+        # yesterday during finalize — so yesterday ends up with a slightly
+        # higher synced_at. We still want today's row to win, since the user's
+        # current local date is the higher log_date.
         tables.Table(DATA_TABLE_NAME).put_item(Item={
             "user_id":   USER,
             "log_date":  "2026-04-27",
-            "steps":     0,
-            "synced_at": 100,
+            "steps":     100,
+            "synced_at": 100,   # written first
         })
         tables.Table(DATA_TABLE_NAME).put_item(Item={
             "user_id":   USER,
             "log_date":  "2026-04-26",
             "steps":     8868,
-            "synced_at": 500,
+            "synced_at": 500,   # finalize re-wrote yesterday after today
         })
         r = crud.get_today(USER)
         body = json.loads(r["body"])
-        assert body["log_date"] == "2026-04-26"
-        assert body["steps"] == 8868
+        assert body["log_date"] == "2026-04-27"
+        assert body["steps"] == 100
 
     def test_get_status_disconnected(self, tables):
         r = crud.get_status(USER)
