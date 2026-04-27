@@ -1973,6 +1973,39 @@
     }
     .home-widget-link:hover { text-decoration: underline; }
 
+    .home-health-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 16px;
+      margin-top: 4px;
+    }
+    .home-health-metric {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .home-health-metric-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+    }
+    .home-health-metric-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -.5px;
+    }
+    .home-health-metric-unit {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      margin-left: 3px;
+    }
+
     /* ── Profile page ── */
     #page-profile { padding: 0; max-width: none; overflow: hidden; }
 
@@ -15024,6 +15057,27 @@
         </div>`;
     }
 
+    // ── Health widget (steps / calories / sleep / active) ────────────────────
+    const healthHtml = `
+      <div class="home-health-grid">
+        <div class="home-health-metric">
+          <span class="home-health-metric-label">Steps</span>
+          <span class="home-health-metric-value" id="home-health-steps">—</span>
+        </div>
+        <div class="home-health-metric">
+          <span class="home-health-metric-label">Calories</span>
+          <span class="home-health-metric-value" id="home-health-calories">—</span>
+        </div>
+        <div class="home-health-metric">
+          <span class="home-health-metric-label">Sleep</span>
+          <span class="home-health-metric-value" id="home-health-sleep">—</span>
+        </div>
+        <div class="home-health-metric">
+          <span class="home-health-metric-label">Active</span>
+          <span class="home-health-metric-value" id="home-health-active">—</span>
+        </div>
+      </div>`;
+
     grid.innerHTML = `
       <div class="home-widget">
         <div class="home-widget-title">Tasks</div>
@@ -15045,7 +15099,53 @@
         ${goalsHtml}
         <div class="home-widget-footer"><span class="home-widget-link" onclick="pages.show('goals')">View all →</span></div>
       </div>
+      <div class="home-widget">
+        <div class="home-widget-title">Health today</div>
+        ${healthHtml}
+        <div class="home-widget-footer"><span class="home-widget-link" onclick="pages.show('health')">Open health →</span></div>
+      </div>
       ${financesWidget}`;
+
+    loadHomeHealth(today);
+  }
+
+  async function loadHomeHealth(dateStr) {
+    const stepsEl = $("home-health-steps");
+    if (!stepsEl) return;
+    const fmtNum = n => (n == null || n === "") ? "—" : Number(n).toLocaleString();
+    const fmtSleep = min => {
+      if (!min) return "—";
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      return `${h}h ${m}m`;
+    };
+    const fmtActive = min => {
+      if (!min) return "—";
+      if (min < 60) return `${min}<span class="home-health-metric-unit">min</span>`;
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      return m
+        ? `${h}h ${m}<span class="home-health-metric-unit">m</span>`
+        : `${h}<span class="home-health-metric-unit">h</span>`;
+    };
+    try {
+      const log = await api.call("GET", `/health/${dateStr}`);
+      const steps    = log?.steps;
+      const calOut   = log?.calories_out;
+      const sleepMin = log?.sleep?.minutes_asleep;
+      const active   = log?.active_minutes;
+      stepsEl.textContent = fmtNum(steps);
+      $("home-health-calories").innerHTML = calOut
+        ? `${fmtNum(calOut)}<span class="home-health-metric-unit">kcal</span>`
+        : "—";
+      $("home-health-sleep").textContent = fmtSleep(sleepMin);
+      $("home-health-active").innerHTML = fmtActive(active);
+    } catch (e) {
+      // 404 = no log for today, leave dashes
+      if (!e.message?.includes("not found") && !e.message?.includes("404")) {
+        console.error("Home health load failed:", e);
+      }
+    }
   }
 
   function renderSettings() {
