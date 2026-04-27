@@ -17,6 +17,9 @@ def route(route_key: str, user_id: str, body: dict, path_params: dict, query_par
     if route_key == "GET /health/exercises/recent":
         return crud.recent_exercises(user_id, query_params)
 
+    if route_key == "GET /health/history":
+        return crud.get_history(user_id, query_params)
+
     if route_key == "GET /health/{date}":
         if not log_date:
             return error("date required")

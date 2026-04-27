@@ -6130,6 +6130,16 @@
     }
     .hl-food-list:not(:empty) + .hl-empty { display: none; }
 
+    .hl-trends-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+
     /* History / trend charts */
     .fb-history-section {
       grid-column: 1 / -1;
@@ -7121,6 +7131,49 @@
                                 <label class="u-text-xs u-muted">Notes</label>
                                 <textarea id="health-notes" placeholder="How did it go?..." rows="3"></textarea>
                             </div>
+                        </section>
+
+                        <!-- Trends -->
+                        <section class="hl-section">
+                            <div class="hl-trends-head">
+                                <div class="hl-section-title" style="border:none; padding:0; margin:0;">Trends</div>
+                                <div class="fb-range" role="tablist" aria-label="History range">
+                                    <button type="button" class="fb-range-btn"           data-hl-range="7">7d</button>
+                                    <button type="button" class="fb-range-btn is-active" data-hl-range="30">30d</button>
+                                    <button type="button" class="fb-range-btn"           data-hl-range="90">90d</button>
+                                </div>
+                            </div>
+                            <div class="fb-charts">
+                                <div class="fb-chart fb-chart--steps">
+                                    <header class="fb-chart-head">
+                                        <span class="fb-chart-label">Steps</span>
+                                        <span class="fb-chart-summary" id="hl-trend-steps-summary"></span>
+                                    </header>
+                                    <div class="fb-chart-svg" id="hl-trend-steps"></div>
+                                </div>
+                                <div class="fb-chart fb-chart--weight">
+                                    <header class="fb-chart-head">
+                                        <span class="fb-chart-label">Weight</span>
+                                        <span class="fb-chart-summary" id="hl-trend-weight-summary"></span>
+                                    </header>
+                                    <div class="fb-chart-svg" id="hl-trend-weight"></div>
+                                </div>
+                                <div class="fb-chart fb-chart--sleep">
+                                    <header class="fb-chart-head">
+                                        <span class="fb-chart-label">Sleep</span>
+                                        <span class="fb-chart-summary" id="hl-trend-sleep-summary"></span>
+                                    </header>
+                                    <div class="fb-chart-svg" id="hl-trend-sleep"></div>
+                                </div>
+                                <div class="fb-chart fb-chart--food">
+                                    <header class="fb-chart-head">
+                                        <span class="fb-chart-label">Calories</span>
+                                        <span class="fb-chart-summary" id="hl-trend-cal-summary"></span>
+                                    </header>
+                                    <div class="fb-chart-svg" id="hl-trend-cal"></div>
+                                </div>
+                            </div>
+                            <p class="hl-empty" id="hl-trend-empty" style="display:none;">No history yet — finalized days will appear here after midnight.</p>
                         </section>
                     </main>
                     <!-- Nutrition page -->
@@ -8721,6 +8774,7 @@
     fitbitLogFood(body)        { return api.call("POST", "/fitbit/food", body); },
     fitbitSearchFoods(query)   { return api.call("GET",  `/fitbit/food/search?q=${encodeURIComponent(query)}`); },
     fitbitHistory(days)        { return api.call("GET",  `/fitbit/history?days=${encodeURIComponent(days)}`); },
+    healthHistory(days)        { return api.call("GET",  `/health/history?days=${encodeURIComponent(days)}`); },
 
     listDiagrams()              { return api.call("GET",    "/diagrams"); },
     getDiagram(id)              { return api.call("GET",    `/diagrams/${id}`); },
@@ -10501,8 +10555,10 @@
         const ys = data.map(d => d.y);
         let minY = Math.min(...ys);
         let maxY = Math.max(...ys);
-        // Always anchor non-weight charts at zero for honest comparison
-        if (containerId !== "fb-chart-weight") minY = Math.min(0, minY);
+        // Always anchor non-weight charts at zero for honest comparison.
+        // Weight charts (Fitbit + Health trends) auto-fit to the value range.
+        const isWeight = containerId === "fb-chart-weight" || containerId === "hl-trend-weight";
+        if (!isWeight) minY = Math.min(0, minY);
         if (minY === maxY) maxY = minY + 1;
         const sx = i => fitbit.chart.PAD_L + (data.length === 1 ? innerW / 2 : (i / (data.length - 1)) * innerW);
         const sy = v => fitbit.chart.PAD_T + innerH - ((v - minY) / (maxY - minY)) * innerH;
@@ -10515,7 +10571,7 @@
         const ticks = Array.from({ length: tickCount }, (_, i) => minY + ((maxY - minY) * i) / (tickCount - 1));
         const yTicks = ticks.map(t => {
           const y = sy(t);
-          const label = (containerId === "fb-chart-weight") ? t.toFixed(0) : fitbit.fmt.num(Math.round(t));
+          const label = isWeight ? t.toFixed(0) : fitbit.fmt.num(Math.round(t));
           return `<line class="fb-chart-grid-line" x1="${fitbit.chart.PAD_L}" x2="${W - fitbit.chart.PAD_R}" y1="${y.toFixed(2)}" y2="${y.toFixed(2)}" stroke="currentColor" stroke-opacity=".15" stroke-dasharray="2 4"></line>
                   <text class="fb-chart-axis-label" x="${fitbit.chart.PAD_L - 6}" y="${(y + 3).toFixed(2)}" text-anchor="end">${label}</text>`;
         }).join("");
@@ -12661,6 +12717,73 @@
       }
     },
 
+    trends: {
+      range: 30,
+      rows: [],
+
+      async load(range) {
+        if (range != null) health.trends.range = range;
+        try {
+          const data = await api.healthHistory(health.trends.range);
+          health.trends.rows = (data && data.rows) || [];
+        } catch (e) {
+          health.trends.rows = [];
+          console.error("Health history load failed:", e);
+        }
+        health.trends.render();
+      },
+
+      setRange(range) {
+        health.trends.range = range;
+        document.querySelectorAll("[data-hl-range]").forEach(btn => {
+          btn.classList.toggle("is-active", parseInt(btn.dataset.hlRange, 10) === range);
+        });
+        health.trends.load(range);
+      },
+
+      render() {
+        const rows = health.trends.rows;
+        const empty = $("hl-trend-empty");
+        const ids = ["hl-trend-steps", "hl-trend-weight", "hl-trend-sleep", "hl-trend-cal"];
+        if (!rows.length) {
+          if (empty) empty.style.display = "";
+          ids.forEach(id => { const el = $(id); if (el) el.innerHTML = `<div class="fb-chart-empty">No data yet</div>`; });
+          ["hl-trend-steps-summary","hl-trend-weight-summary","hl-trend-sleep-summary","hl-trend-cal-summary"]
+            .forEach(id => { const el = $(id); if (el) el.textContent = ""; });
+          return;
+        }
+        if (empty) empty.style.display = "none";
+        const stepsData  = rows.map(r => ({ x: r.log_date, y: r.steps,         raw: r }));
+        const weightData = rows.filter(r => r.weight != null && r.weight > 0).map(r => ({ x: r.log_date, y: r.weight, raw: r }));
+        const sleepData  = rows.map(r => ({ x: r.log_date, y: r.sleep_minutes, raw: r }));
+        const calData    = rows.map(r => ({ x: r.log_date, y: r.calories_in,   raw: r }));
+
+        // Patch chart's container-id detection so the weight chart skips zero-anchor
+        const origDraw = fitbit.chart.draw;
+        fitbit.chart.draw("hl-trend-steps",  stepsData,  v => fitbit.fmt.num(v) + " steps");
+        fitbit.chart.draw("hl-trend-weight", weightData, v => v.toFixed(1) + " lb");
+        fitbit.chart.draw("hl-trend-sleep",  sleepData,  v => fitbit.fmt.sleep(v));
+        fitbit.chart.draw("hl-trend-cal",    calData,    v => fitbit.fmt.num(v) + " kcal");
+
+        const avg = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b.y, 0) / arr.length) : 0;
+        $("hl-trend-steps-summary").textContent  = stepsData.length ? `avg ${fitbit.fmt.num(avg(stepsData))}` : "";
+        const calNonZero = calData.filter(d => d.y > 0);
+        $("hl-trend-cal-summary").textContent    = calNonZero.length ? `avg ${fitbit.fmt.num(avg(calNonZero))} kcal` : "";
+        const sleepNonZero = sleepData.filter(d => d.y > 0);
+        $("hl-trend-sleep-summary").textContent  = sleepNonZero.length ? `avg ${fitbit.fmt.sleep(avg(sleepNonZero))}` : "";
+        if (weightData.length) {
+          const first = weightData[0].y, last = weightData[weightData.length - 1].y;
+          const delta = last - first;
+          const sign  = delta > 0 ? "+" : "";
+          $("hl-trend-weight-summary").textContent = `${last.toFixed(1)} lb (${sign}${delta.toFixed(1)})`;
+        } else {
+          $("hl-trend-weight-summary").textContent = "";
+        }
+        // suppress unused warning; origDraw was a no-op safeguard if patch was needed
+        void origDraw;
+      },
+    },
+
     addExercise() {
       health.exercises.push({ id: crypto.randomUUID(), name: "", sets: [], duration_min: null });
       health.renderExercises();
@@ -12896,6 +13019,10 @@
   $("health-date-picker")?.addEventListener("change", e => {
     const v = e.target.value;
     if (v) health.openLog(v);
+  });
+
+  document.querySelectorAll("[data-hl-range]").forEach(btn => {
+    btn.addEventListener("click", () => health.trends.setRange(parseInt(btn.dataset.hlRange, 10)));
   });
   ["hl-food-name", "hl-food-cal"].forEach(id => {
     const el = $(id);
@@ -15479,6 +15606,7 @@
         if (health.logs.length === 0) health.load();
         // Always open today on entry so stats render without a click
         health.openLog(todayStr());
+        health.trends.load();
       }
       if (name === "nutrition" && nutrition.logs.length === 0) nutrition.load();
       if (name === "feeds")     feeds.refresh();

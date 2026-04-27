@@ -19,6 +19,8 @@ import uuid
 from datetime import date as _date, timedelta
 from decimal import Decimal, InvalidOperation
 
+from boto3.dynamodb.conditions import Key
+
 from db import get_table, query_by_user
 from response import ok, no_content, error, not_found
 from utils import now_iso, validate_date
@@ -475,6 +477,60 @@ def summary(user_id: str, query_params: dict) -> dict:
         "type_counts":    type_counts,
         "streak_days":    streak,
     })
+
+
+def get_history(user_id: str, query_params: dict) -> dict:
+    """Return per-day rollup over the trailing N days for the trend charts.
+
+    Excludes today by default unless include_today=1 (today is still mutable).
+    """
+    qp = query_params or {}
+    try:
+        days = int(qp.get("days") or 30)
+    except (TypeError, ValueError):
+        days = 30
+    days = max(1, min(days, 365))
+    include_today = (qp.get("include_today") or "").lower() in ("1", "true", "yes")
+
+    today  = _date.today()
+    cutoff = (today - timedelta(days=days)).isoformat()
+    table  = _table()
+
+    items: list[dict] = []
+    params: dict = {
+        "KeyConditionExpression":
+            Key("user_id").eq(user_id) & Key("log_date").gte(cutoff),
+        "ScanIndexForward": True,
+    }
+    while True:
+        resp = table.query(**params)
+        items.extend(resp.get("Items", []))
+        if "LastEvaluatedKey" not in resp:
+            break
+        params["ExclusiveStartKey"] = resp["LastEvaluatedKey"]
+
+    rows = []
+    for item in items:
+        if not include_today and item.get("log_date") == today.isoformat():
+            continue
+        foods = item.get("foods") or []
+        cal_in = sum(int(f.get("calories") or 0) for f in foods)
+        sleep = item.get("sleep") or {}
+        rows.append({
+            "log_date":         item.get("log_date"),
+            "steps":            int(item.get("steps", 0) or 0),
+            "calories_in":      cal_in,
+            "calories_out":     int(item.get("calories_out", 0) or 0),
+            "distance_mi":      float(item.get("distance_mi", 0) or 0),
+            "active_minutes":   int(item.get("active_minutes", 0) or 0),
+            "weight":           float(item.get("weight")) if item.get("weight") not in (None, "") else None,
+            "sleep_minutes":    int(sleep.get("minutes_asleep") or 0),
+            "sleep_efficiency": int(sleep.get("efficiency") or 0),
+            "food_count":       len(foods),
+            "exercise_count":   len(item.get("exercises") or []),
+            "finalized":        bool(item.get("finalized", False)),
+        })
+    return ok({"days": days, "rows": rows})
 
 
 def recent_exercises(user_id: str, query_params: dict) -> dict:

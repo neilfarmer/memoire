@@ -426,3 +426,39 @@ class TestNormalizeFood:
     def test_drops_invalid_meal_type(self):
         out = crud._normalize_food({"name": "Eggs", "meal_type_id": 99})
         assert "meal_type_id" not in out
+
+
+class TestHistory:
+    def test_empty(self, tbl):
+        r = crud.get_history(USER, {})
+        assert r["statusCode"] == 200
+        body = json.loads(r["body"])
+        assert body["rows"] == []
+
+    @freeze_time("2026-04-27")
+    def test_returns_recent_rows_excluding_today(self, tbl):
+        crud.set_activity_totals(USER, "2026-04-25", {"steps": 5000})
+        crud.set_activity_totals(USER, "2026-04-26", {"steps": 7000})
+        crud.set_activity_totals(USER, "2026-04-27", {"steps": 3000})  # today, excluded
+        r = crud.get_history(USER, {"days": 30})
+        body = json.loads(r["body"])
+        dates = [row["log_date"] for row in body["rows"]]
+        assert dates == ["2026-04-25", "2026-04-26"]
+
+    @freeze_time("2026-04-27")
+    def test_aggregates_food_calories(self, tbl):
+        crud.add_food(USER, "2026-04-26", {"name": "Apple",  "calories": 95})
+        crud.add_food(USER, "2026-04-26", {"name": "Banana", "calories": 105})
+        r = crud.get_history(USER, {"days": 7})
+        body = json.loads(r["body"])
+        row = body["rows"][0]
+        assert row["calories_in"] == 200
+        assert row["food_count"]   == 2
+
+    @freeze_time("2026-04-27")
+    def test_include_today(self, tbl):
+        crud.set_activity_totals(USER, "2026-04-27", {"steps": 100})
+        r = crud.get_history(USER, {"days": 7, "include_today": "1"})
+        body = json.loads(r["body"])
+        assert len(body["rows"]) == 1
+        assert body["rows"][0]["log_date"] == "2026-04-27"

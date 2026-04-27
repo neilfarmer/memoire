@@ -77,6 +77,7 @@ locals {
     "GET /health",
     "GET /health/summary",
     "GET /health/exercises/recent",
+    "GET /health/history",
     "GET /health/{date}",
     "PUT /health/{date}",
     "DELETE /health/{date}",
