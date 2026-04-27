@@ -77,7 +77,12 @@ def _exercise_totals(exercises: list) -> dict:
         dist = _to_decimal(ex.get("distance_km"))
         if dist is not None:
             total_distance += dist
-        for s in ex.get("sets") or []:
+        sets_val = ex.get("sets")
+        if not isinstance(sets_val, list):
+            continue
+        for s in sets_val:
+            if not isinstance(s, dict):
+                continue
             total_sets += 1
             reps = _to_decimal(s.get("reps"))
             weight = _to_decimal(s.get("weight"))
