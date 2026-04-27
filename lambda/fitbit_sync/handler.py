@@ -142,6 +142,7 @@ def _push_to_health(user_id: str, log_date: str, summary: dict) -> None:
     """
     if not HEALTH_TABLE:
         return
+    summary  = _to_dynamo_safe(summary)
     table    = _dynamodb.Table(HEALTH_TABLE)
     existing = table.get_item(Key={"user_id": user_id, "log_date": log_date}).get("Item") or {}
 

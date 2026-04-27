@@ -561,3 +561,195 @@ class TestSync:
 
     def test_activity_distance_handles_missing(self):
         assert sync_handler._activity_distance([]) == 0.0
+
+
+# ── Fitbit sync internals ────────────────────────────────────────────────────
+
+class TestFetchSummary:
+    """Drive _fetch_summary against canned _fitbit_get responses."""
+
+    def test_aggregates_activity_food_weight_sleep(self):
+        responses = {
+            "/1/user/-/activities/date/2026-04-26.json": {
+                "summary": {
+                    "steps": 8000,
+                    "caloriesOut": 2400,
+                    "veryActiveMinutes":   30,
+                    "fairlyActiveMinutes": 15,
+                    "distances": [{"activity": "total", "distance": 3.5}],
+                },
+            },
+            "/1/user/-/foods/log/date/2026-04-26.json": {
+                "summary": {"calories": 1800, "water": 16},
+                "foods": [{
+                    "logId": 111,
+                    "loggedFood": {
+                        "name":         "Greek yogurt",
+                        "brand":        "Fage",
+                        "amount":       1.5,
+                        "unit":         {"name": "cup"},
+                        "mealTypeId":   1,
+                        "logDate":      "2026-04-26",
+                    },
+                    "nutritionalValues": {"calories": 200},
+                }],
+            },
+            "/1/user/-/foods/log/date/2026-04-27.json": {"summary": {"calories": 0}, "foods": []},
+            "/1/user/-/body/log/weight/date/2026-04-26/30d.json": {
+                "weight": [
+                    {"weight": 250.5, "date": "2026-04-20", "time": "09:00:00"},
+                    {"weight": 251.1, "date": "2026-04-22", "time": "09:00:00"},
+                ],
+            },
+            "/1.2/user/-/sleep/date/2026-04-26.json": {
+                "sleep": [{
+                    "isMainSleep":    True,
+                    "duration":       28_800_000,  # 8h in ms
+                    "efficiency":     93,
+                    "minutesAsleep":  450,
+                    "minutesAwake":   30,
+                    "startTime":      "2026-04-25T23:00:00",
+                    "endTime":        "2026-04-26T07:00:00",
+                    "dateOfSleep":    "2026-04-26",
+                }],
+            },
+        }
+        with patch.object(sync_handler, "_fitbit_get", side_effect=lambda _t, p: responses.get(p)):
+            summary = sync_handler._fetch_summary("AT", "2026-04-26")
+
+        assert summary["steps"]          == 8000
+        assert summary["calories_out"]   == 2400
+        assert summary["active_minutes"] == 45
+        assert abs(summary["distance_mi"] - 3.5) < 1e-6
+        assert summary["calories_in"]    == 1800
+        assert summary["food_water_oz"]  == 16
+        assert len(summary["foods"]) == 1
+        assert summary["foods"][0]["log_id"] == "111"
+        assert summary["foods"][0]["meal_type_id"] == 1
+        assert summary["weight"]      == 251.1
+        assert summary["weight_unit"] == "lb"
+        assert summary["weight_date"] == "2026-04-22"
+        assert summary["sleep"]["minutes_asleep"] == 450
+        assert summary["sleep"]["efficiency"]     == 93
+
+    def test_no_data_yields_empty(self):
+        with patch.object(sync_handler, "_fitbit_get", return_value=None):
+            summary = sync_handler._fetch_summary("AT", "2026-04-26")
+        assert summary == {}
+
+
+class TestFetchMainSleep:
+    def test_falls_back_to_yesterday_when_today_empty(self):
+        responses = {
+            "/1.2/user/-/sleep/date/2026-04-26.json": {"sleep": []},
+            "/1.2/user/-/sleep/date/2026-04-25.json": {
+                "sleep": [{
+                    "isMainSleep":    True,
+                    "duration":       21_600_000,  # 6h
+                    "efficiency":     85,
+                    "minutesAsleep":  330,
+                    "minutesAwake":   30,
+                    "startTime":      "2026-04-24T23:00:00",
+                    "endTime":        "2026-04-25T05:30:00",
+                    "dateOfSleep":    "2026-04-25",
+                }],
+            },
+        }
+        with patch.object(sync_handler, "_fitbit_get", side_effect=lambda _t, p: responses.get(p)):
+            entry = sync_handler._fetch_main_sleep("AT", "2026-04-26")
+        assert entry is not None
+        assert entry["minutes_asleep"] == 330
+        assert entry["date"]           == "2026-04-25"
+
+    def test_returns_none_when_no_sleep_anywhere(self):
+        with patch.object(sync_handler, "_fitbit_get", return_value=None):
+            assert sync_handler._fetch_main_sleep("AT", "2026-04-26") is None
+
+    def test_invalid_log_date_does_not_crash(self):
+        with patch.object(sync_handler, "_fitbit_get", return_value=None):
+            assert sync_handler._fetch_main_sleep("AT", "not-a-date") is None
+
+
+class TestFitbitGet:
+    def test_returns_parsed_body(self):
+        class FakeResp:
+            def __enter__(self): return self
+            def __exit__(self, *a): pass
+            def read(self): return b'{"ok": true}'
+
+        with patch.object(sync_handler.urllib.request, "urlopen", return_value=FakeResp()):
+            assert sync_handler._fitbit_get("AT", "/1/user/-/profile.json") == {"ok": True}
+
+    def test_returns_none_on_http_error(self):
+        import urllib.error
+        err = urllib.error.HTTPError("u", 401, "Unauthorized", {}, None)
+        err.read = lambda: b"unauthorized"
+        with patch.object(sync_handler.urllib.request, "urlopen", side_effect=err):
+            assert sync_handler._fitbit_get("AT", "/1/user/-/profile.json") is None
+
+    def test_returns_none_on_unexpected_error(self):
+        with patch.object(sync_handler.urllib.request, "urlopen", side_effect=ConnectionError("boom")):
+            assert sync_handler._fitbit_get("AT", "/1/user/-/profile.json") is None
+
+
+class TestPushToHealth:
+    def test_replaces_only_fitbit_foods_and_sets_scalars(self, tables):
+        # Pre-existing manual food and a stale fitbit food in the health row
+        tables.Table(HEALTH_TABLE_NAME).put_item(Item={
+            "user_id":   USER,
+            "log_date":  "2026-04-26",
+            "foods": [
+                {"id": "m1", "name": "Manual apple", "source": "manual",  "calories": 95},
+                {"id": "f-old", "name": "Old Fitbit", "source": "fitbit", "calories": 999},
+            ],
+            "exercises": [{"id": "e1", "name": "Run", "sets": []}],
+        })
+        summary = {
+            "steps":          7777,
+            "active_minutes": 50,
+            "calories_out":   2300,
+            "distance_mi":    3.1,
+            "weight":         180,
+            "weight_unit":    "lb",
+            "weight_date":    "2026-04-25",
+            "sleep":          {"minutes_asleep": 420, "efficiency": 91},
+            "foods": [
+                {"log_id": "fb-1", "name": "Sour Patch Kids", "calories": 900, "meal_type_id": 7},
+            ],
+        }
+        sync_handler._push_to_health(USER, "2026-04-26", summary)
+
+        row = tables.Table(HEALTH_TABLE_NAME).get_item(
+            Key={"user_id": USER, "log_date": "2026-04-26"}
+        )["Item"]
+        names = sorted(f["name"] for f in row["foods"])
+        # Manual entry preserved, old fitbit entry replaced by new fitbit entry
+        assert names == ["Manual apple", "Sour Patch Kids"]
+        # Each fitbit food gets fitbit_log_id mapped from log_id
+        fb_food = next(f for f in row["foods"] if f["source"] == "fitbit")
+        assert fb_food["fitbit_log_id"] == "fb-1"
+        # Exercises preserved
+        assert len(row["exercises"]) == 1
+        # Scalars upserted
+        assert int(row["steps"])       == 7777
+        assert row["weight_unit"]      == "lb"
+        assert int(row["sleep"]["minutes_asleep"]) == 420
+
+    def test_creates_row_when_missing(self, tables):
+        sync_handler._push_to_health(USER, "2026-04-26", {
+            "steps": 100,
+            "foods": [{"log_id": "x", "name": "Snack", "calories": 50}],
+        })
+        row = tables.Table(HEALTH_TABLE_NAME).get_item(
+            Key={"user_id": USER, "log_date": "2026-04-26"}
+        )["Item"]
+        assert int(row["steps"]) == 100
+        assert len(row["foods"]) == 1
+
+    def test_noop_when_health_table_unset(self, tables):
+        with patch.object(sync_handler, "HEALTH_TABLE", ""):
+            sync_handler._push_to_health(USER, "2026-04-26", {"steps": 1})
+        row = tables.Table(HEALTH_TABLE_NAME).get_item(
+            Key={"user_id": USER, "log_date": "2026-04-26"}
+        ).get("Item")
+        assert row is None
