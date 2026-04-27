@@ -277,6 +277,88 @@ class TestLogFood:
         assert b"calories=120"          in captured["data"]
         assert b"mealTypeId=1"          in captured["data"]
 
+    def test_logs_with_food_id(self, tables):
+        self._connect(tables)
+        captured = {}
+
+        class FakeResp:
+            def __enter__(self): return self
+            def __exit__(self, *a): pass
+            def read(self): return b'{"foodLog": {"logId": 456}}'
+
+        def fake_urlopen(req, timeout=10):
+            captured["data"] = req.data
+            return FakeResp()
+
+        with patch.object(crud.urllib.request, "urlopen", side_effect=fake_urlopen):
+            with patch.object(crud, "_lambda"):
+                r = crud.log_food(USER, {
+                    "food_id":      "12345",
+                    "unit_id":      304,
+                    "amount":       1.5,
+                    "meal_type_id": 3,
+                })
+        assert r["statusCode"] == 200
+        assert b"foodId=12345"    in captured["data"]
+        assert b"unitId=304"      in captured["data"]
+        assert b"amount=1.5"      in captured["data"]
+        assert b"mealTypeId=3"    in captured["data"]
+        # foodName must NOT be sent when food_id is provided
+        assert b"foodName=" not in captured["data"]
+
+
+class TestSearchFoods:
+    def _connect(self, tables):
+        tables.Table(TOKENS_TABLE_NAME).put_item(Item={
+            "user_id":       USER,
+            "access_token":  "AT",
+            "refresh_token": "RT",
+            "expires_at":    int(time.time()) + 3600,
+        })
+
+    def test_short_query_returns_empty(self, tables):
+        self._connect(tables)
+        r = crud.search_foods(USER, {"q": "a"})
+        assert r["statusCode"] == 200
+        assert json.loads(r["body"]) == {"foods": []}
+
+    def test_requires_connection(self, tables):
+        r = crud.search_foods(USER, {"q": "apple"})
+        assert r["statusCode"] == 400
+
+    def test_returns_normalized_results(self, tables):
+        self._connect(tables)
+
+        class FakeResp:
+            def __enter__(self): return self
+            def __exit__(self, *a): pass
+            def read(self):
+                return json.dumps({
+                    "foods": [{
+                        "foodId": 999,
+                        "name":   "Apple",
+                        "brand":  "",
+                        "calories": 95,
+                        "defaultServingSize": 1,
+                        "defaultUnit": {"id": 226, "name": "medium"},
+                    }, {
+                        "foodId": 1000,
+                        "name":   "Apple Pie",
+                        "calories": 296,
+                        "defaultUnit": {"id": 304, "name": "serving"},
+                    }],
+                }).encode()
+
+        with patch.object(crud.urllib.request, "urlopen", return_value=FakeResp()):
+            r = crud.search_foods(USER, {"q": "apple"})
+        assert r["statusCode"] == 200
+        body = json.loads(r["body"])
+        assert body["query"] == "apple"
+        assert len(body["foods"]) == 2
+        assert body["foods"][0]["food_id"] == "999"
+        assert body["foods"][0]["calories"] == 95
+        assert body["foods"][0]["unit_id"] == 226
+
 
 # ── router ────────────────────────────────────────────────────────────────────
 

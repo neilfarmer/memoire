@@ -5666,11 +5666,116 @@
       .fb-quickadd-row {
         grid-template-columns: 1fr 1fr;
       }
-      .fb-input--name      { grid-column: 1 / -1; }
+      .fb-combobox         { grid-column: 1 / -1; }
       .fb-input--cal       { grid-column: 1 / 2; }
       .fb-input-suffix     { display: none; }
       .fb-input--meal      { grid-column: 2 / 3; }
       .fb-quickadd-btn     { grid-column: 1 / -1; }
+    }
+
+    /* Food autocomplete combobox */
+    .fb-combobox {
+      position: relative;
+      min-width: 0;
+    }
+    .fb-combobox .fb-input--name {
+      width: 100%;
+    }
+    .fb-combobox-panel {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      max-height: 320px;
+      overflow-y: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      z-index: 50;
+      padding: 4px;
+    }
+    .fb-combobox-panel.hidden { display: none; }
+    .fb-combobox-empty,
+    .fb-combobox-loading {
+      padding: 16px 14px;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: .2px;
+    }
+    .fb-combobox-loading::before {
+      content: "";
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      margin-right: 8px;
+      border-radius: 50%;
+      border: 2px solid color-mix(in oklab, var(--primary) 30%, transparent);
+      border-top-color: var(--primary);
+      animation: fb-spin .8s linear infinite;
+      vertical-align: -1px;
+    }
+    .fb-combobox-option {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background .12s var(--ease);
+      border: 1px solid transparent;
+    }
+    .fb-combobox-option:hover,
+    .fb-combobox-option.is-active {
+      background: color-mix(in oklab, var(--accent) 10%, transparent);
+      border-color: color-mix(in oklab, var(--accent) 25%, transparent);
+    }
+    .fb-combobox-option-main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .fb-combobox-option-name {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: -.1px;
+      color: var(--text);
+      line-height: 1.25;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .fb-combobox-option-meta {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: .2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .fb-combobox-option-cal {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -.2px;
+      color: color-mix(in oklab, var(--accent) 70%, var(--text));
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .fb-combobox-option-cal-unit {
+      font-family: var(--font-sans);
+      font-size: 9px;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-left: 3px;
+      font-weight: var(--weight-medium);
     }
 
     /* Feed */
@@ -7096,7 +7201,18 @@
                                 <div class="fb-quickadd-rail">
                                     <span class="fb-quickadd-eyebrow">Log food</span>
                                     <div class="fb-quickadd-row">
-                                        <input type="text" id="fitbit-food-name" class="fb-input fb-input--name" placeholder="What did you eat?" autocomplete="off" />
+                                        <div class="fb-combobox" id="fb-food-combobox">
+                                            <input type="text"
+                                                   id="fitbit-food-name"
+                                                   class="fb-input fb-input--name"
+                                                   placeholder="Search Fitbit foods..."
+                                                   autocomplete="off"
+                                                   role="combobox"
+                                                   aria-autocomplete="list"
+                                                   aria-expanded="false"
+                                                   aria-controls="fb-food-results" />
+                                            <div class="fb-combobox-panel hidden" id="fb-food-results" role="listbox"></div>
+                                        </div>
                                         <input type="number" id="fitbit-food-calories" class="fb-input fb-input--cal" min="0" max="10000" placeholder="0" inputmode="numeric" />
                                         <span class="fb-input-suffix">kcal</span>
                                         <select id="fitbit-food-meal" class="fb-input fb-input--meal">
@@ -8104,6 +8220,7 @@
     fitbitDisconnect()         { return api.call("POST", "/fitbit/disconnect"); },
     fitbitSync()               { return api.call("POST", "/fitbit/sync"); },
     fitbitLogFood(body)        { return api.call("POST", "/fitbit/food", body); },
+    fitbitSearchFoods(query)   { return api.call("GET",  `/fitbit/food/search?q=${encodeURIComponent(query)}`); },
 
     listDiagrams()              { return api.call("GET",    "/diagrams"); },
     getDiagram(id)              { return api.call("GET",    `/diagrams/${id}`); },
@@ -9770,14 +9887,24 @@
       const name     = $("fitbit-food-name").value.trim();
       const calories = parseInt($("fitbit-food-calories").value, 10);
       const meal     = parseInt($("fitbit-food-meal").value, 10);
-      if (!name)            { fitbit.setFoodMsg("Enter a food name", "error"); return; }
-      if (!Number.isFinite(calories) || calories < 0) { fitbit.setFoodMsg("Enter calories", "error"); return; }
+      const picked   = fitbit.search.picked;
+
+      if (!picked && !name) { fitbit.setFoodMsg("Enter a food name", "error"); return; }
+      if (!picked && (!Number.isFinite(calories) || calories < 0)) {
+        fitbit.setFoodMsg("Enter calories", "error");
+        return;
+      }
+
+      const body = picked
+        ? { food_id: picked.food_id, unit_id: picked.unit_id, amount: picked.amount, meal_type_id: meal }
+        : { name, calories, meal_type_id: meal };
 
       const btn = $("fitbit-food-add-btn");
       btn.disabled = true;
       fitbit.setFoodMsg("Logging...");
       try {
-        await api.fitbitLogFood({ name, calories, meal_type_id: meal });
+        await api.fitbitLogFood(body);
+        fitbit.search.clearPicked();
         $("fitbit-food-name").value = "";
         $("fitbit-food-calories").value = "";
         fitbit.setFoodMsg("Logged.");
@@ -9789,6 +9916,144 @@
         btn.disabled = false;
       }
     },
+
+    search: {
+      DEBOUNCE_MS: 250,
+      _timer:  null,
+      _seq:    0,
+      picked:  null,
+      results: [],
+      activeIndex: -1,
+
+      input()  { return $("fitbit-food-name"); },
+      panel()  { return $("fb-food-results"); },
+      calInput() { return $("fitbit-food-calories"); },
+
+      onInput() {
+        // User typed — invalidate previous selection
+        if (fitbit.search.picked) {
+          fitbit.search.picked = null;
+          fitbit.search.calInput().value = "";
+        }
+        const q = fitbit.search.input().value.trim();
+        clearTimeout(fitbit.search._timer);
+        if (q.length < 2) {
+          fitbit.search.close();
+          return;
+        }
+        fitbit.search._timer = setTimeout(() => fitbit.search.run(q), fitbit.search.DEBOUNCE_MS);
+      },
+
+      async run(query) {
+        const seq = ++fitbit.search._seq;
+        fitbit.search.showLoading();
+        try {
+          const data = await api.fitbitSearchFoods(query);
+          if (seq !== fitbit.search._seq) return;
+          fitbit.search.results = (data && data.foods) || [];
+          fitbit.search.activeIndex = fitbit.search.results.length ? 0 : -1;
+          fitbit.search.render();
+        } catch (e) {
+          if (seq !== fitbit.search._seq) return;
+          fitbit.search.results = [];
+          fitbit.search.activeIndex = -1;
+          fitbit.search.renderEmpty(e.message || "Search failed");
+        }
+      },
+
+      open() {
+        fitbit.search.panel().classList.remove("hidden");
+        fitbit.search.input().setAttribute("aria-expanded", "true");
+      },
+      close() {
+        fitbit.search.panel().classList.add("hidden");
+        fitbit.search.input().setAttribute("aria-expanded", "false");
+      },
+      showLoading() {
+        const p = fitbit.search.panel();
+        p.innerHTML = `<div class="fb-combobox-loading">Searching Fitbit foods...</div>`;
+        fitbit.search.open();
+      },
+      renderEmpty(text) {
+        const p = fitbit.search.panel();
+        p.innerHTML = `<div class="fb-combobox-empty">${escHtml(text)}</div>`;
+        fitbit.search.open();
+      },
+      render() {
+        const p = fitbit.search.panel();
+        if (!fitbit.search.results.length) {
+          fitbit.search.renderEmpty("No matches.");
+          return;
+        }
+        p.innerHTML = fitbit.search.results.map((f, i) => {
+          const meta = [f.brand, f.amount && f.unit ? `${Number(f.amount).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${f.unit}` : ""].filter(Boolean).join(" · ");
+          return `<div class="fb-combobox-option ${i === fitbit.search.activeIndex ? "is-active" : ""}" role="option" data-idx="${i}" aria-selected="${i === fitbit.search.activeIndex}">
+            <div class="fb-combobox-option-main">
+              <div class="fb-combobox-option-name">${escHtml(f.name || "")}</div>
+              ${meta ? `<div class="fb-combobox-option-meta">${escHtml(meta)}</div>` : ""}
+            </div>
+            <div><span class="fb-combobox-option-cal">${fitbit.fmt.num(f.calories || 0)}</span><span class="fb-combobox-option-cal-unit">kcal</span></div>
+          </div>`;
+        }).join("");
+        p.querySelectorAll(".fb-combobox-option").forEach(el => {
+          el.addEventListener("mousedown", ev => {
+            ev.preventDefault(); // keep input focus
+            fitbit.search.pick(parseInt(el.dataset.idx, 10));
+          });
+          el.addEventListener("mouseenter", () => {
+            fitbit.search.activeIndex = parseInt(el.dataset.idx, 10);
+            fitbit.search.refreshActive();
+          });
+        });
+        fitbit.search.open();
+      },
+      refreshActive() {
+        const p = fitbit.search.panel();
+        p.querySelectorAll(".fb-combobox-option").forEach((el, i) => {
+          el.classList.toggle("is-active", i === fitbit.search.activeIndex);
+          el.setAttribute("aria-selected", i === fitbit.search.activeIndex);
+        });
+      },
+      move(delta) {
+        if (!fitbit.search.results.length) return;
+        const next = (fitbit.search.activeIndex + delta + fitbit.search.results.length) % fitbit.search.results.length;
+        fitbit.search.activeIndex = next;
+        fitbit.search.refreshActive();
+        const el = fitbit.search.panel().querySelector(`.fb-combobox-option[data-idx="${next}"]`);
+        if (el) el.scrollIntoView({ block: "nearest" });
+      },
+      pick(idx) {
+        const food = fitbit.search.results[idx];
+        if (!food) return;
+        fitbit.search.picked = food;
+        fitbit.search.input().value     = food.name || "";
+        fitbit.search.calInput().value  = food.calories || "";
+        fitbit.search.close();
+        fitbit.setFoodMsg("");
+      },
+      clearPicked() {
+        fitbit.search.picked = null;
+        fitbit.search.results = [];
+        fitbit.search.activeIndex = -1;
+        fitbit.search.close();
+      },
+      onKey(e) {
+        const open = !fitbit.search.panel().classList.contains("hidden");
+        if (e.key === "ArrowDown") { e.preventDefault(); if (open) fitbit.search.move(1); }
+        else if (e.key === "ArrowUp")   { e.preventDefault(); if (open) fitbit.search.move(-1); }
+        else if (e.key === "Enter") {
+          if (open && fitbit.search.activeIndex >= 0) {
+            e.preventDefault();
+            fitbit.search.pick(fitbit.search.activeIndex);
+          } else {
+            e.preventDefault();
+            fitbit.addFood();
+          }
+        } else if (e.key === "Escape") {
+          fitbit.search.close();
+        }
+      },
+    },
   };
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -9798,6 +10063,19 @@
     $("fitbit-disconnect-btn")?.addEventListener("click", () => fitbit.disconnect());
     $("fitbit-sync-btn")?.addEventListener("click", () => fitbit.syncNow());
     $("fitbit-food-add-btn")?.addEventListener("click", () => fitbit.addFood());
+
+    const foodNameInput = $("fitbit-food-name");
+    if (foodNameInput) {
+      foodNameInput.addEventListener("input",   () => fitbit.search.onInput());
+      foodNameInput.addEventListener("keydown", e  => fitbit.search.onKey(e));
+      foodNameInput.addEventListener("focus", () => {
+        if (fitbit.search.results.length) fitbit.search.open();
+      });
+      foodNameInput.addEventListener("blur", () => {
+        // Slight delay so a click on a result still registers
+        setTimeout(() => fitbit.search.close(), 120);
+      });
+    }
   });
 
   // ── Color themes ─────────────────────────────────────────────────────────────

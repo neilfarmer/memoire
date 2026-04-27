@@ -27,4 +27,7 @@ def route(route_key: str, user_id: str, body: dict, path_params: dict, query_par
     if route_key == "POST /fitbit/food":
         return crud.log_food(user_id, body)
 
+    if route_key == "GET /fitbit/food/search":
+        return crud.search_foods(user_id, query_params)
+
     return not_found("Route")

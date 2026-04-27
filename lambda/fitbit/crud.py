@@ -71,17 +71,15 @@ def disconnect(user_id: str) -> dict:
 
 
 def log_food(user_id: str, body: dict) -> dict:
-    """Quick-add a custom food entry directly to Fitbit's food log."""
-    name = (body.get("name") or "").strip()
-    if not name:
-        return error("name is required")
+    """Log a food entry to Fitbit.
 
-    try:
-        calories = int(body.get("calories") or 0)
-    except (TypeError, ValueError):
-        return error("calories must be an integer")
-    if calories < 0 or calories > 10000:
-        return error("calories must be between 0 and 10000")
+    Two modes:
+      - Database food: pass food_id (and optionally unit_id, amount). Fitbit
+        derives calories from its own database for that food + unit + amount.
+      - Custom food: pass name + calories. Stored as a one-off entry.
+    """
+    food_id_raw = body.get("food_id")
+    food_id = str(food_id_raw).strip() if food_id_raw not in (None, "") else ""
 
     try:
         meal_type_id = int(body.get("meal_type_id") or 7)
@@ -102,15 +100,46 @@ def log_food(user_id: str, body: dict) -> dict:
     if not access_token:
         return error("Could not refresh Fitbit token", status=502)
 
-    params = {
-        "foodName":     name,
-        "mealTypeId":   str(meal_type_id),
-        "unitId":       "304",        # serving — Fitbit's generic unit
-        "amount":       "1",
-        "date":         log_date,
-        "calories":     str(calories),
-        "favorite":     "false",
-    }
+    params: dict
+    if food_id:
+        try:
+            unit_id = int(body.get("unit_id") or 304)
+        except (TypeError, ValueError):
+            return error("unit_id must be an integer")
+        try:
+            amount = float(body.get("amount") or 1)
+        except (TypeError, ValueError):
+            return error("amount must be a number")
+        if amount <= 0:
+            return error("amount must be greater than 0")
+
+        params = {
+            "foodId":     food_id,
+            "mealTypeId": str(meal_type_id),
+            "unitId":     str(unit_id),
+            "amount":     f"{amount:g}",
+            "date":       log_date,
+        }
+    else:
+        name = (body.get("name") or "").strip()
+        if not name:
+            return error("name or food_id is required")
+        try:
+            calories = int(body.get("calories") or 0)
+        except (TypeError, ValueError):
+            return error("calories must be an integer")
+        if calories < 0 or calories > 10000:
+            return error("calories must be between 0 and 10000")
+
+        params = {
+            "foodName":   name,
+            "mealTypeId": str(meal_type_id),
+            "unitId":     "304",        # generic serving
+            "amount":     "1",
+            "date":       log_date,
+            "calories":   str(calories),
+            "favorite":   "false",
+        }
     payload = urllib.parse.urlencode(params).encode()
     req = urllib.request.Request(
         f"{FITBIT_API_BASE}/1/user/-/foods/log.json",
@@ -153,6 +182,64 @@ def log_food(user_id: str, body: dict) -> dict:
         "logged": True,
         "food":   data.get("foodLog") or data,
     })
+
+
+def search_foods(user_id: str, query_params: dict) -> dict:
+    """Search Fitbit's public food database by query string.
+
+    Returns a list of foods with their default serving size + calories so the
+    frontend can present an autocomplete dropdown the user can pick from.
+    """
+    qp = query_params or {}
+    q = (qp.get("q") or "").strip()
+    if len(q) < 2:
+        return ok({"foods": []})
+
+    tokens = oauth.get_tokens(user_id)
+    if not tokens:
+        return error("Fitbit not connected", status=400)
+    access_token = oauth.refresh_if_needed(user_id, tokens)
+    if not access_token:
+        return error("Could not refresh Fitbit token", status=502)
+
+    path = f"/1/foods/search.json?{urllib.parse.urlencode({'query': q})}"
+    req = urllib.request.Request(
+        f"{FITBIT_API_BASE}{path}",
+        headers={
+            "Authorization":   f"Bearer {access_token}",
+            "Accept-Language": "en_US",
+        },
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310 — fixed Fitbit HTTPS endpoint
+            data = json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        body_text = ""
+        try:
+            body_text = exc.read().decode()[:300]
+        except Exception:
+            pass
+        logger.warning("Fitbit food search failed: %s %s — %s", exc.code, exc.reason, body_text)
+        return error(f"Fitbit rejected the request ({exc.code})", status=502)
+    except Exception as exc:
+        logger.error("Fitbit food search error: %s", exc)
+        return error("Could not reach Fitbit", status=502)
+
+    foods = []
+    for item in (data.get("foods") or [])[:25]:
+        unit = item.get("defaultUnit") or {}
+        foods.append({
+            "food_id":     str(item.get("foodId") or ""),
+            "name":        item.get("name") or "",
+            "brand":       item.get("brand") or "",
+            "calories":    int(item.get("calories") or 0),
+            "amount":      float(item.get("defaultServingSize") or 1),
+            "unit_id":     int(unit.get("id") or 304),
+            "unit":        unit.get("name") or "",
+            "access_level": item.get("accessLevel") or "",
+        })
+    return ok({"foods": foods, "query": q})
 
 
 def sync_now(user_id: str) -> dict:

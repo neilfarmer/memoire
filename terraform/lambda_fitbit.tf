@@ -108,6 +108,7 @@ locals {
     "POST /fitbit/disconnect",
     "POST /fitbit/sync",
     "POST /fitbit/food",
+    "GET /fitbit/food/search",
   ]
 }
 
