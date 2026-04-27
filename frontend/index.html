@@ -6239,6 +6239,22 @@
                             </div>
                         </div>
                         <div class="settings-section">
+                            <div class="settings-section-title">Notifications</div>
+                            <div class="settings-row">
+                                <div>
+                                    <div class="settings-label">Browser notifications for due tasks</div>
+                                    <div class="settings-desc">
+                                        One desktop notification per task on its due date. Fires while a Memoire tab is open (focused or in background). Browser must allow notifications.
+                                    </div>
+                                    <div id="browser-notify-status" class="settings-desc" style="margin-top:4px;"></div>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="browser-notify-toggle" />
+                                    <span class="toggle-track"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="settings-section">
                             <div class="settings-section-title">AI Pal</div>
                             <div class="settings-row">
                                 <div>
@@ -7863,6 +7879,7 @@
       nutrition.load();  // preload so journal calendar shows nutrition dots
       favs.load();       // preload so heart buttons show correct state on feeds page
       if (state.settings?.home_finances_widget) finances.load(); // preload for home widget if enabled
+      if (state.settings?.browser_notifications_enabled) browserNotifier.start();
       pages.show("home");
     },
 
@@ -7907,6 +7924,7 @@
         renderTasks();
         if (pages.current === "home") renderHomeDashboard();
         if ($("journal-calendar") && journal.calMonth) journal.renderCalendar();
+        if (typeof browserNotifier !== "undefined") browserNotifier.check();
       } catch (e) {
         console.error("Failed to load tasks:", e);
       } finally {
@@ -8606,6 +8624,113 @@
     try {
       const updated = await api.updateSettings({ supervisor_enabled: enabled });
       state.settings = { ...state.settings, ...updated };
+    } catch (e) {
+      this.checked = !enabled;
+    } finally {
+      this.disabled = false;
+    }
+  });
+
+  // ── Browser notifications (local, one per task on its due date) ─────────────
+
+  const browserNotifier = {
+    STORAGE_KEY: "memoire_notified_due_tasks",
+    _interval: null,
+
+    notifiedSet() {
+      try {
+        const raw = localStorage.getItem(browserNotifier.STORAGE_KEY);
+        return new Set(raw ? JSON.parse(raw) : []);
+      } catch (e) {
+        return new Set();
+      }
+    },
+
+    markNotified(taskId) {
+      const set = browserNotifier.notifiedSet();
+      set.add(taskId);
+      try {
+        localStorage.setItem(browserNotifier.STORAGE_KEY, JSON.stringify([...set]));
+      } catch (e) { /* quota exceeded — ignore */ }
+    },
+
+    isSupported() {
+      return typeof Notification !== "undefined";
+    },
+
+    renderStatus() {
+      const el = $("browser-notify-status");
+      if (!el) return;
+      if (!browserNotifier.isSupported()) {
+        el.textContent = "This browser does not support notifications.";
+        return;
+      }
+      const perm = Notification.permission;
+      if (perm === "granted") el.textContent = "Permission granted.";
+      else if (perm === "denied") el.textContent = "Permission denied. Re-enable in browser settings.";
+      else el.textContent = "Permission will be requested when you turn this on.";
+    },
+
+    start() {
+      if (browserNotifier._interval) return;
+      browserNotifier.check();
+      browserNotifier._interval = setInterval(browserNotifier.check, 60_000);
+    },
+
+    stop() {
+      if (browserNotifier._interval) {
+        clearInterval(browserNotifier._interval);
+        browserNotifier._interval = null;
+      }
+    },
+
+    async ensurePermission() {
+      if (!browserNotifier.isSupported()) return false;
+      if (Notification.permission === "granted") return true;
+      if (Notification.permission === "denied")  return false;
+      const result = await Notification.requestPermission();
+      return result === "granted";
+    },
+
+    check() {
+      if (!state.settings?.browser_notifications_enabled) return;
+      if (!browserNotifier.isSupported() || Notification.permission !== "granted") return;
+      const today = todayStr();
+      const notified = browserNotifier.notifiedSet();
+      (state.tasks || []).forEach(task => {
+        if (task.status === "done") return;
+        if (task.due_date !== today) return;
+        if (notified.has(task.task_id)) return;
+        try {
+          new Notification("Task due today", {
+            body: task.title,
+            tag:  task.task_id,
+          });
+          browserNotifier.markNotified(task.task_id);
+        } catch (e) {
+          console.error("Notification failed:", e);
+        }
+      });
+    },
+  };
+
+  $("browser-notify-toggle").addEventListener("change", async function() {
+    const enabled = this.checked;
+    this.disabled = true;
+    try {
+      if (enabled) {
+        const ok = await browserNotifier.ensurePermission();
+        if (!ok) {
+          this.checked = false;
+          browserNotifier.renderStatus();
+          return;
+        }
+      }
+      const updated = await api.updateSettings({ browser_notifications_enabled: enabled });
+      state.settings = { ...state.settings, ...updated };
+      if (enabled) browserNotifier.start();
+      else         browserNotifier.stop();
+      browserNotifier.renderStatus();
     } catch (e) {
       this.checked = !enabled;
     } finally {
@@ -12412,6 +12537,8 @@
     $("display-name-input").value = state.settings?.display_name || "";
     $("pal-name-input").value = state.settings?.pal_name || "";
     $("home-finances-toggle").checked = !!(state.settings?.home_finances_widget);
+    $("browser-notify-toggle").checked = !!(state.settings?.browser_notifications_enabled);
+    browserNotifier.renderStatus();
     loadPatList();
   }
 

@@ -26,17 +26,18 @@ CALENDAR_DEFAULTS = {
 }
 
 DEFAULTS = {
-    "dark_mode":               False,
-    "ntfy_url":                "",
-    "autosave_seconds":        300,
-    "timezone":                "",
-    "display_name":            "",
-    "pal_name":                "",
-    "profile_inference_hours": 24,
-    "home_finances_widget":    False,
-    "chat_retention_days":     30,
-    "supervisor_enabled":      True,
-    "calendar":                CALENDAR_DEFAULTS,
+    "dark_mode":                    False,
+    "ntfy_url":                     "",
+    "autosave_seconds":             300,
+    "timezone":                     "",
+    "display_name":                 "",
+    "pal_name":                     "",
+    "profile_inference_hours":      24,
+    "home_finances_widget":         False,
+    "chat_retention_days":          30,
+    "supervisor_enabled":           True,
+    "browser_notifications_enabled": False,
+    "calendar":                     CALENDAR_DEFAULTS,
 }
 
 ALLOWED_KEYS = set(DEFAULTS.keys())

@@ -42,6 +42,7 @@ class TestGetSettings:
         assert body["ntfy_url"] == ""
         assert body["autosave_seconds"] == 300
         assert body["timezone"] == ""
+        assert body["browser_notifications_enabled"] is False
 
     def test_returns_merged_defaults_after_partial_update(self, tbl):
         crud.update_settings(USER, {"dark_mode": True})
