@@ -55,6 +55,7 @@ resource "aws_iam_role_policy" "fitbit_dynamodb" {
           "dynamodb:GetItem",
           "dynamodb:PutItem",
           "dynamodb:DeleteItem",
+          "dynamodb:Query",
         ]
         Resource = [
           aws_dynamodb_table.fitbit_tokens.arn,

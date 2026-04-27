@@ -133,15 +133,23 @@ class TestCrud:
         assert body["synced"] is False
         assert body["log_date"] == "2026-04-26"
 
-    def test_get_today_returns_data(self, tables):
+    def test_get_today_returns_latest_entry(self, tables):
+        tables.Table(DATA_TABLE_NAME).put_item(Item={
+            "user_id":  USER,
+            "log_date": "2026-04-25",
+            "steps":    1000,
+        })
         tables.Table(DATA_TABLE_NAME).put_item(Item={
             "user_id":  USER,
             "log_date": "2026-04-26",
             "steps":    5000,
         })
-        with freeze_time("2026-04-26"):
+        # Query the entry under the user's most recent log_date even if UTC
+        # "today" is later than the stored date.
+        with freeze_time("2026-04-27"):
             r = crud.get_today(USER)
         body = json.loads(r["body"])
+        assert body["log_date"] == "2026-04-26"
         assert body["steps"] == 5000
         assert "user_id" not in body
 

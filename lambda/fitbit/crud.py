@@ -5,6 +5,7 @@ import os
 from datetime import date as _date
 
 import boto3
+from boto3.dynamodb.conditions import Key
 
 import db
 import oauth
@@ -21,12 +22,21 @@ def _today_iso() -> str:
 
 
 def get_today(user_id: str) -> dict:
-    log_date = _today_iso()
-    item = db.get_table(DATA_TABLE).get_item(
-        Key={"user_id": user_id, "log_date": log_date}
-    ).get("Item")
-    if not item:
-        return ok({"log_date": log_date, "synced": False})
+    """Return the most recent Fitbit data entry for the user.
+
+    The sync Lambda stores entries keyed by the user's local date (derived
+    from their Fitbit profile timezone), not UTC, so we query the latest
+    log_date and return that. The frontend treats it as "today's data."
+    """
+    resp = db.get_table(DATA_TABLE).query(
+        KeyConditionExpression=Key("user_id").eq(user_id),
+        ScanIndexForward=False,
+        Limit=1,
+    )
+    items = resp.get("Items") or []
+    if not items:
+        return ok({"log_date": _today_iso(), "synced": False})
+    item = items[0]
     item.pop("user_id", None)
     return ok(item)
 
