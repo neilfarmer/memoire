@@ -160,7 +160,11 @@ def _ensure_fresh_access_token(item: dict) -> str | None:
 
 
 def _fetch_summary(access_token: str, log_date: str) -> dict:
-    """Aggregate the four data points the Fitbit page shows. Each call is best-effort."""
+    """Aggregate the four data points the Fitbit page shows. Each call is best-effort.
+
+    Sends Accept-Language: en_US so Fitbit returns imperial units (weight in
+    pounds, distance in miles) — Memoire's audience is US-based.
+    """
     out: dict = {}
 
     # log_date is already in the user's profile timezone, computed in _user_today.
@@ -169,14 +173,14 @@ def _fetch_summary(access_token: str, log_date: str) -> dict:
         summary = activity.get("summary") or {}
         out["steps"]        = int(summary.get("steps", 0) or 0)
         out["calories_out"] = int(summary.get("caloriesOut", 0) or 0)
-        out["distance_km"]  = _activity_distance_km(summary.get("distances") or [])
+        out["distance_mi"]  = _activity_distance(summary.get("distances") or [])
         out["active_minutes"] = int(
             (summary.get("veryActiveMinutes") or 0)
             + (summary.get("fairlyActiveMinutes") or 0)
         )
         logger.info(
-            "Fitbit activity: steps=%s, calories_out=%s, distance_km=%s",
-            out.get("steps"), out.get("calories_out"), out.get("distance_km"),
+            "Fitbit activity: steps=%s, calories_out=%s, distance_mi=%s",
+            out.get("steps"), out.get("calories_out"), out.get("distance_mi"),
         )
     else:
         logger.warning("Fitbit activity endpoint returned no data")
@@ -185,7 +189,24 @@ def _fetch_summary(access_token: str, log_date: str) -> dict:
     if food:
         food_summary = food.get("summary") or {}
         out["calories_in"]    = int(food_summary.get("calories", 0) or 0)
-        out["food_water_ml"]  = int(food_summary.get("water", 0) or 0)
+        out["food_water_oz"]  = float(food_summary.get("water", 0) or 0)
+
+        items: list[dict] = []
+        for entry in food.get("foods") or []:
+            logged = entry.get("loggedFood") or {}
+            nutr   = entry.get("nutritionalValues") or {}
+            unit   = logged.get("unit") or {}
+            items.append({
+                "log_id":    str(entry.get("logId") or ""),
+                "name":      logged.get("name") or "",
+                "brand":     logged.get("brand") or "",
+                "calories":  int(nutr.get("calories") or 0),
+                "amount":    float(logged.get("amount") or 0),
+                "unit":      unit.get("name") or "",
+                "meal_type_id": int(logged.get("mealTypeId") or 0),
+                "logged_at": logged.get("logDate") or "",
+            })
+        out["foods"] = items
 
     # Weight: a single date often has no entry. Pull the last 30 days, take latest.
     weight = _fitbit_get(access_token, f"/1/user/-/body/log/weight/date/{log_date}/30d.json")
@@ -195,7 +216,7 @@ def _fetch_summary(access_token: str, log_date: str) -> dict:
             latest = max(entries, key=lambda e: (e.get("date", ""), e.get("time", "")))
             try:
                 out["weight"] = float(latest.get("weight", 0) or 0)
-                out["weight_unit"]  = "kg"
+                out["weight_unit"]  = "lb"
                 out["weight_date"]  = latest.get("date", "")
             except (TypeError, ValueError):
                 pass
@@ -237,7 +258,7 @@ def _fetch_main_sleep(access_token: str, log_date: str) -> dict | None:
     return None
 
 
-def _activity_distance_km(distances: list) -> float:
+def _activity_distance(distances: list) -> float:
     for d in distances:
         if d.get("activity") == "total":
             try:
@@ -250,7 +271,10 @@ def _activity_distance_km(distances: list) -> float:
 def _fitbit_get(access_token: str, path: str) -> dict | None:
     req = urllib.request.Request(
         f"{API_BASE}{path}",
-        headers={"Authorization": f"Bearer {access_token}"},
+        headers={
+            "Authorization":   f"Bearer {access_token}",
+            "Accept-Language": "en_US",
+        },
         method="GET",
     )
     try:

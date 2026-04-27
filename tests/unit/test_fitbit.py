@@ -223,6 +223,61 @@ class TestCrud:
         assert json.loads(call_kwargs["Payload"]) == {"user_ids": [USER]}
 
 
+class TestLogFood:
+    def _connect(self, tables):
+        tables.Table(TOKENS_TABLE_NAME).put_item(Item={
+            "user_id":       USER,
+            "access_token":  "AT",
+            "refresh_token": "RT",
+            "expires_at":    int(time.time()) + 3600,
+        })
+
+    def test_requires_name(self, tables):
+        self._connect(tables)
+        r = crud.log_food(USER, {"calories": 100})
+        assert r["statusCode"] == 400
+
+    def test_requires_connection(self, tables):
+        r = crud.log_food(USER, {"name": "Apple", "calories": 95})
+        assert r["statusCode"] == 400
+
+    def test_invalid_meal_type(self, tables):
+        self._connect(tables)
+        r = crud.log_food(USER, {"name": "Apple", "calories": 95, "meal_type_id": 99})
+        assert r["statusCode"] == 400
+
+    def test_invalid_calories(self, tables):
+        self._connect(tables)
+        r = crud.log_food(USER, {"name": "Apple", "calories": -5})
+        assert r["statusCode"] == 400
+
+    def test_posts_to_fitbit(self, tables):
+        self._connect(tables)
+        captured = {}
+
+        class FakeResp:
+            def __enter__(self): return self
+            def __exit__(self, *a): pass
+            def read(self): return b'{"foodLog": {"logId": 123}}'
+
+        def fake_urlopen(req, timeout=10):
+            captured["url"]    = req.full_url
+            captured["data"]   = req.data
+            captured["method"] = req.get_method()
+            return FakeResp()
+
+        with patch.object(crud.urllib.request, "urlopen", side_effect=fake_urlopen):
+            with patch.object(crud, "_lambda"):  # sync_now invoke
+                r = crud.log_food(USER, {"name": "Greek yogurt", "calories": 120, "meal_type_id": 1})
+
+        assert r["statusCode"] == 200
+        assert captured["url"].endswith("/foods/log.json")
+        assert captured["method"] == "POST"
+        assert b"foodName=Greek+yogurt" in captured["data"]
+        assert b"calories=120"          in captured["data"]
+        assert b"mealTypeId=1"          in captured["data"]
+
+
 # ── router ────────────────────────────────────────────────────────────────────
 
 class TestRouter:
@@ -340,7 +395,7 @@ class TestSync:
             {"activity": "total",   "distance": 4.2},
             {"activity": "loggedActivities", "distance": 0.5},
         ]
-        assert sync_handler._activity_distance_km(distances) == 4.2
+        assert sync_handler._activity_distance(distances) == 4.2
 
     def test_activity_distance_handles_missing(self):
-        assert sync_handler._activity_distance_km([]) == 0.0
+        assert sync_handler._activity_distance([]) == 0.0

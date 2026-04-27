@@ -6452,30 +6452,65 @@
                             <p>Fitbit is not connected.</p>
                             <p class="u-text-sm u-muted">Connect Fitbit in Settings to start syncing.</p>
                         </div>
-                        <div id="fitbit-cards" class="hidden"
-                             style="display:grid;
-                                    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-                                    gap:16px;
-                                    margin-top:16px;">
-                            <div class="settings-section">
-                                <div class="settings-section-title">Steps</div>
-                                <div id="fitbit-steps" style="font-size:32px; font-weight:600;">—</div>
-                                <div id="fitbit-steps-sub" class="u-text-sm u-muted"></div>
+                        <div id="fitbit-cards" class="hidden">
+                            <div style="display:grid;
+                                        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                                        gap:16px;
+                                        margin-top:16px;">
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Steps</div>
+                                    <div id="fitbit-steps" style="font-size:32px; font-weight:600;">—</div>
+                                    <div id="fitbit-steps-sub" class="u-text-sm u-muted"></div>
+                                </div>
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Food</div>
+                                    <div id="fitbit-calories-in" style="font-size:32px; font-weight:600;">—</div>
+                                    <div id="fitbit-calories-sub" class="u-text-sm u-muted"></div>
+                                </div>
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Weight</div>
+                                    <div id="fitbit-weight" style="font-size:32px; font-weight:600;">—</div>
+                                    <div id="fitbit-weight-sub" class="u-text-sm u-muted"></div>
+                                </div>
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Sleep</div>
+                                    <div id="fitbit-sleep" style="font-size:32px; font-weight:600;">—</div>
+                                    <div id="fitbit-sleep-sub" class="u-text-sm u-muted"></div>
+                                </div>
                             </div>
-                            <div class="settings-section">
-                                <div class="settings-section-title">Food</div>
-                                <div id="fitbit-calories-in" style="font-size:32px; font-weight:600;">—</div>
-                                <div id="fitbit-calories-sub" class="u-text-sm u-muted"></div>
+                            <div class="settings-section" style="margin-top:16px;">
+                                <div class="settings-section-title">Log food</div>
+                                <div style="display:grid;
+                                            grid-template-columns: 2fr 1fr 1fr auto;
+                                            gap:8px;
+                                            align-items:end;">
+                                    <label style="display:flex; flex-direction:column; gap:4px; font-size:12px;">
+                                        <span class="settings-label" style="font-weight:500;">Food</span>
+                                        <input type="text" id="fitbit-food-name" placeholder="e.g. Greek yogurt" />
+                                    </label>
+                                    <label style="display:flex; flex-direction:column; gap:4px; font-size:12px;">
+                                        <span class="settings-label" style="font-weight:500;">Calories</span>
+                                        <input type="number" id="fitbit-food-calories" min="0" max="10000" placeholder="0" />
+                                    </label>
+                                    <label style="display:flex; flex-direction:column; gap:4px; font-size:12px;">
+                                        <span class="settings-label" style="font-weight:500;">Meal</span>
+                                        <select id="fitbit-food-meal">
+                                            <option value="1">Breakfast</option>
+                                            <option value="2">Morning Snack</option>
+                                            <option value="3">Lunch</option>
+                                            <option value="4">Afternoon Snack</option>
+                                            <option value="5">Dinner</option>
+                                            <option value="7" selected>Anytime</option>
+                                        </select>
+                                    </label>
+                                    <button class="btn btn-primary" id="fitbit-food-add-btn">Add</button>
+                                </div>
+                                <div id="fitbit-food-msg" class="hidden" style="font-size:13px; margin-top:6px;"></div>
                             </div>
-                            <div class="settings-section">
-                                <div class="settings-section-title">Weight</div>
-                                <div id="fitbit-weight" style="font-size:32px; font-weight:600;">—</div>
-                                <div id="fitbit-weight-sub" class="u-text-sm u-muted"></div>
-                            </div>
-                            <div class="settings-section">
-                                <div class="settings-section-title">Sleep</div>
-                                <div id="fitbit-sleep" style="font-size:32px; font-weight:600;">—</div>
-                                <div id="fitbit-sleep-sub" class="u-text-sm u-muted"></div>
+                            <div class="settings-section" style="margin-top:16px;">
+                                <div class="settings-section-title">Today's food</div>
+                                <div id="fitbit-food-list-empty" class="u-text-sm u-muted">No food logged yet today.</div>
+                                <ul id="fitbit-food-list" class="hidden" style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px;"></ul>
                             </div>
                         </div>
                     </main>
@@ -7454,6 +7489,7 @@
     fitbitAuthCallback(body)   { return api.call("POST", "/fitbit/auth/callback", body); },
     fitbitDisconnect()         { return api.call("POST", "/fitbit/disconnect"); },
     fitbitSync()               { return api.call("POST", "/fitbit/sync"); },
+    fitbitLogFood(body)        { return api.call("POST", "/fitbit/food", body); },
 
     listDiagrams()              { return api.call("GET",    "/diagrams"); },
     getDiagram(id)              { return api.call("GET",    `/diagrams/${id}`); },
@@ -8997,19 +9033,23 @@
         }
         cards.classList.remove("hidden");
         $("fitbit-steps").textContent     = fitbit.fmt.num(data.steps);
-        $("fitbit-steps-sub").textContent = data.distance_km
-          ? `${Number(data.distance_km).toFixed(2)} km · ${data.active_minutes || 0} active min`
+        $("fitbit-steps-sub").textContent = data.distance_mi
+          ? `${Number(data.distance_mi).toFixed(2)} mi · ${data.active_minutes || 0} active min`
           : "";
         $("fitbit-calories-in").textContent  = data.calories_in != null ? `${fitbit.fmt.num(data.calories_in)} kcal` : "—";
         $("fitbit-calories-sub").textContent = data.calories_out
           ? `Burned: ${fitbit.fmt.num(data.calories_out)} kcal`
           : "";
-        $("fitbit-weight").textContent     = data.weight ? `${Number(data.weight).toFixed(1)} kg` : "—";
-        $("fitbit-weight-sub").textContent = "";
+        $("fitbit-weight").textContent     = data.weight ? `${Number(data.weight).toFixed(1)} lb` : "—";
+        const weightSub = data.weight_date && data.weight_date !== data.log_date
+          ? `as of ${data.weight_date}`
+          : "";
+        $("fitbit-weight-sub").textContent = weightSub;
         $("fitbit-sleep").textContent      = fitbit.fmt.sleep(data.sleep?.minutes_asleep);
         $("fitbit-sleep-sub").textContent  = data.sleep?.efficiency
           ? `Efficiency ${data.sleep.efficiency}%`
           : "";
+        fitbit.renderFoodList(data.foods || []);
         if (data.synced_at) {
           $("fitbit-last-sync").textContent = `Synced ${new Date(data.synced_at * 1000).toLocaleTimeString()}`;
         }
@@ -9032,6 +9072,62 @@
         btn.disabled = false;
       }
     },
+
+    MEAL_LABELS: { 1: "Breakfast", 2: "Morning Snack", 3: "Lunch", 4: "Afternoon Snack", 5: "Dinner", 7: "Anytime" },
+
+    renderFoodList(items) {
+      const ul    = $("fitbit-food-list");
+      const empty = $("fitbit-food-list-empty");
+      if (!items.length) {
+        ul.classList.add("hidden");
+        empty.classList.remove("hidden");
+        ul.innerHTML = "";
+        return;
+      }
+      empty.classList.add("hidden");
+      ul.classList.remove("hidden");
+      ul.innerHTML = items.map(f => {
+        const meal = fitbit.MEAL_LABELS[f.meal_type_id] || "";
+        const qty  = f.amount && f.unit ? `${f.amount} ${f.unit}` : "";
+        const lhs  = [escHtml(f.name || ""), qty].filter(Boolean).join(" · ");
+        const rhs  = [meal, `${fitbit.fmt.num(f.calories)} kcal`].filter(Boolean).join(" · ");
+        return `<li style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border-subtle, #eee);">
+          <span>${lhs}</span>
+          <span class="u-text-sm u-muted">${escHtml(rhs)}</span>
+        </li>`;
+      }).join("");
+    },
+
+    setFoodMsg(text, kind = "info") {
+      const el = $("fitbit-food-msg");
+      if (!el) return;
+      el.textContent = text || "";
+      el.classList.toggle("hidden", !text);
+      el.style.color = kind === "error" ? "var(--color-error, #c0392b)" : "var(--color-text-muted)";
+    },
+
+    async addFood() {
+      const name     = $("fitbit-food-name").value.trim();
+      const calories = parseInt($("fitbit-food-calories").value, 10);
+      const meal     = parseInt($("fitbit-food-meal").value, 10);
+      if (!name)            { fitbit.setFoodMsg("Enter a food name", "error"); return; }
+      if (!Number.isFinite(calories) || calories < 0) { fitbit.setFoodMsg("Enter calories", "error"); return; }
+
+      const btn = $("fitbit-food-add-btn");
+      btn.disabled = true;
+      fitbit.setFoodMsg("Logging...");
+      try {
+        await api.fitbitLogFood({ name, calories, meal_type_id: meal });
+        $("fitbit-food-name").value = "";
+        $("fitbit-food-calories").value = "";
+        fitbit.setFoodMsg("Logged. Refreshing...");
+        setTimeout(() => fitbit.load(), 3000);
+      } catch (e) {
+        fitbit.setFoodMsg(e.message || "Failed to log food", "error");
+      } finally {
+        btn.disabled = false;
+      }
+    },
   };
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -9040,6 +9136,7 @@
     $("fitbit-connect-btn")?.addEventListener("click", () => fitbit.connect());
     $("fitbit-disconnect-btn")?.addEventListener("click", () => fitbit.disconnect());
     $("fitbit-sync-btn")?.addEventListener("click", () => fitbit.syncNow());
+    $("fitbit-food-add-btn")?.addEventListener("click", () => fitbit.addFood());
   });
 
   // ── Color themes ─────────────────────────────────────────────────────────────

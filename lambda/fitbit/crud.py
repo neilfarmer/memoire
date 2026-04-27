@@ -1,7 +1,11 @@
 """Read endpoints + sync trigger for Fitbit data."""
 
 import json
+import logging
 import os
+import urllib.error
+import urllib.parse
+import urllib.request
 from datetime import date as _date
 
 import boto3
@@ -15,6 +19,11 @@ DATA_TABLE       = os.environ["FITBIT_DATA_TABLE"]
 SYNC_FUNCTION    = os.environ.get("FITBIT_SYNC_FUNCTION", "")
 
 _lambda = boto3.client("lambda")
+logger = logging.getLogger()
+
+FITBIT_API_BASE = "https://api.fitbit.com"
+
+MEAL_TYPE_IDS = {1, 2, 3, 4, 5, 7}  # Breakfast, Morning Snack, Lunch, Afternoon Snack, Dinner, Anytime
 
 
 def _today_iso() -> str:
@@ -59,6 +68,80 @@ def disconnect(user_id: str) -> dict:
         return not_found("Fitbit connection")
     oauth.delete_tokens(user_id)
     return ok({"disconnected": True})
+
+
+def log_food(user_id: str, body: dict) -> dict:
+    """Quick-add a custom food entry directly to Fitbit's food log."""
+    name = (body.get("name") or "").strip()
+    if not name:
+        return error("name is required")
+
+    try:
+        calories = int(body.get("calories") or 0)
+    except (TypeError, ValueError):
+        return error("calories must be an integer")
+    if calories < 0 or calories > 10000:
+        return error("calories must be between 0 and 10000")
+
+    try:
+        meal_type_id = int(body.get("meal_type_id") or 7)
+    except (TypeError, ValueError):
+        return error("meal_type_id must be an integer")
+    if meal_type_id not in MEAL_TYPE_IDS:
+        return error("meal_type_id must be one of 1,2,3,4,5,7")
+
+    log_date = (body.get("log_date") or "").strip()
+    if not log_date:
+        log_date = _today_iso()
+
+    tokens = oauth.get_tokens(user_id)
+    if not tokens:
+        return error("Fitbit not connected", status=400)
+
+    access_token = oauth.refresh_if_needed(user_id, tokens)
+    if not access_token:
+        return error("Could not refresh Fitbit token", status=502)
+
+    params = {
+        "foodName":     name,
+        "mealTypeId":   str(meal_type_id),
+        "unitId":       "304",        # serving — Fitbit's generic unit
+        "amount":       "1",
+        "date":         log_date,
+        "calories":     str(calories),
+        "favorite":     "false",
+    }
+    payload = urllib.parse.urlencode(params).encode()
+    req = urllib.request.Request(
+        f"{FITBIT_API_BASE}/1/user/-/foods/log.json",
+        data=payload,
+        headers={
+            "Authorization":   f"Bearer {access_token}",
+            "Content-Type":    "application/x-www-form-urlencoded",
+            "Accept-Language": "en_US",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310 — fixed Fitbit HTTPS endpoint
+            data = json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        body_text = ""
+        try:
+            body_text = exc.read().decode()[:300]
+        except Exception:
+            pass
+        logger.warning("Fitbit food log failed: %s %s — %s", exc.code, exc.reason, body_text)
+        return error(f"Fitbit rejected the request ({exc.code})", status=502)
+    except Exception as exc:
+        logger.error("Fitbit food log error: %s", exc)
+        return error("Could not reach Fitbit", status=502)
+
+    sync_now(user_id)
+    return ok({
+        "logged": True,
+        "food":   data.get("foodLog") or data,
+    })
 
 
 def sync_now(user_id: str) -> dict:

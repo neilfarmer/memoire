@@ -105,6 +105,7 @@ locals {
     "POST /fitbit/auth/callback",
     "POST /fitbit/disconnect",
     "POST /fitbit/sync",
+    "POST /fitbit/food",
   ]
 }
 

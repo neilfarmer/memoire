@@ -107,6 +107,20 @@ def refresh_tokens(user_id: str, refresh_token: str) -> dict | None:
     return _store_tokens(user_id, data)
 
 
+def refresh_if_needed(user_id: str, item: dict, leeway_seconds: int = 300) -> str | None:
+    """Return a usable access token, refreshing it if it is close to expiry."""
+    expires_at = int(item.get("expires_at", 0))
+    if expires_at - int(time.time()) > leeway_seconds:
+        return item.get("access_token", "")
+    refresh_token = item.get("refresh_token", "")
+    if not refresh_token:
+        return None
+    refreshed = refresh_tokens(user_id, refresh_token)
+    if not refreshed:
+        return None
+    return refreshed.get("access_token", "")
+
+
 def get_tokens(user_id: str) -> dict | None:
     item = db.get_table(TOKENS_TABLE).get_item(Key={"user_id": user_id}).get("Item")
     return item or None
