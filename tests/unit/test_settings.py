@@ -92,6 +92,27 @@ class TestUpdateSettings:
         assert "display_name" in body
         assert body["display_name"] == ""
 
+    def test_home_widget_flags_default_true_except_finances(self, tbl):
+        body = json.loads(crud.get_settings(USER)["body"])
+        assert body["home_tasks_widget"] is True
+        assert body["home_habits_widget"] is True
+        assert body["home_journal_widget"] is True
+        assert body["home_goals_widget"] is True
+        assert body["home_health_widget"] is True
+        assert body["home_finances_widget"] is False
+
+    def test_home_widget_flags_persist(self, tbl):
+        crud.update_settings(USER, {
+            "home_tasks_widget": False,
+            "home_health_widget": False,
+            "home_finances_widget": True,
+        })
+        body = json.loads(crud.get_settings(USER)["body"])
+        assert body["home_tasks_widget"] is False
+        assert body["home_habits_widget"] is True  # unchanged default
+        assert body["home_health_widget"] is False
+        assert body["home_finances_widget"] is True
+
     def test_empty_body_returns_defaults(self, tbl):
         r = crud.update_settings(USER, {})
         assert r["statusCode"] == 200

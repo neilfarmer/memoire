@@ -7701,7 +7701,57 @@
                             </div>
                         </div>
                         <div class="settings-section">
-                            <div class="settings-section-title">Home</div>
+                            <div class="settings-section-title">Home widgets</div>
+                            <div class="settings-row">
+                                <div>
+                                    <div class="settings-label">Tasks widget</div>
+                                    <div class="settings-desc">Show today's tasks and overdue count</div>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="home-tasks-toggle" />
+                                    <span class="toggle-track"></span>
+                                </label>
+                            </div>
+                            <div class="settings-row">
+                                <div>
+                                    <div class="settings-label">Habits widget</div>
+                                    <div class="settings-desc">Show today's habit completion progress</div>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="home-habits-toggle" />
+                                    <span class="toggle-track"></span>
+                                </label>
+                            </div>
+                            <div class="settings-row">
+                                <div>
+                                    <div class="settings-label">Journal widget</div>
+                                    <div class="settings-desc">Show day streak and quick entry link</div>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="home-journal-toggle" />
+                                    <span class="toggle-track"></span>
+                                </label>
+                            </div>
+                            <div class="settings-row">
+                                <div>
+                                    <div class="settings-label">Goals widget</div>
+                                    <div class="settings-desc">Show active goals on the home dashboard</div>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="home-goals-toggle" />
+                                    <span class="toggle-track"></span>
+                                </label>
+                            </div>
+                            <div class="settings-row">
+                                <div>
+                                    <div class="settings-label">Health widget</div>
+                                    <div class="settings-desc">Show today's steps, calories, sleep, and active minutes</div>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="home-health-toggle" />
+                                    <span class="toggle-track"></span>
+                                </label>
+                            </div>
                             <div class="settings-row">
                                 <div>
                                     <div class="settings-label">Finances widget</div>
@@ -10336,6 +10386,27 @@
       this.disabled = false;
     }
   });
+
+  function bindHomeWidgetToggle(toggleId, key) {
+    $(toggleId).addEventListener("change", async function() {
+      const enabled = this.checked;
+      this.disabled = true;
+      try {
+        const updated = await api.updateSettings({ [key]: enabled });
+        state.settings = { ...state.settings, ...updated };
+        if (pages.current === "home") renderHomeDashboard();
+      } catch (e) {
+        this.checked = !enabled;
+      } finally {
+        this.disabled = false;
+      }
+    });
+  }
+  bindHomeWidgetToggle("home-tasks-toggle",   "home_tasks_widget");
+  bindHomeWidgetToggle("home-habits-toggle",  "home_habits_widget");
+  bindHomeWidgetToggle("home-journal-toggle", "home_journal_widget");
+  bindHomeWidgetToggle("home-goals-toggle",   "home_goals_widget");
+  bindHomeWidgetToggle("home-health-toggle",  "home_health_widget");
 
   $("supervisor-enabled-toggle").addEventListener("change", async function() {
     const enabled = this.checked;
@@ -15078,35 +15149,43 @@
         </div>
       </div>`;
 
-    grid.innerHTML = `
+    const widgetEnabled = (k, dflt = true) =>
+      state.settings?.[k] === undefined ? dflt : !!state.settings[k];
+
+    const tasksWidget = widgetEnabled("home_tasks_widget") ? `
       <div class="home-widget">
         <div class="home-widget-title">Tasks</div>
         ${tasksHtml}
         <div class="home-widget-footer"><span class="home-widget-link" onclick="pages.show('tasks')">View all →</span></div>
-      </div>
+      </div>` : "";
+    const habitsWidget = widgetEnabled("home_habits_widget") ? `
       <div class="home-widget">
         <div class="home-widget-title">Habits</div>
         ${habitsHtml}
         <div class="home-widget-footer"><span class="home-widget-link" onclick="pages.show('habits')">View all →</span></div>
-      </div>
+      </div>` : "";
+    const journalWidget = widgetEnabled("home_journal_widget") ? `
       <div class="home-widget">
         <div class="home-widget-title">Journal</div>
         ${journalHtml}
         <div class="home-widget-footer"><span class="home-widget-link" onclick="pages.show('journal')">Open journal →</span></div>
-      </div>
+      </div>` : "";
+    const goalsWidget = widgetEnabled("home_goals_widget") ? `
       <div class="home-widget">
         <div class="home-widget-title">Goals</div>
         ${goalsHtml}
         <div class="home-widget-footer"><span class="home-widget-link" onclick="pages.show('goals')">View all →</span></div>
-      </div>
+      </div>` : "";
+    const healthWidget = widgetEnabled("home_health_widget") ? `
       <div class="home-widget">
         <div class="home-widget-title">Health today</div>
         ${healthHtml}
         <div class="home-widget-footer"><span class="home-widget-link" onclick="pages.show('health')">Open health →</span></div>
-      </div>
-      ${financesWidget}`;
+      </div>` : "";
 
-    loadHomeHealth(today);
+    grid.innerHTML = `${tasksWidget}${habitsWidget}${journalWidget}${goalsWidget}${healthWidget}${financesWidget}`;
+
+    if (widgetEnabled("home_health_widget")) loadHomeHealth(today);
   }
 
   async function loadHomeHealth(dateStr) {
@@ -15158,6 +15237,12 @@
       : "—";
     $("display-name-input").value = state.settings?.display_name || "";
     $("pal-name-input").value = state.settings?.pal_name || "";
+    const widgetFlag = (k, dflt) => state.settings?.[k] === undefined ? dflt : !!state.settings[k];
+    $("home-tasks-toggle").checked    = widgetFlag("home_tasks_widget", true);
+    $("home-habits-toggle").checked   = widgetFlag("home_habits_widget", true);
+    $("home-journal-toggle").checked  = widgetFlag("home_journal_widget", true);
+    $("home-goals-toggle").checked    = widgetFlag("home_goals_widget", true);
+    $("home-health-toggle").checked   = widgetFlag("home_health_widget", true);
     $("home-finances-toggle").checked = !!(state.settings?.home_finances_widget);
     $("browser-notify-toggle").checked = !!(state.settings?.browser_notifications_enabled);
     browserNotifier.renderStatus();
