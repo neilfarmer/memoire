@@ -2843,21 +2843,25 @@
     .notes-editor-header {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 0 16px;
-      height: 48px;
+      gap: 6px;
+      padding: 0 20px;
+      height: 44px;
       flex-shrink: 0;
       border-bottom: 1px solid var(--border);
       background: var(--surface);
     }
 
     .notes-folder-crumb {
-      font-size: 13px;
+      font-size: 11px;
       color: var(--muted);
       margin-right: auto;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 500;
+      max-width: 50%;
     }
 
     .notes-toolbar-sep {
@@ -2906,41 +2910,74 @@
     .notes-editor-body {
       flex: 1;
       overflow-y: auto;
-      padding: 24px 28px;
+      padding: 48px 32px 96px;
+      scroll-behavior: smooth;
+    }
+
+    .notes-editor-body > * {
+      max-width: 880px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .notes-editor-body .entry-title-input {
-      font-size: 20px;
+      display: block;
+      width: 100%;
+      font-family: var(--font-display, Fraunces, Georgia, serif);
+      font-size: 36px;
       font-weight: 600;
+      line-height: 1.15;
+      letter-spacing: -0.022em;
       border: none;
-      border-bottom: 1px solid var(--border);
       border-radius: 0;
-      padding: 0 0 12px;
-      margin-bottom: 16px;
+      padding: 0 0 4px;
+      margin: 0 auto 4px;
       background: transparent;
+      color: var(--text);
+    }
+    .notes-editor-body .entry-title-input::placeholder {
+      color: var(--muted);
+      opacity: 0.45;
+      font-style: italic;
     }
     .notes-editor-body .entry-title-input:focus {
       box-shadow: none;
-      border-color: var(--primary);
+      outline: none;
+      border-color: transparent;
+    }
+
+    .notes-editor-body .md-toolbar {
+      padding: 6px 0 8px;
+      margin: 0 auto 24px;
+      border-bottom: 1px solid var(--border);
+      gap: 1px;
     }
 
     .notes-editor-body .entry-textarea {
       display: block;
       width: 100%;
       resize: none;
-      min-height: 300px;
+      min-height: calc(100vh - 260px);
       border: none;
       border-radius: 0;
       background: transparent;
-      font-size: 14px;
-      line-height: 1.7;
+      font-size: 15px;
+      line-height: 1.75;
       padding: 0;
+      color: var(--text);
     }
-    .notes-editor-body .entry-textarea:focus { box-shadow: none; }
+    .notes-editor-body .entry-textarea:focus {
+      box-shadow: none;
+      outline: none;
+    }
+    .notes-editor-body .entry-textarea::placeholder {
+      color: var(--muted);
+      opacity: 0.5;
+    }
 
     .notes-editor-body .entry-preview {
-      font-size: 14px;
-      line-height: 1.7;
+      font-size: 15px;
+      line-height: 1.75;
     }
 
     .notes-tags-row {
@@ -2978,12 +3015,12 @@
     }
 
     .notes-editor-footer {
-      padding: 8px 28px;
+      padding: 0 20px;
       border-top: 1px solid var(--border);
       background: var(--surface);
-      font-size: 12px;
+      font-size: 11px;
       color: var(--muted);
-      min-height: 34px;
+      height: 28px;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -7118,7 +7155,7 @@
                                 <button class="btn btn-primary" onclick="notesApp.newNote()">+ New note</button>
                             </div>
                             <!-- Editor pane (hidden until a note is opened) -->
-                            <div id="notes-editor-pane" class="hidden" class="u-stretch-col">
+                            <div id="notes-editor-pane" class="hidden u-stretch-col">
                                 <div id="notes-overlay-loader" class="overlay-loader hidden">
                                     <div class="spinner"></div>
                                 </div>
@@ -11456,14 +11493,11 @@
 
     showEditor() {
       $("notes-empty-state").classList.add("hidden");
-      const pane = $("notes-editor-pane");
-      pane.classList.remove("hidden");
-      pane.style.display = "flex";
+      $("notes-editor-pane").classList.remove("hidden");
     },
 
     hideEditor() {
       $("notes-editor-pane").classList.add("hidden");
-      $("notes-editor-pane").style.display = "none";
       $("notes-empty-state").classList.remove("hidden");
     },
 
