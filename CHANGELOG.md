@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.2](https://github.com/neilfarmer/memoire/compare/v0.12.1...v0.12.2) (2026-04-30)
+
+
+### Bug Fixes
+
+* **notes:** correct editor pane flex direction and refresh layout ([f2a1efd](https://github.com/neilfarmer/memoire/commit/f2a1efd314c9e277372b1880695e8346698922ed))
+* **notes:** correct editor pane flex direction and refresh layout ([b79ef3c](https://github.com/neilfarmer/memoire/commit/b79ef3c6bbc5a54cb092130b268cd9803986ed5e))
+
 ## [0.12.1](https://github.com/neilfarmer/memoire/compare/v0.12.0...v0.12.1) (2026-04-27)
 
 
