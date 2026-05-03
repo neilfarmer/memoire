@@ -1802,6 +1802,15 @@ def main():
             mcp.settings.streamable_http_path = path
         else:
             mcp.settings.sse_path = path
+        # FastMCP ships with a TransportSecurityMiddleware that rejects
+        # Host headers it doesn't recognize (DNS-rebind defense). When
+        # the server runs behind a non-localhost DNS name (e.g. a
+        # Kubernetes Service), set MEMOIRE_MCP_ALLOWED_HOSTS as a
+        # comma-separated list, or "*" to disable the check.
+        allowed = os.environ.get("MEMOIRE_MCP_ALLOWED_HOSTS", "").strip()
+        if allowed:
+            hosts = [h.strip() for h in allowed.split(",") if h.strip()]
+            mcp.settings.transport_security.allowed_hosts = hosts
         mcp.run(transport=transport)
     else:
         mcp.run(transport="stdio")

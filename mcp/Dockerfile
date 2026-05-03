@@ -29,7 +29,8 @@ RUN pip install --no-cache-dir .
 ENV MEMOIRE_MCP_TRANSPORT=streamable-http \
     MEMOIRE_MCP_HOST=0.0.0.0 \
     MEMOIRE_MCP_PORT=8000 \
-    MEMOIRE_MCP_PATH=/mcp
+    MEMOIRE_MCP_PATH=/mcp \
+    MEMOIRE_MCP_ALLOWED_HOSTS=*
 
 EXPOSE 8000
 
