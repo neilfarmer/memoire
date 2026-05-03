@@ -1806,9 +1806,14 @@ def main():
         # Host headers it doesn't recognize (DNS-rebind defense). When
         # the server runs behind a non-localhost DNS name (e.g. a
         # Kubernetes Service), set MEMOIRE_MCP_ALLOWED_HOSTS as a
-        # comma-separated list, or "*" to disable the check.
+        # comma-separated list of hosts to whitelist, or `*` to turn
+        # the protection off entirely. Note: FastMCP does not support
+        # `*` as a wildcard match — it's a sentinel here that disables
+        # the middleware.
         allowed = os.environ.get("MEMOIRE_MCP_ALLOWED_HOSTS", "").strip()
-        if allowed:
+        if allowed == "*":
+            mcp.settings.transport_security.enable_dns_rebinding_protection = False
+        elif allowed:
             hosts = [h.strip() for h in allowed.split(",") if h.strip()]
             mcp.settings.transport_security.allowed_hosts = hosts
         mcp.run(transport=transport)
