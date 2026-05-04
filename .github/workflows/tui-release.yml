@@ -1,0 +1,47 @@
+name: TUI Release
+
+on:
+  push:
+    tags:
+      - 'tui-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tui/go.mod
+          cache: true
+          cache-dependency-path: tui/go.sum
+
+      - name: go vet
+        working-directory: tui
+        run: go vet ./...
+
+      - name: go test
+        working-directory: tui
+        run: go test ./... -count=1
+
+      - name: govulncheck
+        working-directory: tui
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          $(go env GOPATH)/bin/govulncheck ./...
+
+      - name: GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean
+          workdir: tui
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

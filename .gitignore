@@ -38,3 +38,8 @@ coverage.xml
 # Stray screenshots in the repo root (the canonical README screenshots
 # live under docs/screenshots/)
 /*.png
+
+# TUI build output
+/bin/
+tui/dist/
+tui/memoire
