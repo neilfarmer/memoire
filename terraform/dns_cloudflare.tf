@@ -3,7 +3,9 @@
 
 data "cloudflare_zone" "main" {
   count = local.cloudflare_enabled ? 1 : 0
-  name  = var.root_domain
+  filter = {
+    name = var.root_domain
+  }
 }
 
 locals {
@@ -20,7 +22,7 @@ locals {
 # Keys are the domain names we already know statically — this lets Terraform plan
 # the resource instances without needing domain_validation_options to be resolved.
 # The record name/type/value are unknown until the cert exists, which is fine.
-resource "cloudflare_record" "acm_validation" {
+resource "cloudflare_dns_record" "acm_validation" {
   for_each = local.cloudflare_enabled ? toset([local.frontend_domain, local.api_domain]) : toset([])
 
   zone_id = local.cloudflare_zone_id
@@ -41,7 +43,7 @@ resource "cloudflare_record" "acm_validation" {
 }
 
 # Frontend CNAME → CloudFront distribution domain
-resource "cloudflare_record" "frontend" {
+resource "cloudflare_dns_record" "frontend" {
   count = local.cloudflare_enabled ? 1 : 0
 
   zone_id = local.cloudflare_zone_id
@@ -53,7 +55,7 @@ resource "cloudflare_record" "frontend" {
 }
 
 # API CNAME → API Gateway regional domain
-resource "cloudflare_record" "api" {
+resource "cloudflare_dns_record" "api" {
   count = local.cloudflare_enabled ? 1 : 0
 
   zone_id = local.cloudflare_zone_id
