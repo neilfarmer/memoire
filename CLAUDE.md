@@ -207,7 +207,7 @@ GitHub Actions workflows in `.github/workflows/`:
 | `terraform-lint.yml` | push + PR | tflint with provider init |
 | `terraform-test.yml` | push + PR | `terraform test` (all 3 test files) |
 | `release.yml` | -- | Release automation (release-please) |
-| `renovate.yml` | -- | Dependency updates (grouped by category) |
+| Dependabot | scheduled (weekly) | Dependency updates (grouped by ecosystem); config in `.github/dependabot.yml` |
 
 ## MCP Server
 
