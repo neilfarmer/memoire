@@ -328,7 +328,8 @@ class TestGetArticlesWithFetch:
         with patch.object(crud, "_fetch_feed", return_value=[{
             "feed_id": "f1", "feed_title": "T", "title": "A",
             "url": "https://example.com/1", "description": "d",
-            "image": "https://example.com/img.jpg", "published": "2026-04-07T00:00:00+00:00",
+            "image": "https://example.com/img.jpg",
+            "published": datetime.now(timezone.utc).isoformat(),
         }]):
             result = crud.get_articles(USER)
         assert result["statusCode"] == 200
