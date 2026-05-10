@@ -23,12 +23,16 @@ pip install /path/to/memoire/mcp
 
 ## Configuration
 
-The server reads two environment variables:
+The server reads these environment variables:
 
 | Variable | Description |
 |---|---|
 | `MEMOIRE_API_URL` | Base URL of the deployed API (e.g. `https://api.memoire.example.com`) |
 | `MEMOIRE_PAT` | Personal Access Token (starts with `pat_`) |
+| `MEMOIRE_MCP_TRANSPORT` | `stdio` (default), `streamable-http`, or `sse` |
+| `MEMOIRE_MCP_HOST` | Bind host for HTTP transports (default `0.0.0.0`) |
+| `MEMOIRE_MCP_PORT` | Bind port for HTTP transports (default `8000`) |
+| `MEMOIRE_MCP_PATH` | Mount path for HTTP transports (default `/mcp`) |
 
 ## Usage with Claude Code
 
@@ -62,6 +66,37 @@ Or run via `uv` without installing:
         "MEMOIRE_API_URL": "https://your-api-url.example.com",
         "MEMOIRE_PAT": "pat_your_token_here"
       }
+    }
+  }
+}
+```
+
+## Standalone HTTP server (Docker / Kubernetes)
+
+Run the MCP server as its own networked service so any MCP client (e.g.
+an OpenClaw gateway) can connect via URL instead of spawning it as a
+local stdio child:
+
+```bash
+docker build -t memoire-mcp:latest mcp
+docker run --rm -p 8000:8000 \
+  -e MEMOIRE_API_URL=https://api.memoire.example.com \
+  -e MEMOIRE_PAT=pat_... \
+  memoire-mcp:latest
+```
+
+The image's default entrypoint sets `MEMOIRE_MCP_TRANSPORT=streamable-http`
+and binds `0.0.0.0:8000/mcp`. Connect any MCP client at
+`http://<host>:8000/mcp`.
+
+Example client-side config (Streamable HTTP MCP server):
+
+```json
+{
+  "mcpServers": {
+    "memoire": {
+      "url": "https://memoire-mcp.example.com/mcp",
+      "transport": "streamable-http"
     }
   }
 }

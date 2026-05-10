@@ -1778,7 +1778,47 @@ async def list_backlinks(target_type: str, target_id: str) -> str:
 
 
 def main():
-    mcp.run(transport="stdio")
+    """Run the MCP server.
+
+    Transport defaults to stdio for backwards-compat with `pip install + run`.
+    Set MEMOIRE_MCP_TRANSPORT=streamable-http (or "sse") to expose the server
+    over HTTP — useful when running memoire-mcp as a standalone networked
+    service that an MCP client (e.g. an OpenClaw gateway in Kubernetes)
+    connects to via URL instead of spawning it as a stdio child.
+
+    HTTP-mode env vars:
+      MEMOIRE_MCP_HOST  bind host (default 0.0.0.0)
+      MEMOIRE_MCP_PORT  bind port (default 8000)
+      MEMOIRE_MCP_PATH  mount path (default /mcp)
+    """
+    transport = os.environ.get("MEMOIRE_MCP_TRANSPORT", "stdio")
+    if transport in ("streamable-http", "sse"):
+        host = os.environ.get("MEMOIRE_MCP_HOST", "0.0.0.0")
+        port = int(os.environ.get("MEMOIRE_MCP_PORT", "8000"))
+        path = os.environ.get("MEMOIRE_MCP_PATH", "/mcp")
+        mcp.settings.host = host
+        mcp.settings.port = port
+        if transport == "streamable-http":
+            mcp.settings.streamable_http_path = path
+        else:
+            mcp.settings.sse_path = path
+        # FastMCP ships with a TransportSecurityMiddleware that rejects
+        # Host headers it doesn't recognize (DNS-rebind defense). When
+        # the server runs behind a non-localhost DNS name (e.g. a
+        # Kubernetes Service), set MEMOIRE_MCP_ALLOWED_HOSTS as a
+        # comma-separated list of hosts to whitelist, or `*` to turn
+        # the protection off entirely. Note: FastMCP does not support
+        # `*` as a wildcard match — it's a sentinel here that disables
+        # the middleware.
+        allowed = os.environ.get("MEMOIRE_MCP_ALLOWED_HOSTS", "").strip()
+        if allowed == "*":
+            mcp.settings.transport_security.enable_dns_rebinding_protection = False
+        elif allowed:
+            hosts = [h.strip() for h in allowed.split(",") if h.strip()]
+            mcp.settings.transport_security.allowed_hosts = hosts
+        mcp.run(transport=transport)
+    else:
+        mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":
