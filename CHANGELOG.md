@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.13.0](https://github.com/neilfarmer/memoire/compare/v0.12.2...v0.13.0) (2026-05-11)
+
+
+### Features
+
+* **mcp:** support streamable-http and sse transports ([6209ee5](https://github.com/neilfarmer/memoire/commit/6209ee57bd7c85c0b6f7df3e8a2610b2692bb39a))
+* **mcp:** support streamable-http and sse transports ([e466fe0](https://github.com/neilfarmer/memoire/commit/e466fe04bc62341a8c166ad4688693bc14015c58))
+
+
+### Bug Fixes
+
+* **mcp:** allow non-localhost host headers via MEMOIRE_MCP_ALLOWED_HOSTS ([c8d9d75](https://github.com/neilfarmer/memoire/commit/c8d9d7552fbb4bf4a966bf33770f33b0d397f950))
+* **mcp:** treat MEMOIRE_MCP_ALLOWED_HOSTS=* as disable-rebind-protection ([86a0734](https://github.com/neilfarmer/memoire/commit/86a0734fd802db6a63467f6b433ee78e2578e5b4))
+* **terraform:** migrate Cloudflare provider config to v5 syntax ([333c071](https://github.com/neilfarmer/memoire/commit/333c071e2863f1611d534d40c3a68118d0393c61))
+
 ## [0.12.2](https://github.com/neilfarmer/memoire/compare/v0.12.1...v0.12.2) (2026-04-30)
 
 
