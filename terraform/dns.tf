@@ -28,7 +28,7 @@ resource "aws_acm_certificate_validation" "main" {
   certificate_arn = aws_acm_certificate.main[0].arn
 
   validation_record_fqdns = concat(
-    [for r in cloudflare_record.acm_validation : r.hostname],
+    [for r in cloudflare_dns_record.acm_validation : r.name],
     [for r in aws_route53_record.acm_validation : r.fqdn],
   )
 }
